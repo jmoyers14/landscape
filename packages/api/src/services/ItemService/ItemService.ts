@@ -1,13 +1,9 @@
-/**
- * Client-facing item shape. Defined here (not imported from the Mongoose model)
- * so this interface stays free of runtime/mongoose imports — the web client
- * consumes the AppRouter type through it.
- */
-export interface Item {
-  id: string;
-  name: string;
-  createdAt: string;
-}
+import type { Item } from "../../data-access/repositories/ItemRepository.ts";
+
+// The Item entity is owned by the data-access layer (the repository produces
+// it). Re-exported here so callers that already import it from the service keep
+// working and don't need to know where it's defined.
+export type { Item };
 
 export interface ItemService {
   list(orgId: string): Promise<Item[]>;

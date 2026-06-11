@@ -4,6 +4,9 @@ import { Schema, model, type InferSchemaType } from "mongoose";
  * Generic placeholder model (rename when the real domain takes shape). Every
  * document is scoped to a Clerk organization via `orgId` — the tenant boundary.
  * Queries must always filter by orgId so one business never sees another's data.
+ *
+ * This schema lives in the data-access layer; nothing Mongoose-related is
+ * allowed to escape past the repository that wraps it.
  */
 const itemSchema = new Schema(
   {

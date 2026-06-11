@@ -1,4 +1,5 @@
 import "reflect-metadata"; // MUST be imported before any decorated class is used
+import "../data-access/index.ts"; // registers repositories the services depend on
 import { container } from "tsyringe";
 import { CONFIG_SERVICE_TOKEN, ITEM_SERVICE_TOKEN } from "./tokens.ts";
 import { ConfigServiceImpl } from "./ConfigService/ConfigServiceImpl.ts";

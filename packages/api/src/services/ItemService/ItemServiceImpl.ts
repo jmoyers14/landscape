@@ -1,38 +1,30 @@
-import { injectable } from "tsyringe";
-import { ItemModel, type ItemDocument } from "../../models/Item.ts";
+import { inject, injectable } from "tsyringe";
+import { ITEM_REPOSITORY_TOKEN } from "../../data-access/tokens.ts";
+import type { ItemRepository } from "../../data-access/repositories/ItemRepository.ts";
 import type { Item, ItemService } from "./ItemService.ts";
 
-type ItemDoc = ItemDocument & { _id: unknown; createdAt: Date };
-
 /**
- * Persists items in MongoDB via Mongoose. Every method takes an `orgId` and
- * filters by it, so the tenant boundary is enforced at the data layer — a
- * resolver can never accidentally read or mutate another org's items.
+ * Item business logic. Persistence is delegated to ItemRepository, so this
+ * layer stays free of Mongoose. Today the methods are thin passthroughs, but
+ * validation and cross-entity rules will grow here without touching the data
+ * layer — that separation is the whole point of the seam.
  */
 @injectable()
 export class ItemServiceImpl implements ItemService {
-  async list(orgId: string): Promise<Item[]> {
-    const docs = await ItemModel.find({ orgId })
-      .sort({ createdAt: -1 })
-      .lean<ItemDoc[]>();
-    return docs.map(toItem);
+  constructor(
+    @inject(ITEM_REPOSITORY_TOKEN)
+    private readonly items: ItemRepository,
+  ) {}
+
+  list(orgId: string): Promise<Item[]> {
+    return this.items.findByOrg(orgId);
   }
 
-  async create(orgId: string, name: string): Promise<Item> {
-    const doc = await ItemModel.create({ orgId, name });
-    return toItem(doc.toObject() as ItemDoc);
+  create(orgId: string, name: string): Promise<Item> {
+    return this.items.create(orgId, name);
   }
 
-  async remove(orgId: string, id: string): Promise<void> {
-    // orgId in the filter prevents deleting another org's item by guessing ids.
-    await ItemModel.deleteOne({ _id: id, orgId });
+  remove(orgId: string, id: string): Promise<void> {
+    return this.items.deleteByOrg(orgId, id);
   }
-}
-
-function toItem(doc: ItemDoc): Item {
-  return {
-    id: String(doc._id),
-    name: doc.name,
-    createdAt: doc.createdAt.toISOString(),
-  };
 }
