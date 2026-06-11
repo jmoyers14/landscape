@@ -1,0 +1,26 @@
+{
+  "name": "landscape",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "bun run dev:api & bun run dev:web",
+    "dev:api": "bun run --cwd packages/api dev",
+    "dev:web": "bun run --cwd packages/web dev",
+    "build": "bun run build:api && bun run build:web",
+    "build:api": "bun run --cwd packages/api build",
+    "build:web": "bun run --cwd packages/web build",
+    "typecheck": "bun run --cwd packages/api typecheck && bun run --cwd packages/web typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.90.16",
+    "@trpc/client": "^11.8.1",
+    "@trpc/server": "^11.8.1",
+    "@trpc/tanstack-react-query": "^11.8.1"
+  }
+}
