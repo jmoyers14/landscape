@@ -8,10 +8,13 @@ COPY packages/web/package.json packages/web/
 
 RUN bun install --frozen-lockfile
 
-# The API base URL is baked into the static bundle at build time
+# The API URL and Clerk publishable key are baked into the static bundle at
+# build time (both are public — the publishable key is client-side by design).
 COPY packages/web/ packages/web/
 ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
+ARG VITE_CLERK_PUBLISHABLE_KEY
+ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
 RUN bun run build:web
 
 FROM nginx:alpine

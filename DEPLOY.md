@@ -68,10 +68,37 @@ cd /Users/jeremymoyers/Code/landscape
 ./deploy.sh
 ```
 
-The script: builds + pushes the API image → deploys the API → builds the web
-image with `VITE_API_URL` pointing at the live API → deploys web → updates the
-API's `WEB_URL` so CORS allows the real web origin. It prints both public URLs
-at the end — share the web URL for feedback.
+The script: validates Clerk config → builds + pushes the API image → deploys the
+API (with the Clerk secret injected) → builds the web image with `VITE_API_URL`
+and the Clerk publishable key baked in → deploys web → updates the API's
+`WEB_URL` so CORS allows the real web origin. It prints both public URLs at the
+end — share the web URL for feedback.
+
+## Clerk configuration
+
+`deploy.sh` reads its Clerk values from your local `.env` files (the same source
+of truth as local dev), so there's nothing extra to pass:
+
+- **Publishable key** (`pk_…`, public — baked into the web bundle): read from
+  `packages/web/.env` `VITE_CLERK_PUBLISHABLE_KEY`, passed as a Docker build-arg.
+- **Secret key** (`sk_…`, sensitive — injected at runtime): stored in **GCP
+  Secret Manager** as `clerk-secret-key`. On first deploy the script enables the
+  Secret Manager API, creates the secret from `packages/api/.env`'s
+  `CLERK_SECRET_KEY`, and grants the Cloud Run service account read access — all
+  idempotent.
+
+**Rotating the secret key** (after creating a new key in Clerk):
+
+```bash
+printf '%s' 'sk_live_new_value' | \
+  gcloud secrets versions add clerk-secret-key --data-file=- --project landscape-499116
+# then redeploy (or: gcloud run services update landscape-api --region us-central1 \
+#   --set-secrets CLERK_SECRET_KEY=clerk-secret-key:latest)
+```
+
+> Docker prints a `SecretsUsedInArgOrEnv` warning for `VITE_CLERK_PUBLISHABLE_KEY`
+> — a false positive. Publishable keys are client-side by design; only the secret
+> key is kept out of the image (in Secret Manager).
 
 ## Redeploying after changes
 
@@ -80,9 +107,9 @@ service's block, or run the relevant `docker build`/`gcloud run deploy` lines.
 
 ## Notes
 
-- **No secrets/DB yet.** When you add a database, store its URL in Secret
-  Manager and add `--set-secrets DATABASE_URL=database-url:latest` to the API
-  deploy + update commands (see how trova-experience does MONGODB_URI).
+- **Database:** none yet. When you add one, store its URL in Secret Manager and
+  add `--set-secrets DATABASE_URL=database-url:latest` to the API deploy + update
+  commands — same pattern as `clerk-secret-key`.
 - **amd64 builds on Apple Silicon** run under emulation (`--platform
   linux/amd64`) — slower but required, since Cloud Run runs amd64.
 - **Cost:** Cloud Run scales to zero; idle services cost ~nothing and fit the

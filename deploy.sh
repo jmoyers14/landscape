@@ -16,6 +16,7 @@ API_SERVICE="landscape-api"
 WEB_SERVICE="landscape-web"
 API_IMAGE="$REGISTRY/api:latest"
 WEB_IMAGE="$REGISTRY/web:latest"
+CLERK_SECRET_NAME="clerk-secret-key"  # Secret Manager secret holding the Clerk sk_ key
 
 # ── Safety guard ─────────────────────────────────────────────────────────────
 # Activate the personal configuration and refuse to proceed unless the active
@@ -46,6 +47,36 @@ gcloud artifacts repositories describe "$REPO" --location "$REGION" >/dev/null 2
     --repository-format docker --location "$REGION" \
     --description "landscape images"
 
+# ── Clerk config (validated up front, before the slow builds) ────────────────
+# Publishable key (pk_) is PUBLIC — baked into the web bundle at build time.
+# Source of truth is packages/web/.env, same as local dev.
+CLERK_PUBLISHABLE_KEY="${VITE_CLERK_PUBLISHABLE_KEY:-$(grep -E '^VITE_CLERK_PUBLISHABLE_KEY=' packages/web/.env 2>/dev/null | head -1 | cut -d= -f2-)}"
+if [ -z "$CLERK_PUBLISHABLE_KEY" ]; then
+  echo "ERROR: VITE_CLERK_PUBLISHABLE_KEY not set (env or packages/web/.env)." >&2
+  exit 1
+fi
+
+# Secret key (sk_) is SENSITIVE — stored in Secret Manager, injected at runtime.
+gcloud services enable secretmanager.googleapis.com --project "$PROJECT" --quiet >/dev/null
+if ! gcloud secrets describe "$CLERK_SECRET_NAME" --project "$PROJECT" >/dev/null 2>&1; then
+  echo "Creating Secret Manager secret: $CLERK_SECRET_NAME"
+  SECRET_VALUE="${CLERK_SECRET_KEY:-$(grep -E '^CLERK_SECRET_KEY=' packages/api/.env 2>/dev/null | head -1 | cut -d= -f2-)}"
+  if [ -z "$SECRET_VALUE" ]; then
+    echo "ERROR: secret '$CLERK_SECRET_NAME' missing and CLERK_SECRET_KEY not in packages/api/.env." >&2
+    echo "  Create it once: printf '%s' 'sk_...' | gcloud secrets create $CLERK_SECRET_NAME --data-file=- --project $PROJECT" >&2
+    exit 1
+  fi
+  printf '%s' "$SECRET_VALUE" | gcloud secrets create "$CLERK_SECRET_NAME" \
+    --project "$PROJECT" --replication-policy automatic --data-file=- >/dev/null
+fi
+
+# Let the Cloud Run runtime service account read the secret (idempotent)
+PROJECT_NUMBER=$(gcloud projects describe "$PROJECT" --format "value(projectNumber)")
+gcloud secrets add-iam-policy-binding "$CLERK_SECRET_NAME" \
+  --project "$PROJECT" \
+  --member "serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+  --role roles/secretmanager.secretAccessor --quiet >/dev/null
+
 # ── API ──────────────────────────────────────────────────────────────────────
 echo "Building API image..."
 docker build --platform linux/amd64 -t "$API_IMAGE" -f packages/api/Dockerfile .
@@ -60,7 +91,8 @@ gcloud run deploy "$API_SERVICE" \
   --region "$REGION" \
   --allow-unauthenticated \
   --set-env-vars ENVIRONMENT=production \
-  --set-env-vars WEB_URL="${WEB_URL:-https://placeholder.example.com}"
+  --set-env-vars WEB_URL="${WEB_URL:-https://placeholder.example.com}" \
+  --set-secrets CLERK_SECRET_KEY="$CLERK_SECRET_NAME:latest"
 
 API_URL=$(gcloud run services describe "$API_SERVICE" \
   --project "$PROJECT" --region "$REGION" --format "value(status.url)")
@@ -70,6 +102,7 @@ echo "API deployed at: $API_URL"
 echo "Building web image (VITE_API_URL=$API_URL)..."
 docker build --platform linux/amd64 \
   --build-arg VITE_API_URL="$API_URL" \
+  --build-arg VITE_CLERK_PUBLISHABLE_KEY="$CLERK_PUBLISHABLE_KEY" \
   -t "$WEB_IMAGE" \
   -f packages/web/Dockerfile .
 
@@ -92,7 +125,8 @@ echo "Updating API CORS (WEB_URL=$WEB_URL)..."
 gcloud run services update "$API_SERVICE" \
   --project "$PROJECT" --region "$REGION" \
   --set-env-vars ENVIRONMENT=production \
-  --set-env-vars WEB_URL="$WEB_URL"
+  --set-env-vars WEB_URL="$WEB_URL" \
+  --set-secrets CLERK_SECRET_KEY="$CLERK_SECRET_NAME:latest"
 
 echo ""
 echo "Deploy complete!"
