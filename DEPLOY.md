@@ -68,11 +68,13 @@ cd /Users/jeremymoyers/Code/landscape
 ./deploy.sh
 ```
 
-The script: validates Clerk config → builds + pushes the API image → deploys the
-API (with the Clerk secret injected) → builds the web image with `VITE_API_URL`
-and the Clerk publishable key baked in → deploys web → updates the API's
-`WEB_URL` so CORS allows the real web origin. It prints both public URLs at the
-end — share the web URL for feedback.
+The script: validates Clerk config → looks up the (stable) web URL and deploys
+the API with it as the trusted CORS origin → builds the web image with
+`VITE_API_URL` and the Clerk publishable key baked in → deploys web. On the
+first-ever deploy the web URL isn't known yet, so the API starts with a
+placeholder origin and the script updates it once the web service exists; every
+later deploy reuses the stable web URL directly (no placeholder window, one
+fewer revision). It prints both public URLs at the end — share the web URL.
 
 ## Secrets & configuration
 

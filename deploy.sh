@@ -86,6 +86,14 @@ ensure_secret "$CLERK_SECRET_NAME" CLERK_SECRET_KEY
 ensure_secret "$MONGO_SECRET_NAME" MONGODB_URI
 
 # ── API ──────────────────────────────────────────────────────────────────────
+# The web URL is stable across deploys, so look it up now and hand it to the API
+# from its first revision — no placeholder, no transient wrong-origin window.
+# Falls back to a placeholder only on a true first deploy (no web service yet).
+EXISTING_WEB_URL=$(gcloud run services describe "$WEB_SERVICE" \
+  --project "$PROJECT" --region "$REGION" --format "value(status.url)" 2>/dev/null || true)
+API_WEB_URL="${EXISTING_WEB_URL:-https://placeholder.example.com}"
+echo "API will trust web origin: $API_WEB_URL"
+
 echo "Building API image..."
 docker build --platform linux/amd64 -t "$API_IMAGE" -f packages/api/Dockerfile .
 
@@ -99,7 +107,7 @@ gcloud run deploy "$API_SERVICE" \
   --region "$REGION" \
   --allow-unauthenticated \
   --set-env-vars ENVIRONMENT=production \
-  --set-env-vars WEB_URL="${WEB_URL:-https://placeholder.example.com}" \
+  --set-env-vars WEB_URL="$API_WEB_URL" \
   --set-secrets CLERK_SECRET_KEY="$CLERK_SECRET_NAME:latest",MONGODB_URI="$MONGO_SECRET_NAME:latest"
 
 API_URL=$(gcloud run services describe "$API_SERVICE" \
@@ -128,13 +136,17 @@ WEB_URL=$(gcloud run services describe "$WEB_SERVICE" \
   --project "$PROJECT" --region "$REGION" --format "value(status.url)")
 echo "Web deployed at: $WEB_URL"
 
-# ── Wire CORS: tell the API its real web origin ──────────────────────────────
-echo "Updating API CORS (WEB_URL=$WEB_URL)..."
-gcloud run services update "$API_SERVICE" \
-  --project "$PROJECT" --region "$REGION" \
-  --set-env-vars ENVIRONMENT=production \
-  --set-env-vars WEB_URL="$WEB_URL" \
-  --set-secrets CLERK_SECRET_KEY="$CLERK_SECRET_NAME:latest",MONGODB_URI="$MONGO_SECRET_NAME:latest"
+# ── Wire CORS only if the web origin changed (i.e. the first-ever deploy) ────
+if [ "$WEB_URL" != "$API_WEB_URL" ]; then
+  echo "Web origin changed; updating API CORS (WEB_URL=$WEB_URL)..."
+  gcloud run services update "$API_SERVICE" \
+    --project "$PROJECT" --region "$REGION" \
+    --set-env-vars ENVIRONMENT=production \
+    --set-env-vars WEB_URL="$WEB_URL" \
+    --set-secrets CLERK_SECRET_KEY="$CLERK_SECRET_NAME:latest",MONGODB_URI="$MONGO_SECRET_NAME:latest"
+else
+  echo "API already trusts $WEB_URL — skipping CORS update."
+fi
 
 echo ""
 echo "Deploy complete!"

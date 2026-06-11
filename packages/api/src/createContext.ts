@@ -24,11 +24,14 @@ async function authenticate(
   const token = authHeader.slice("Bearer ".length);
   try {
     const claims = await verifyToken(token, { secretKey });
+    // Clerk v2 session tokens nest org data under `o` (id/rol/slg); v1 used
+    // top-level org_* claims. Read both so either token version works.
+    const o = (claims as { o?: { id?: string; rol?: string; slg?: string } }).o;
     return {
       userId: claims.sub,
-      orgId: claims.org_id ?? null,
-      orgRole: claims.org_role ?? null,
-      orgSlug: claims.org_slug ?? null,
+      orgId: claims.org_id ?? o?.id ?? null,
+      orgRole: claims.org_role ?? (o?.rol ? `org:${o.rol}` : null),
+      orgSlug: claims.org_slug ?? o?.slg ?? null,
     };
   } catch {
     return null;
