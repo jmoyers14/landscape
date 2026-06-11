@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   CreateOrganization,
   OrganizationSwitcher,
@@ -7,8 +8,8 @@ import {
   UserButton,
   useOrganization,
 } from "@clerk/react";
-import { useQuery } from "@tanstack/react-query";
-import { trpc } from "./trpc.ts";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { queryClient, trpc } from "./trpc.ts";
 
 const Header = () => (
   <header className="flex items-center justify-between border-b border-slate-200 px-6 py-3">
@@ -42,22 +43,78 @@ const SignedOutHero = () => (
 );
 
 const Workspace = () => {
-  const me = useQuery(trpc.auth.me.queryOptions());
+  const [name, setName] = useState("");
+  const items = useQuery(trpc.items.list.queryOptions());
+
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: trpc.items.list.queryKey() });
+
+  const create = useMutation(
+    trpc.items.create.mutationOptions({
+      onSuccess: () => {
+        invalidate();
+        setName("");
+      },
+    }),
+  );
+  const remove = useMutation(
+    trpc.items.remove.mutationOptions({ onSuccess: invalidate }),
+  );
 
   return (
-    <div className="mx-auto max-w-xl space-y-8 p-8">
-      <section>
-        <h2 className="text-lg font-semibold text-slate-800">
-          Your authenticated session
-        </h2>
-        <pre className="mt-2 overflow-x-auto rounded bg-slate-100 p-3 text-sm text-slate-700">
-          {me.isLoading ? "…" : JSON.stringify(me.data, null, 2)}
-        </pre>
-        <p className="mt-1 text-xs text-slate-400">
-          Returned by the org-scoped <code>auth.me</code> tRPC procedure after
-          verifying your Clerk token on the backend.
+    <div className="mx-auto max-w-xl space-y-4 p-8">
+      <div>
+        <h2 className="text-lg font-semibold text-slate-800">Items</h2>
+        <p className="text-sm text-slate-500">
+          Stored in MongoDB, scoped to your active organization. Switch orgs to
+          see each business's own items.
         </p>
-      </section>
+      </div>
+
+      <form
+        className="flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (name.trim()) create.mutate({ name: name.trim() });
+        }}
+      >
+        <input
+          className="flex-1 rounded border border-slate-300 px-3 py-2"
+          placeholder="Add an item…"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <button
+          className="rounded bg-slate-800 px-4 py-2 font-medium text-white disabled:opacity-50"
+          type="submit"
+          disabled={create.isPending}
+        >
+          Add
+        </button>
+      </form>
+
+      {items.isLoading ? (
+        <p className="text-slate-400">Loading…</p>
+      ) : items.data && items.data.length > 0 ? (
+        <ul className="space-y-1">
+          {items.data.map((item) => (
+            <li
+              key={item.id}
+              className="flex items-center justify-between rounded bg-slate-100 px-3 py-2"
+            >
+              <span className="text-slate-800">{item.name}</span>
+              <button
+                className="text-sm text-slate-400 hover:text-red-600"
+                onClick={() => remove.mutate({ id: item.id })}
+              >
+                Delete
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-slate-400">No items yet — add one above.</p>
+      )}
     </div>
   );
 };
@@ -85,7 +142,8 @@ const SignedInApp = () => {
     );
   }
 
-  return <Workspace />;
+  // Remount when the active org changes so item queries refetch for the new org.
+  return <Workspace key={organization.id} />;
 };
 
 export const App = () => {

@@ -57,8 +57,10 @@ bun run build        # both packages
 
 Add a router under `src/routers/`, then mount it in `src/router.ts`.
 
-## No database yet
+## Database
 
-State lives in memory (see `GreetingServiceImpl`). To add a DB, introduce a
-data-access service and inject it where needed — no router or client changes
-required.
+MongoDB Atlas via Mongoose. The API connects at startup (`MONGODB_URI`); models
+live in `src/models/`. All domain data is **org-scoped** — every model carries an
+`orgId` and every repository method filters by it, so one organization never sees
+another's data. `orgProtectedProcedure` guarantees `ctx.auth.orgId` for org-scoped
+routes (see `ItemService` + `routers/items.ts` for the pattern).

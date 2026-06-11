@@ -17,6 +17,7 @@ WEB_SERVICE="landscape-web"
 API_IMAGE="$REGISTRY/api:latest"
 WEB_IMAGE="$REGISTRY/web:latest"
 CLERK_SECRET_NAME="clerk-secret-key"  # Secret Manager secret holding the Clerk sk_ key
+MONGO_SECRET_NAME="mongodb-uri"       # Secret Manager secret holding the Atlas connection string
 
 # ── Safety guard ─────────────────────────────────────────────────────────────
 # Activate the personal configuration and refuse to proceed unless the active
@@ -56,26 +57,33 @@ if [ -z "$CLERK_PUBLISHABLE_KEY" ]; then
   exit 1
 fi
 
-# Secret key (sk_) is SENSITIVE — stored in Secret Manager, injected at runtime.
+# Sensitive values (Clerk secret key, Mongo URI) live in Secret Manager and are
+# injected at runtime. Create each from packages/api/.env on first run, then
+# grant the Cloud Run runtime service account read access. All idempotent.
 gcloud services enable secretmanager.googleapis.com --project "$PROJECT" --quiet >/dev/null
-if ! gcloud secrets describe "$CLERK_SECRET_NAME" --project "$PROJECT" >/dev/null 2>&1; then
-  echo "Creating Secret Manager secret: $CLERK_SECRET_NAME"
-  SECRET_VALUE="${CLERK_SECRET_KEY:-$(grep -E '^CLERK_SECRET_KEY=' packages/api/.env 2>/dev/null | head -1 | cut -d= -f2-)}"
-  if [ -z "$SECRET_VALUE" ]; then
-    echo "ERROR: secret '$CLERK_SECRET_NAME' missing and CLERK_SECRET_KEY not in packages/api/.env." >&2
-    echo "  Create it once: printf '%s' 'sk_...' | gcloud secrets create $CLERK_SECRET_NAME --data-file=- --project $PROJECT" >&2
-    exit 1
-  fi
-  printf '%s' "$SECRET_VALUE" | gcloud secrets create "$CLERK_SECRET_NAME" \
-    --project "$PROJECT" --replication-policy automatic --data-file=- >/dev/null
-fi
-
-# Let the Cloud Run runtime service account read the secret (idempotent)
 PROJECT_NUMBER=$(gcloud projects describe "$PROJECT" --format "value(projectNumber)")
-gcloud secrets add-iam-policy-binding "$CLERK_SECRET_NAME" \
-  --project "$PROJECT" \
-  --member "serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
-  --role roles/secretmanager.secretAccessor --quiet >/dev/null
+RUNTIME_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+
+ensure_secret() {
+  local secret_name="$1" env_var="$2"
+  if ! gcloud secrets describe "$secret_name" --project "$PROJECT" >/dev/null 2>&1; then
+    echo "Creating Secret Manager secret: $secret_name"
+    local value="${!env_var:-$(grep -E "^$env_var=" packages/api/.env 2>/dev/null | head -1 | cut -d= -f2-)}"
+    if [ -z "$value" ]; then
+      echo "ERROR: secret '$secret_name' missing and $env_var not in packages/api/.env." >&2
+      exit 1
+    fi
+    printf '%s' "$value" | gcloud secrets create "$secret_name" \
+      --project "$PROJECT" --replication-policy automatic --data-file=- >/dev/null
+  fi
+  gcloud secrets add-iam-policy-binding "$secret_name" \
+    --project "$PROJECT" \
+    --member "serviceAccount:$RUNTIME_SA" \
+    --role roles/secretmanager.secretAccessor --quiet >/dev/null
+}
+
+ensure_secret "$CLERK_SECRET_NAME" CLERK_SECRET_KEY
+ensure_secret "$MONGO_SECRET_NAME" MONGODB_URI
 
 # ── API ──────────────────────────────────────────────────────────────────────
 echo "Building API image..."
@@ -92,7 +100,7 @@ gcloud run deploy "$API_SERVICE" \
   --allow-unauthenticated \
   --set-env-vars ENVIRONMENT=production \
   --set-env-vars WEB_URL="${WEB_URL:-https://placeholder.example.com}" \
-  --set-secrets CLERK_SECRET_KEY="$CLERK_SECRET_NAME:latest"
+  --set-secrets CLERK_SECRET_KEY="$CLERK_SECRET_NAME:latest",MONGODB_URI="$MONGO_SECRET_NAME:latest"
 
 API_URL=$(gcloud run services describe "$API_SERVICE" \
   --project "$PROJECT" --region "$REGION" --format "value(status.url)")
@@ -126,7 +134,7 @@ gcloud run services update "$API_SERVICE" \
   --project "$PROJECT" --region "$REGION" \
   --set-env-vars ENVIRONMENT=production \
   --set-env-vars WEB_URL="$WEB_URL" \
-  --set-secrets CLERK_SECRET_KEY="$CLERK_SECRET_NAME:latest"
+  --set-secrets CLERK_SECRET_KEY="$CLERK_SECRET_NAME:latest",MONGODB_URI="$MONGO_SECRET_NAME:latest"
 
 echo ""
 echo "Deploy complete!"

@@ -1,4 +1,4 @@
-import type { GreetingService } from "./services/GreetingService/GreetingService.ts";
+import type { ItemService } from "./services/ItemService/ItemService.ts";
 
 /**
  * Authenticated principal for a request, derived from a verified Clerk session
@@ -20,6 +20,6 @@ export interface AuthContext {
 export interface Context {
   auth: AuthContext | null;
   services: {
-    greetingService: GreetingService;
+    itemService: ItemService;
   };
 }

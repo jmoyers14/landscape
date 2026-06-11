@@ -3,6 +3,7 @@ import { z } from "zod";
 import type {
   ClerkConfig,
   ConfigService,
+  DatabaseConfig,
   Environment,
   ServerConfig,
 } from "./ConfigService.ts";
@@ -14,6 +15,7 @@ const envSchema = z.object({
   port: z.coerce.number().default(3000),
   webUrl: z.string().url().default("http://localhost:5173"),
   clerkSecretKey: z.string().min(1),
+  mongodbUri: z.string().min(1),
 });
 
 @injectable()
@@ -27,6 +29,7 @@ export class ConfigServiceImpl implements ConfigService {
       port: process.env.PORT,
       webUrl: process.env.WEB_URL,
       clerkSecretKey: process.env.CLERK_SECRET_KEY,
+      mongodbUri: process.env.MONGODB_URI,
     });
 
     if (!result.success) {
@@ -51,6 +54,12 @@ export class ConfigServiceImpl implements ConfigService {
   getClerk(): ClerkConfig {
     return {
       secretKey: this.config.clerkSecretKey,
+    };
+  }
+
+  getDatabase(): DatabaseConfig {
+    return {
+      uri: this.config.mongodbUri,
     };
   }
 }

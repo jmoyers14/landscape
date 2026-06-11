@@ -74,31 +74,39 @@ and the Clerk publishable key baked in → deploys web → updates the API's
 `WEB_URL` so CORS allows the real web origin. It prints both public URLs at the
 end — share the web URL for feedback.
 
-## Clerk configuration
+## Secrets & configuration
 
-`deploy.sh` reads its Clerk values from your local `.env` files (the same source
-of truth as local dev), so there's nothing extra to pass:
+`deploy.sh` reads everything from your local `.env` files (the same source of
+truth as local dev), so there's nothing extra to pass:
 
-- **Publishable key** (`pk_…`, public — baked into the web bundle): read from
-  `packages/web/.env` `VITE_CLERK_PUBLISHABLE_KEY`, passed as a Docker build-arg.
-- **Secret key** (`sk_…`, sensitive — injected at runtime): stored in **GCP
-  Secret Manager** as `clerk-secret-key`. On first deploy the script enables the
-  Secret Manager API, creates the secret from `packages/api/.env`'s
-  `CLERK_SECRET_KEY`, and grants the Cloud Run service account read access — all
-  idempotent.
+- **Clerk publishable key** (`pk_…`, public — baked into the web bundle): read
+  from `packages/web/.env` `VITE_CLERK_PUBLISHABLE_KEY`, passed as a build-arg.
+- **Clerk secret key** (`sk_…`, sensitive): Secret Manager secret
+  `clerk-secret-key`, from `packages/api/.env` `CLERK_SECRET_KEY`.
+- **Mongo Atlas URI** (sensitive): Secret Manager secret `mongodb-uri`, from
+  `packages/api/.env` `MONGODB_URI`.
 
-**Rotating the secret key** (after creating a new key in Clerk):
+On first deploy the script enables the Secret Manager API, creates each secret
+from `packages/api/.env`, and grants the Cloud Run service account read access —
+all idempotent. Both secrets are injected at runtime via `--set-secrets`.
+
+**Rotating a secret** (e.g. a new Clerk key or rotated Atlas password):
 
 ```bash
-printf '%s' 'sk_live_new_value' | \
+printf '%s' 'NEW_VALUE' | \
   gcloud secrets versions add clerk-secret-key --data-file=- --project landscape-499116
-# then redeploy (or: gcloud run services update landscape-api --region us-central1 \
-#   --set-secrets CLERK_SECRET_KEY=clerk-secret-key:latest)
+#                              ^ or mongodb-uri
+# then redeploy, or: gcloud run services update landscape-api --region us-central1 \
+#   --set-secrets CLERK_SECRET_KEY=clerk-secret-key:latest,MONGODB_URI=mongodb-uri:latest
 ```
+
+**Atlas network access:** Cloud Run egresses from dynamic IPs, so the Atlas
+cluster's Network Access list must allow `0.0.0.0/0` (or use a VPC connector with
+a static egress IP to lock it down later).
 
 > Docker prints a `SecretsUsedInArgOrEnv` warning for `VITE_CLERK_PUBLISHABLE_KEY`
 > — a false positive. Publishable keys are client-side by design; only the secret
-> key is kept out of the image (in Secret Manager).
+> key and Mongo URI are kept out of the image (in Secret Manager).
 
 ## Redeploying after changes
 
@@ -107,9 +115,8 @@ service's block, or run the relevant `docker build`/`gcloud run deploy` lines.
 
 ## Notes
 
-- **Database:** none yet. When you add one, store its URL in Secret Manager and
-  add `--set-secrets DATABASE_URL=database-url:latest` to the API deploy + update
-  commands — same pattern as `clerk-secret-key`.
+- **Database:** MongoDB Atlas, connection string in the `mongodb-uri` secret
+  (see above). The API connects at startup; data is scoped per organization.
 - **amd64 builds on Apple Silicon** run under emulation (`--platform
   linux/amd64`) — slower but required, since Cloud Run runs amd64.
 - **Cost:** Cloud Run scales to zero; idle services cost ~nothing and fit the

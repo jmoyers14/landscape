@@ -9,8 +9,13 @@ export interface ClerkConfig {
   secretKey: string;
 }
 
+export interface DatabaseConfig {
+  uri: string;
+}
+
 export interface ConfigService {
   environment: Environment;
   getServer(): ServerConfig;
   getClerk(): ClerkConfig;
+  getDatabase(): DatabaseConfig;
 }

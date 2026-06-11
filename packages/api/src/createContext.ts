@@ -3,10 +3,10 @@ import type { CreateHTTPContextOptions } from "@trpc/server/adapters/standalone"
 import {
   container,
   CONFIG_SERVICE_TOKEN,
-  GREETING_SERVICE_TOKEN,
+  ITEM_SERVICE_TOKEN,
 } from "./services/index.ts";
 import type { ConfigService } from "./services/ConfigService/ConfigService.ts";
-import type { GreetingService } from "./services/GreetingService/GreetingService.ts";
+import type { ItemService } from "./services/ItemService/ItemService.ts";
 import type { AuthContext, Context } from "./context.ts";
 
 /**
@@ -52,9 +52,7 @@ export async function createContext(
   return {
     auth,
     services: {
-      greetingService: container.resolve<GreetingService>(
-        GREETING_SERVICE_TOKEN,
-      ),
+      itemService: container.resolve<ItemService>(ITEM_SERVICE_TOKEN),
     },
   };
 }
