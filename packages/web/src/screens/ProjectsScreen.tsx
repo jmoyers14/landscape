@@ -52,29 +52,30 @@ export function ProjectsScreen() {
       {projects.isLoading ? (
         <p className="text-slate-400">Loading…</p>
       ) : projects.data && projects.data.length > 0 ? (
-        <table className="w-full border-collapse text-sm">
+        <div className="overflow-hidden rounded-lg border border-slate-200 shadow-sm">
+          <table className="w-full border-collapse text-sm">
           <thead>
-            <tr className="border-b border-slate-200 text-left text-slate-500">
-              <th className="py-2 pr-4 font-medium">Name</th>
-              <th className="py-2 pr-4 font-medium">Client</th>
-              <th className="py-2 pr-4 font-medium">Location</th>
-              <th className="py-2 pr-4 font-medium">Status</th>
-              <th className="py-2" />
+            <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-500">
+              <th className="px-4 py-2 font-medium">Name</th>
+              <th className="px-4 py-2 font-medium">Client</th>
+              <th className="px-4 py-2 font-medium">Location</th>
+              <th className="px-4 py-2 font-medium">Status</th>
+              <th className="px-4 py-2" />
             </tr>
           </thead>
           <tbody>
             {projects.data.map((project) => (
               <tr key={project.id} className="border-b border-slate-100">
-                <td className="py-2 pr-4 font-medium text-slate-800">
+                <td className="px-4 py-2 font-medium text-slate-800">
                   {project.name}
                 </td>
-                <td className="py-2 pr-4 text-slate-600">
+                <td className="px-4 py-2 text-slate-600">
                   {project.clientName ?? "—"}
                 </td>
-                <td className="py-2 pr-4 text-slate-600">
+                <td className="px-4 py-2 text-slate-600">
                   {project.location ?? "—"}
                 </td>
-                <td className="py-2 pr-4">
+                <td className="px-4 py-2">
                   <StatusSelect
                     status={project.status}
                     onChange={(status) =>
@@ -82,7 +83,7 @@ export function ProjectsScreen() {
                     }
                   />
                 </td>
-                <td className="py-2 text-right">
+                <td className="px-4 py-2 text-right">
                   <button
                     onClick={() => remove.mutate({ id: project.id })}
                     className="text-slate-400 hover:text-red-600"
@@ -93,7 +94,8 @@ export function ProjectsScreen() {
               </tr>
             ))}
           </tbody>
-        </table>
+          </table>
+        </div>
       ) : (
         <div className="rounded border border-dashed border-slate-300 p-8 text-center text-slate-500">
           No projects yet. Click{" "}

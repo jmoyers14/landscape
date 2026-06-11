@@ -7,6 +7,7 @@ import { RootLayout } from "./screens/RootLayout.tsx";
 import { ProjectsScreen } from "./screens/ProjectsScreen.tsx";
 import { CreateProjectScreen } from "./screens/CreateProjectScreen.tsx";
 import { ClientsScreen } from "./screens/ClientsScreen.tsx";
+import { CreateClientScreen } from "./screens/CreateClientScreen.tsx";
 
 const rootRoute = createRootRoute({ component: RootLayout });
 
@@ -28,10 +29,17 @@ const clientsRoute = createRoute({
   component: ClientsScreen,
 });
 
+const newClientRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/clients/new",
+  component: CreateClientScreen,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   newProjectRoute,
   clientsRoute,
+  newClientRoute,
 ]);
 
 export const router = createRouter({ routeTree });
