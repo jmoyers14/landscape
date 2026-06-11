@@ -4,9 +4,11 @@ import {
   AUTH_SERVICE_TOKEN,
   CLIENT_SERVICE_TOKEN,
   PROJECT_SERVICE_TOKEN,
+  ESTIMATE_SERVICE_TOKEN,
 } from "./services/index.ts";
 import type { ClientService } from "./services/ClientService/ClientService.ts";
 import type { ProjectService } from "./services/ProjectService/ProjectService.ts";
+import type { EstimateService } from "./services/EstimateService/EstimateService.ts";
 import type { AuthService } from "./services/AuthService/AuthService.ts";
 import type { Context } from "./context.ts";
 
@@ -26,6 +28,7 @@ export async function createContext(
     services: {
       clientService: container.resolve<ClientService>(CLIENT_SERVICE_TOKEN),
       projectService: container.resolve<ProjectService>(PROJECT_SERVICE_TOKEN),
+      estimateService: container.resolve<EstimateService>(ESTIMATE_SERVICE_TOKEN),
     },
   };
 }

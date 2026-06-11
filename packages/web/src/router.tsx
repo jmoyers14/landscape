@@ -5,7 +5,9 @@ import {
 } from "@tanstack/react-router";
 import { RootLayout } from "./screens/RootLayout.tsx";
 import { ProjectsScreen } from "./screens/ProjectsScreen.tsx";
+import { ProjectDetailScreen } from "./screens/ProjectDetailScreen.tsx";
 import { CreateProjectScreen } from "./screens/CreateProjectScreen.tsx";
+import { EstimateEditorScreen } from "./screens/EstimateEditorScreen.tsx";
 import { ClientsScreen } from "./screens/ClientsScreen.tsx";
 import { CreateClientScreen } from "./screens/CreateClientScreen.tsx";
 
@@ -23,6 +25,18 @@ const newProjectRoute = createRoute({
   component: CreateProjectScreen,
 });
 
+const projectDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/projects/$projectId",
+  component: ProjectDetailScreen,
+});
+
+const estimateEditorRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/projects/$projectId/estimates/$estimateId",
+  component: EstimateEditorScreen,
+});
+
 const clientsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/clients",
@@ -38,6 +52,8 @@ const newClientRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   newProjectRoute,
+  projectDetailRoute,
+  estimateEditorRoute,
   clientsRoute,
   newClientRoute,
 ]);

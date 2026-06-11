@@ -2,15 +2,18 @@ import "reflect-metadata"; // MUST be imported before any decorated class is use
 import { container } from "tsyringe";
 import {
   CLIENT_REPOSITORY_TOKEN,
+  ESTIMATE_REPOSITORY_TOKEN,
   PROJECT_REPOSITORY_TOKEN,
 } from "./tokens.ts";
 import { ClientRepositoryImpl } from "./repositories/ClientRepositoryImpl.ts";
 import { ProjectRepositoryImpl } from "./repositories/ProjectRepositoryImpl.ts";
+import { EstimateRepositoryImpl } from "./repositories/EstimateRepositoryImpl.ts";
 
 // Register every repository as a process-wide singleton. Importing this module
 // wires up the data-access layer; the service composition root pulls it in.
 container.registerSingleton(CLIENT_REPOSITORY_TOKEN, ClientRepositoryImpl);
 container.registerSingleton(PROJECT_REPOSITORY_TOKEN, ProjectRepositoryImpl);
+container.registerSingleton(ESTIMATE_REPOSITORY_TOKEN, EstimateRepositoryImpl);
 
 export { connectDatabase } from "./connection.ts";
 export * from "./tokens.ts";
