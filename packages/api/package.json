@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@clerk/backend": "^3.6.1",
     "@trpc/server": "^11.8.1",
     "cors": "^2.8.5",
     "reflect-metadata": "^0.2.1",

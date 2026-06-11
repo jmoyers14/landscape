@@ -1,77 +1,103 @@
-import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { trpc, queryClient } from "./trpc.ts";
+import {
+  CreateOrganization,
+  OrganizationSwitcher,
+  Show,
+  SignInButton,
+  SignUpButton,
+  UserButton,
+  useOrganization,
+} from "@clerk/react";
+import { useQuery } from "@tanstack/react-query";
+import { trpc } from "./trpc.ts";
 
-export const App = () => {
-  const [name, setName] = useState("world");
-  const [message, setMessage] = useState("");
+const Header = () => (
+  <header className="flex items-center justify-between border-b border-slate-200 px-6 py-3">
+    <div>
+      <span className="text-lg font-bold text-slate-800">Landscape</span>
+      <span className="ml-2 text-sm text-slate-500">for landscaping teams</span>
+    </div>
+    <div className="flex items-center gap-3">
+      <Show when="signed-out">
+        <SignInButton mode="modal" />
+        <SignUpButton mode="modal" />
+      </Show>
+      <Show when="signed-in">
+        <OrganizationSwitcher afterCreateOrganizationUrl="/" />
+        <UserButton />
+      </Show>
+    </div>
+  </header>
+);
 
-  const hello = useQuery(trpc.greeting.hello.queryOptions({ name }));
-  const greetings = useQuery(trpc.greeting.list.queryOptions());
+const SignedOutHero = () => (
+  <div className="mx-auto max-w-xl p-8 text-center">
+    <h1 className="text-2xl font-bold text-slate-800">
+      Run your landscaping business
+    </h1>
+    <p className="mt-2 text-slate-500">
+      Sign in or create an account to get started. Each business gets its own
+      organization and can invite its team.
+    </p>
+  </div>
+);
 
-  const addGreeting = useMutation(
-    trpc.greeting.add.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.greeting.list.queryKey(),
-        });
-        setMessage("");
-      },
-    }),
-  );
+const Workspace = () => {
+  const me = useQuery(trpc.auth.me.queryOptions());
 
   return (
-    <div className="mx-auto max-w-xl p-8">
-      <h1 className="text-2xl font-bold text-slate-800">Landscape</h1>
-      <p className="mt-1 text-sm text-slate-500">
-        Bun + tRPC + tsyringe + React
-      </p>
-
-      <section className="mt-8">
-        <label className="block text-sm font-medium text-slate-700">
-          Your name
-          <input
-            className="mt-1 block w-full rounded border border-slate-300 px-3 py-2"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-        </label>
-        <p className="mt-3 text-lg text-slate-800">
-          {hello.isLoading ? "…" : hello.data?.message}
+    <div className="mx-auto max-w-xl space-y-8 p-8">
+      <section>
+        <h2 className="text-lg font-semibold text-slate-800">
+          Your authenticated session
+        </h2>
+        <pre className="mt-2 overflow-x-auto rounded bg-slate-100 p-3 text-sm text-slate-700">
+          {me.isLoading ? "…" : JSON.stringify(me.data, null, 2)}
+        </pre>
+        <p className="mt-1 text-xs text-slate-400">
+          Returned by the org-scoped <code>auth.me</code> tRPC procedure after
+          verifying your Clerk token on the backend.
         </p>
       </section>
+    </div>
+  );
+};
 
-      <section className="mt-8">
-        <h2 className="text-lg font-semibold text-slate-800">Greetings</h2>
-        <form
-          className="mt-2 flex gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (message.trim()) addGreeting.mutate({ message });
-          }}
-        >
-          <input
-            className="flex-1 rounded border border-slate-300 px-3 py-2"
-            placeholder="Add a greeting…"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-          />
-          <button
-            className="rounded bg-slate-800 px-4 py-2 font-medium text-white disabled:opacity-50"
-            type="submit"
-            disabled={addGreeting.isPending}
-          >
-            Add
-          </button>
-        </form>
-        <ul className="mt-4 space-y-1">
-          {greetings.data?.map((g) => (
-            <li key={g.id} className="rounded bg-slate-100 px-3 py-2">
-              {g.message}
-            </li>
-          ))}
-        </ul>
-      </section>
+const SignedInApp = () => {
+  const { organization, isLoaded } = useOrganization();
+
+  if (!isLoaded) {
+    return <div className="p-8 text-slate-400">Loading…</div>;
+  }
+
+  // B2B: a user must belong to an organization (their business) to do anything.
+  if (!organization) {
+    return (
+      <div className="mx-auto max-w-xl p-8">
+        <h1 className="text-xl font-bold text-slate-800">
+          Create your organization
+        </h1>
+        <p className="mt-1 mb-4 text-slate-500">
+          Set up your landscaping business to continue. You can invite your team
+          afterward.
+        </p>
+        <CreateOrganization afterCreateOrganizationUrl="/" />
+      </div>
+    );
+  }
+
+  return <Workspace />;
+};
+
+export const App = () => {
+  return (
+    <div className="min-h-screen bg-white">
+      <Header />
+      <Show when="signed-out">
+        <SignedOutHero />
+      </Show>
+      <Show when="signed-in">
+        <SignedInApp />
+      </Show>
     </div>
   );
 };

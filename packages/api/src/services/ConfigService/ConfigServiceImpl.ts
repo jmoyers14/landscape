@@ -1,6 +1,7 @@
 import { injectable } from "tsyringe";
 import { z } from "zod";
 import type {
+  ClerkConfig,
   ConfigService,
   Environment,
   ServerConfig,
@@ -12,6 +13,7 @@ const envSchema = z.object({
     .default("local"),
   port: z.coerce.number().default(3000),
   webUrl: z.string().url().default("http://localhost:5173"),
+  clerkSecretKey: z.string().min(1),
 });
 
 @injectable()
@@ -24,6 +26,7 @@ export class ConfigServiceImpl implements ConfigService {
       environment: process.env.ENVIRONMENT,
       port: process.env.PORT,
       webUrl: process.env.WEB_URL,
+      clerkSecretKey: process.env.CLERK_SECRET_KEY,
     });
 
     if (!result.success) {
@@ -42,6 +45,12 @@ export class ConfigServiceImpl implements ConfigService {
     return {
       port: this.config.port,
       webUrl: this.config.webUrl,
+    };
+  }
+
+  getClerk(): ClerkConfig {
+    return {
+      secretKey: this.config.clerkSecretKey,
     };
   }
 }

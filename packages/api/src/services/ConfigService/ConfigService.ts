@@ -5,7 +5,12 @@ export interface ServerConfig {
   webUrl: string;
 }
 
+export interface ClerkConfig {
+  secretKey: string;
+}
+
 export interface ConfigService {
   environment: Environment;
   getServer(): ServerConfig;
+  getClerk(): ClerkConfig;
 }
