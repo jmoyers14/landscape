@@ -5,3 +5,4 @@
  */
 export const CONFIG_SERVICE_TOKEN = "ConfigService";
 export const ITEM_SERVICE_TOKEN = "ItemService";
+export const AUTH_SERVICE_TOKEN = "AuthService";

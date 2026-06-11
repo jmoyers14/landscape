@@ -1,16 +1,13 @@
+import type { AuthIdentity } from "./integrations/auth/AuthClient.ts";
 import type { ItemService } from "./services/ItemService/ItemService.ts";
 
 /**
- * Authenticated principal for a request, derived from a verified Clerk session
- * token. `orgId`/`orgRole` are populated only when the user has an active
- * organization — the tenant boundary for this B2B app.
+ * Authenticated principal for a request — the provider-neutral identity the
+ * AuthClient returns after verifying a session token. `orgId`/`orgRole` are
+ * populated only when the user has an active organization (the tenant boundary
+ * for this B2B app).
  */
-export interface AuthContext {
-  userId: string;
-  orgId: string | null;
-  orgRole: string | null;
-  orgSlug: string | null;
-}
+export type AuthContext = AuthIdentity;
 
 /**
  * Request context type. This module imports only service *interfaces* (no DI
