@@ -1,10 +1,12 @@
 import type { CreateHTTPContextOptions } from "@trpc/server/adapters/standalone";
 import {
   container,
-  ITEM_SERVICE_TOKEN,
   AUTH_SERVICE_TOKEN,
+  CLIENT_SERVICE_TOKEN,
+  PROJECT_SERVICE_TOKEN,
 } from "./services/index.ts";
-import type { ItemService } from "./services/ItemService/ItemService.ts";
+import type { ClientService } from "./services/ClientService/ClientService.ts";
+import type { ProjectService } from "./services/ProjectService/ProjectService.ts";
 import type { AuthService } from "./services/AuthService/AuthService.ts";
 import type { Context } from "./context.ts";
 
@@ -22,7 +24,8 @@ export async function createContext(
   return {
     auth,
     services: {
-      itemService: container.resolve<ItemService>(ITEM_SERVICE_TOKEN),
+      clientService: container.resolve<ClientService>(CLIENT_SERVICE_TOKEN),
+      projectService: container.resolve<ProjectService>(PROJECT_SERVICE_TOKEN),
     },
   };
 }

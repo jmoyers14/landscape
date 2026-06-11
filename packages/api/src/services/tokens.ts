@@ -4,5 +4,6 @@
  * the concrete class.
  */
 export const CONFIG_SERVICE_TOKEN = "ConfigService";
-export const ITEM_SERVICE_TOKEN = "ItemService";
 export const AUTH_SERVICE_TOKEN = "AuthService";
+export const CLIENT_SERVICE_TOKEN = "ClientService";
+export const PROJECT_SERVICE_TOKEN = "ProjectService";

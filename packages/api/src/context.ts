@@ -1,5 +1,6 @@
 import type { AuthIdentity } from "./integrations/auth/AuthClient.ts";
-import type { ItemService } from "./services/ItemService/ItemService.ts";
+import type { ClientService } from "./services/ClientService/ClientService.ts";
+import type { ProjectService } from "./services/ProjectService/ProjectService.ts";
 
 /**
  * Authenticated principal for a request — the provider-neutral identity the
@@ -17,6 +18,7 @@ export type AuthContext = AuthIdentity;
 export interface Context {
   auth: AuthContext | null;
   services: {
-    itemService: ItemService;
+    clientService: ClientService;
+    projectService: ProjectService;
   };
 }
