@@ -550,7 +550,7 @@ function AddLineItemForm({
       <button
         type="submit"
         disabled={busy}
-        className="col-span-2 rounded bg-slate-800 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 sm:col-span-3"
+        className="col-span-2 rounded bg-gold px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gold-light disabled:opacity-50 sm:col-span-3"
       >
         Add line item
       </button>

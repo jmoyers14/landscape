@@ -41,7 +41,7 @@ export function ProjectsScreen() {
         <h1 className="text-xl font-bold text-slate-800">Projects</h1>
         <Link
           to="/projects/new"
-          className="rounded bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
+          className="rounded bg-gold px-4 py-2 text-sm font-medium text-white hover:bg-gold-light"
         >
           Create Project
         </Link>

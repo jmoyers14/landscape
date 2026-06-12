@@ -84,7 +84,7 @@ export function CreateClientScreen() {
           <button
             type="submit"
             disabled={create.isPending}
-            className="rounded bg-slate-800 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="rounded bg-gold px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gold-light disabled:opacity-50"
           >
             {create.isPending ? "Creating…" : "Create Client"}
           </button>

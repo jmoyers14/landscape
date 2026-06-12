@@ -159,7 +159,7 @@ export function ProjectDetailScreen() {
           <div className="flex gap-2 border-t border-slate-200 pt-4">
             <button
               onClick={() => setEditing(true)}
-              className="rounded bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
+              className="rounded bg-gold px-4 py-2 text-sm font-medium text-white hover:bg-gold-light"
             >
               Edit
             </button>
@@ -178,7 +178,7 @@ export function ProjectDetailScreen() {
               <button
                 onClick={() => createEstimate.mutate({ projectId })}
                 disabled={createEstimate.isPending}
-                className="rounded bg-slate-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+                className="rounded bg-gold px-3 py-1.5 text-sm font-medium text-white hover:bg-gold-light disabled:opacity-50"
               >
                 New estimate
               </button>
@@ -292,7 +292,7 @@ function EditForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded bg-slate-800 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded bg-gold px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gold-light disabled:opacity-50"
         >
           {pending ? "Saving…" : "Save"}
         </button>

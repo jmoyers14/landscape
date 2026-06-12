@@ -1,5 +1,5 @@
 export const inputClass =
-  "w-full rounded border border-slate-300 px-3 py-2 text-sm";
+  "w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold";
 
 export const ErrorNote = ({ message }: { message: string | null }) =>
   message ? (

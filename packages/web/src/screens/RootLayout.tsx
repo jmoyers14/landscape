@@ -11,29 +11,40 @@ import { queryClient } from "../trpc.ts";
 import { LandingScreen } from "./LandingScreen.tsx";
 
 const Header = () => (
-  <header className="flex items-center justify-between border-b border-slate-200 px-6 py-3">
+  <header className="flex items-center justify-between border-b border-white/10 bg-earth px-6 py-3">
     <div className="flex items-center gap-6">
-      <span className="text-lg font-bold text-slate-800">Landscape</span>
+      <span className="font-display text-lg tracking-wide text-[#E8EDE6]">
+        Land<span className="text-gold-light">scape</span>
+      </span>
       <nav className="flex gap-4 text-sm">
         <Link
           to="/"
           activeOptions={{ exact: true }}
-          className="text-slate-500 hover:text-slate-800"
-          activeProps={{ className: "text-slate-900 font-medium" }}
+          className="text-[#7A9A88] transition-colors hover:text-[#E8EDE6]"
+          activeProps={{ className: "text-white font-medium" }}
         >
           Projects
         </Link>
         <Link
           to="/clients"
-          className="text-slate-500 hover:text-slate-800"
-          activeProps={{ className: "text-slate-900 font-medium" }}
+          className="text-[#7A9A88] transition-colors hover:text-[#E8EDE6]"
+          activeProps={{ className: "text-white font-medium" }}
         >
           Clients
         </Link>
       </nav>
     </div>
     <div className="flex items-center gap-3">
-      <OrganizationSwitcher afterCreateOrganizationUrl="/" />
+      <OrganizationSwitcher
+        afterCreateOrganizationUrl="/"
+        appearance={{
+          elements: {
+            organizationSwitcherTrigger:
+              "text-[#E8EDE6] hover:bg-white/10 rounded-md",
+            organizationPreviewMainIdentifier: "text-[#E8EDE6]",
+          },
+        }}
+      />
       <UserButton />
     </div>
   </header>
