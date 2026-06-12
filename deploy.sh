@@ -18,6 +18,7 @@ API_IMAGE="$REGISTRY/api:latest"
 WEB_IMAGE="$REGISTRY/web:latest"
 CLERK_SECRET_NAME="clerk-secret-key"  # Secret Manager secret holding the Clerk sk_ key
 MONGO_SECRET_NAME="mongodb-uri"       # Secret Manager secret holding the Atlas connection string
+MAPS_SECRET_NAME="google-maps-api-key" # Secret Manager secret holding the Google Maps key (optional)
 
 # ── Safety guard ─────────────────────────────────────────────────────────────
 # Activate the personal configuration and refuse to proceed unless the active
@@ -85,6 +86,22 @@ ensure_secret() {
 ensure_secret "$CLERK_SECRET_NAME" CLERK_SECRET_KEY
 ensure_secret "$MONGO_SECRET_NAME" MONGODB_URI
 
+# Required secrets the API always gets, plus the optional Maps key wired in below.
+API_SECRETS="CLERK_SECRET_KEY=$CLERK_SECRET_NAME:latest,MONGODB_URI=$MONGO_SECRET_NAME:latest"
+
+# Google Maps key is optional: wire it only if the secret already exists or
+# GOOGLE_MAPS_API_KEY is available (env or packages/api/.env). This keeps deploys
+# working before the property-image feature is configured.
+if gcloud secrets describe "$MAPS_SECRET_NAME" --project "$PROJECT" >/dev/null 2>&1 \
+  || [ -n "${GOOGLE_MAPS_API_KEY:-}" ] \
+  || grep -qE '^GOOGLE_MAPS_API_KEY=' packages/api/.env 2>/dev/null; then
+  ensure_secret "$MAPS_SECRET_NAME" GOOGLE_MAPS_API_KEY
+  API_SECRETS="$API_SECRETS,GOOGLE_MAPS_API_KEY=$MAPS_SECRET_NAME:latest"
+  echo "Google Maps key wired into the API."
+else
+  echo "No Google Maps key found — deploying without the property-image feature."
+fi
+
 # ── API ──────────────────────────────────────────────────────────────────────
 # The web URL is stable across deploys, so look it up now and hand it to the API
 # from its first revision — no placeholder, no transient wrong-origin window.
@@ -108,7 +125,7 @@ gcloud run deploy "$API_SERVICE" \
   --allow-unauthenticated \
   --set-env-vars ENVIRONMENT=production \
   --set-env-vars WEB_URL="$API_WEB_URL" \
-  --set-secrets CLERK_SECRET_KEY="$CLERK_SECRET_NAME:latest",MONGODB_URI="$MONGO_SECRET_NAME:latest"
+  --set-secrets "$API_SECRETS"
 
 API_URL=$(gcloud run services describe "$API_SERVICE" \
   --project "$PROJECT" --region "$REGION" --format "value(status.url)")
@@ -143,7 +160,7 @@ if [ "$WEB_URL" != "$API_WEB_URL" ]; then
     --project "$PROJECT" --region "$REGION" \
     --set-env-vars ENVIRONMENT=production \
     --set-env-vars WEB_URL="$WEB_URL" \
-    --set-secrets CLERK_SECRET_KEY="$CLERK_SECRET_NAME:latest",MONGODB_URI="$MONGO_SECRET_NAME:latest"
+    --set-secrets "$API_SECRETS"
 else
   echo "API already trusts $WEB_URL — skipping CORS update."
 fi

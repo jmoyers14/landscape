@@ -63,4 +63,10 @@ export const projectsRouter = router({
     .mutation(({ ctx, input }) =>
       ctx.services.projectService.remove(ctx.auth.orgId, input.id),
     ),
+
+  propertyImage: orgProtectedProcedure
+    .input(z.object({ id: z.string().min(1) }))
+    .query(({ ctx, input }) =>
+      ctx.services.projectService.getPropertyImage(ctx.auth.orgId, input.id),
+    ),
 });

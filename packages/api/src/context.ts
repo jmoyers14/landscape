@@ -2,6 +2,7 @@ import type { AuthIdentity } from "./integrations/auth/AuthClient.ts";
 import type { ClientService } from "./services/ClientService/ClientService.ts";
 import type { ProjectService } from "./services/ProjectService/ProjectService.ts";
 import type { EstimateService } from "./services/EstimateService/EstimateService.ts";
+import type { AddressService } from "./services/AddressService/AddressService.ts";
 
 /**
  * Authenticated principal for a request — the provider-neutral identity the
@@ -22,5 +23,6 @@ export interface Context {
     clientService: ClientService;
     projectService: ProjectService;
     estimateService: EstimateService;
+    addressService: AddressService;
   };
 }

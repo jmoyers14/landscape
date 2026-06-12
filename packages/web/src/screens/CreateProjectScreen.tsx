@@ -3,6 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient, trpc } from "../trpc.ts";
 import { ErrorNote, inputClass } from "../components/ui.tsx";
+import { AddressAutocomplete } from "../components/AddressAutocomplete.tsx";
 
 export function CreateProjectScreen() {
   const navigate = useNavigate();
@@ -100,13 +101,10 @@ export function CreateProjectScreen() {
             value={project.name}
             onChange={(e) => setProject({ ...project, name: e.target.value })}
           />
-          <input
-            className={inputClass}
+          <AddressAutocomplete
             placeholder="Location"
             value={project.location}
-            onChange={(e) =>
-              setProject({ ...project, location: e.target.value })
-            }
+            onChange={(location) => setProject({ ...project, location })}
           />
           <textarea
             className={inputClass}

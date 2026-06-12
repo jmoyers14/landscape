@@ -3,6 +3,8 @@ import {
   CLIENT_REPOSITORY_TOKEN,
   PROJECT_REPOSITORY_TOKEN,
 } from "../../data-access/tokens.ts";
+import { MAPS_CLIENT_TOKEN } from "../../integrations/tokens.ts";
+import type { MapsClient } from "../../integrations/maps/MapsClient.ts";
 import type { ClientRepository } from "../../data-access/repositories/ClientRepository.ts";
 import type {
   Project,
@@ -14,6 +16,7 @@ import type {
   CreateProjectInput,
   ProjectService,
   ProjectView,
+  PropertyImage,
   UpdateProjectInput,
 } from "./ProjectService.ts";
 
@@ -44,6 +47,8 @@ export class ProjectServiceImpl implements ProjectService {
     private readonly projects: ProjectRepository,
     @inject(CLIENT_REPOSITORY_TOKEN)
     private readonly clients: ClientRepository,
+    @inject(MAPS_CLIENT_TOKEN)
+    private readonly maps: MapsClient,
   ) {}
 
   async list(orgId: string): Promise<ProjectView[]> {
@@ -119,6 +124,25 @@ export class ProjectServiceImpl implements ProjectService {
 
   async remove(orgId: string, id: string): Promise<void> {
     await this.projects.deleteById(orgId, id);
+  }
+
+  async getPropertyImage(
+    orgId: string,
+    id: string,
+  ): Promise<PropertyImage | null> {
+    const project = await this.projects.findById(orgId, id);
+    if (!project) {
+      throw new ServiceError("NOT_FOUND", "Project not found");
+    }
+    if (!project.location) {
+      return null;
+    }
+    const image = await this.maps.satelliteImage(project.location);
+    if (!image) {
+      return null;
+    }
+    const base64 = Buffer.from(image.data).toString("base64");
+    return { dataUrl: `data:${image.contentType};base64,${base64}` };
   }
 
   private async toView(orgId: string, project: Project): Promise<ProjectView> {

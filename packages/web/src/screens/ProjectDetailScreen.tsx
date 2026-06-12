@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient, trpc } from "../trpc.ts";
 import { ErrorNote, inputClass } from "../components/ui.tsx";
+import { AddressAutocomplete } from "../components/AddressAutocomplete.tsx";
 import { formatCurrency } from "../lib/format.ts";
 import {
   NEXT_STATUSES,
@@ -54,6 +55,10 @@ export function ProjectDetailScreen() {
       },
       onError: (e) => setError(e.message),
     }),
+  );
+
+  const propertyImage = useQuery(
+    trpc.projects.propertyImage.queryOptions({ id: projectId }),
   );
 
   const estimates = useQuery(
@@ -123,6 +128,26 @@ export function ProjectDetailScreen() {
               {STATUS_LABEL[data.status]}
             </span>
           </div>
+
+          {data.location && (
+            <div className="overflow-hidden rounded-lg border border-slate-200 shadow-sm">
+              {propertyImage.isLoading ? (
+                <div className="flex aspect-[16/10] items-center justify-center bg-slate-50 text-sm text-slate-400">
+                  Loading aerial view…
+                </div>
+              ) : propertyImage.data ? (
+                <img
+                  src={propertyImage.data.dataUrl}
+                  alt={`Aerial view of ${data.location}`}
+                  className="aspect-[16/10] w-full object-cover"
+                />
+              ) : (
+                <div className="flex aspect-[16/10] items-center justify-center bg-slate-50 px-4 text-center text-sm text-slate-400">
+                  No aerial view available for this address.
+                </div>
+              )}
+            </div>
+          )}
 
           <dl className="space-y-3 rounded-lg border border-slate-200 p-4 shadow-sm">
             <Field label="Location" value={data.location} />
@@ -275,11 +300,10 @@ function EditForm({
         value={form.name}
         onChange={(e) => setForm({ ...form, name: e.target.value })}
       />
-      <input
-        className={inputClass}
+      <AddressAutocomplete
         placeholder="Location"
         value={form.location}
-        onChange={(e) => setForm({ ...form, location: e.target.value })}
+        onChange={(location) => setForm({ ...form, location })}
       />
       <textarea
         className={inputClass}

@@ -5,6 +5,7 @@ import type {
   ConfigService,
   DatabaseConfig,
   Environment,
+  MapsConfig,
   ServerConfig,
 } from "./ConfigService.ts";
 
@@ -16,6 +17,9 @@ const envSchema = z.object({
   webUrl: z.string().url().default("http://localhost:5173"),
   clerkSecretKey: z.string().min(1),
   mongodbUri: z.string().min(1),
+  // Optional: the property-image feature is simply unavailable without it, so a
+  // deploy that hasn't set the key still boots.
+  googleMapsApiKey: z.string().min(1).optional(),
 });
 
 @injectable()
@@ -30,6 +34,7 @@ export class ConfigServiceImpl implements ConfigService {
       webUrl: process.env.WEB_URL,
       clerkSecretKey: process.env.CLERK_SECRET_KEY,
       mongodbUri: process.env.MONGODB_URI,
+      googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
     });
 
     if (!result.success) {
@@ -60,6 +65,12 @@ export class ConfigServiceImpl implements ConfigService {
   getDatabase(): DatabaseConfig {
     return {
       uri: this.config.mongodbUri,
+    };
+  }
+
+  getMaps(): MapsConfig {
+    return {
+      apiKey: this.config.googleMapsApiKey ?? null,
     };
   }
 }

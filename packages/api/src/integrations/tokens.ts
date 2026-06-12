@@ -4,3 +4,4 @@
  * pulling an SDK into its compile.
  */
 export const AUTH_CLIENT_TOKEN = "AuthClient";
+export const MAPS_CLIENT_TOKEN = "MapsClient";

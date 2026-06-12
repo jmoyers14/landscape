@@ -23,6 +23,11 @@ export interface UpdateProjectInput {
   description?: string | null;
 }
 
+/** A rendered property image, ready to drop straight into an <img src>. */
+export interface PropertyImage {
+  dataUrl: string;
+}
+
 export interface ProjectService {
   list(orgId: string): Promise<ProjectView[]>;
   get(orgId: string, id: string): Promise<ProjectView | null>;
@@ -34,4 +39,9 @@ export interface ProjectService {
     status: ProjectStatus,
   ): Promise<ProjectView>;
   remove(orgId: string, id: string): Promise<void>;
+  /**
+   * Aerial image of the project's property, or null when the project has no
+   * location set or the provider can't locate the address.
+   */
+  getPropertyImage(orgId: string, id: string): Promise<PropertyImage | null>;
 }
