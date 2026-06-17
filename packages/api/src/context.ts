@@ -1,4 +1,5 @@
 import type { AuthIdentity } from "./integrations/auth/AuthClient.ts";
+import type { AnalyticsClient } from "./integrations/analytics/AnalyticsClient.ts";
 import type { ClientService } from "./services/ClientService/ClientService.ts";
 import type { ProjectService } from "./services/ProjectService/ProjectService.ts";
 import type { EstimateService } from "./services/EstimateService/EstimateService.ts";
@@ -19,6 +20,12 @@ export type AuthContext = AuthIdentity;
  */
 export interface Context {
   auth: AuthContext | null;
+  /**
+   * Product-analytics sink. Lives beside `services` rather than inside it
+   * because capture is a cross-cutting side effect fired at the procedure
+   * layer, not domain logic.
+   */
+  analytics: AnalyticsClient;
   services: {
     clientService: ClientService;
     projectService: ProjectService;

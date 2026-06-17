@@ -7,11 +7,13 @@ import {
   ESTIMATE_SERVICE_TOKEN,
   ADDRESS_SERVICE_TOKEN,
 } from "./services/index.ts";
+import { ANALYTICS_CLIENT_TOKEN } from "./integrations/index.ts";
 import type { ClientService } from "./services/ClientService/ClientService.ts";
 import type { ProjectService } from "./services/ProjectService/ProjectService.ts";
 import type { EstimateService } from "./services/EstimateService/EstimateService.ts";
 import type { AddressService } from "./services/AddressService/AddressService.ts";
 import type { AuthService } from "./services/AuthService/AuthService.ts";
+import type { AnalyticsClient } from "./integrations/analytics/AnalyticsClient.ts";
 import type { Context } from "./context.ts";
 
 /**
@@ -27,6 +29,7 @@ export async function createContext(
 
   return {
     auth,
+    analytics: container.resolve<AnalyticsClient>(ANALYTICS_CLIENT_TOKEN),
     services: {
       clientService: container.resolve<ClientService>(CLIENT_SERVICE_TOKEN),
       projectService: container.resolve<ProjectService>(PROJECT_SERVICE_TOKEN),

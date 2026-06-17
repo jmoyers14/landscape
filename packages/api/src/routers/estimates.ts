@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { orgProtectedProcedure, router } from "../trpc.ts";
+import { ANALYTICS_EVENTS } from "../analytics/events.ts";
 
 const lineItemInput = z.object({
   phase: z.string().nullable().default(null),
@@ -36,19 +37,41 @@ export const estimatesRouter = router({
     .input(
       z.object({ projectId: z.string().min(1), title: z.string().optional() }),
     )
-    .mutation(({ ctx, input }) =>
-      ctx.services.estimateService.create(
+    .mutation(async ({ ctx, input }) => {
+      const estimate = await ctx.services.estimateService.create(
         ctx.auth.orgId,
         input.projectId,
         input.title,
-      ),
-    ),
+      );
+      ctx.analytics.capture({
+        event: ANALYTICS_EVENTS.ESTIMATE_CREATED,
+        distinctId: ctx.auth.userId,
+        groupId: ctx.auth.orgId,
+        properties: { estimateId: estimate.id, projectId: input.projectId },
+      });
+      return estimate;
+    }),
 
   updateMeta: orgProtectedProcedure
     .input(metaInput)
-    .mutation(({ ctx, input }) => {
+    .mutation(async ({ ctx, input }) => {
       const { id, ...changes } = input;
-      return ctx.services.estimateService.updateMeta(ctx.auth.orgId, id, changes);
+      const estimate = await ctx.services.estimateService.updateMeta(
+        ctx.auth.orgId,
+        id,
+        changes,
+      );
+      // Status is the sales-progression signal worth its own event; other meta
+      // edits (title, rates) aren't funnel-relevant.
+      if (changes.status) {
+        ctx.analytics.capture({
+          event: ANALYTICS_EVENTS.ESTIMATE_STATUS_CHANGED,
+          distinctId: ctx.auth.userId,
+          groupId: ctx.auth.orgId,
+          properties: { estimateId: id, status: changes.status },
+        });
+      }
+      return estimate;
     }),
 
   addLineItem: orgProtectedProcedure

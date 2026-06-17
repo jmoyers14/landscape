@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { orgProtectedProcedure, router } from "../trpc.ts";
+import { ANALYTICS_EVENTS } from "../analytics/events.ts";
 
 // Optional contact fields default to null so the input type matches ClientInput.
 const clientInput = z.object({
@@ -22,9 +23,19 @@ export const clientsRouter = router({
 
   create: orgProtectedProcedure
     .input(clientInput)
-    .mutation(({ ctx, input }) =>
-      ctx.services.clientService.create(ctx.auth.orgId, input),
-    ),
+    .mutation(async ({ ctx, input }) => {
+      const client = await ctx.services.clientService.create(
+        ctx.auth.orgId,
+        input,
+      );
+      ctx.analytics.capture({
+        event: ANALYTICS_EVENTS.CLIENT_CREATED,
+        distinctId: ctx.auth.userId,
+        groupId: ctx.auth.orgId,
+        properties: { clientId: client.id },
+      });
+      return client;
+    }),
 
   update: orgProtectedProcedure
     .input(clientInput.extend({ id: z.string().min(1) }))

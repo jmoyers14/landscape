@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { SignInButton, SignUpButton } from "@clerk/react";
+import { track, WEB_EVENTS } from "../analytics/posthog.ts";
 
 const PHASES = [
   "Irrigation",
@@ -28,7 +29,10 @@ const Wordmark = ({ className = "" }: { className?: string }) => (
 
 const PrimaryCTA = ({ children }: { children: ReactNode }) => (
   <SignUpButton mode="modal">
-    <button className="rounded-sm bg-gold px-6 py-3 text-sm font-semibold tracking-wide text-white transition-colors hover:bg-gold-light">
+    <button
+      onClick={() => track(WEB_EVENTS.SIGNUP_CTA_CLICKED, { location: "hero" })}
+      className="rounded-sm bg-gold px-6 py-3 text-sm font-semibold tracking-wide text-white transition-colors hover:bg-gold-light"
+    >
       {children}
     </button>
   </SignUpButton>
@@ -36,7 +40,10 @@ const PrimaryCTA = ({ children }: { children: ReactNode }) => (
 
 const SecondaryCTA = ({ children }: { children: ReactNode }) => (
   <SignInButton mode="modal">
-    <button className="rounded-sm border border-gold/30 bg-gold/10 px-6 py-3 text-sm font-semibold tracking-wide text-gold-light transition-colors hover:bg-gold/20">
+    <button
+      onClick={() => track(WEB_EVENTS.SIGNIN_CTA_CLICKED, { location: "hero" })}
+      className="rounded-sm border border-gold/30 bg-gold/10 px-6 py-3 text-sm font-semibold tracking-wide text-gold-light transition-colors hover:bg-gold/20"
+    >
       {children}
     </button>
   </SignInButton>
@@ -50,12 +57,22 @@ export function LandingScreen() {
         <Wordmark className="text-xl text-[#E8EDE6]" />
         <div className="flex items-center gap-3">
           <SignInButton mode="modal">
-            <button className="text-xs font-medium uppercase tracking-[0.08em] text-[#7A9A88] transition-colors hover:text-[#E8EDE6]">
+            <button
+              onClick={() =>
+                track(WEB_EVENTS.SIGNIN_CTA_CLICKED, { location: "nav" })
+              }
+              className="text-xs font-medium uppercase tracking-[0.08em] text-[#7A9A88] transition-colors hover:text-[#E8EDE6]"
+            >
               Sign in
             </button>
           </SignInButton>
           <SignUpButton mode="modal">
-            <button className="rounded-full border border-gold/30 bg-gold/10 px-4 py-1.5 text-xs font-semibold tracking-wide text-gold-light transition-colors hover:bg-gold/20">
+            <button
+              onClick={() =>
+                track(WEB_EVENTS.SIGNUP_CTA_CLICKED, { location: "nav" })
+              }
+              className="rounded-full border border-gold/30 bg-gold/10 px-4 py-1.5 text-xs font-semibold tracking-wide text-gold-light transition-colors hover:bg-gold/20"
+            >
               Get Started
             </button>
           </SignUpButton>

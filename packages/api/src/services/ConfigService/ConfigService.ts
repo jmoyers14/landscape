@@ -18,10 +18,17 @@ export interface MapsConfig {
   apiKey: string | null;
 }
 
+export interface AnalyticsConfig {
+  /** Null when no key is set — analytics capture then becomes a no-op. */
+  apiKey: string | null;
+  host: string;
+}
+
 export interface ConfigService {
   environment: Environment;
   getServer(): ServerConfig;
   getClerk(): ClerkConfig;
   getDatabase(): DatabaseConfig;
   getMaps(): MapsConfig;
+  getAnalytics(): AnalyticsConfig;
 }

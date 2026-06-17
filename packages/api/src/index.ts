@@ -3,8 +3,10 @@ import { createHTTPServer } from "@trpc/server/adapters/standalone";
 import { appRouter } from "./router.ts";
 import { createContext } from "./createContext.ts";
 import { container, CONFIG_SERVICE_TOKEN } from "./services/index.ts";
+import { ANALYTICS_CLIENT_TOKEN } from "./integrations/index.ts";
 import { connectDatabase } from "./data-access/index.ts";
 import type { ConfigService } from "./services/ConfigService/ConfigService.ts";
+import type { AnalyticsClient } from "./integrations/analytics/AnalyticsClient.ts";
 
 const main = async (): Promise<void> => {
   const configService = container.resolve<ConfigService>(CONFIG_SERVICE_TOKEN);
@@ -24,6 +26,17 @@ const main = async (): Promise<void> => {
 
   server.listen(port);
   console.log(`API listening on http://localhost:${port}`);
+
+  // Cloud Run sends SIGTERM before stopping the instance — flush buffered
+  // analytics so the last batch of events isn't lost on shutdown.
+  const analytics = container.resolve<AnalyticsClient>(ANALYTICS_CLIENT_TOKEN);
+  const shutdown = async (signal: string): Promise<void> => {
+    console.log(`Received ${signal}, flushing analytics…`);
+    await analytics.shutdown().catch(() => {});
+    process.exit(0);
+  };
+  process.on("SIGTERM", () => void shutdown("SIGTERM"));
+  process.on("SIGINT", () => void shutdown("SIGINT"));
 };
 
 main().catch((error) => {

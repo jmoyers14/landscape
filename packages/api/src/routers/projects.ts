@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { orgProtectedProcedure, router } from "../trpc.ts";
+import { ANALYTICS_EVENTS } from "../analytics/events.ts";
 
 const PROJECT_STATUSES = [
   "lead",
@@ -37,9 +38,19 @@ export const projectsRouter = router({
 
   create: orgProtectedProcedure
     .input(createInput)
-    .mutation(({ ctx, input }) =>
-      ctx.services.projectService.create(ctx.auth.orgId, input),
-    ),
+    .mutation(async ({ ctx, input }) => {
+      const project = await ctx.services.projectService.create(
+        ctx.auth.orgId,
+        input,
+      );
+      ctx.analytics.capture({
+        event: ANALYTICS_EVENTS.PROJECT_CREATED,
+        distinctId: ctx.auth.userId,
+        groupId: ctx.auth.orgId,
+        properties: { projectId: project.id, hasLocation: input.location != null },
+      });
+      return project;
+    }),
 
   update: orgProtectedProcedure
     .input(updateInput)
@@ -50,13 +61,20 @@ export const projectsRouter = router({
 
   changeStatus: orgProtectedProcedure
     .input(z.object({ id: z.string().min(1), status: z.enum(PROJECT_STATUSES) }))
-    .mutation(({ ctx, input }) =>
-      ctx.services.projectService.changeStatus(
+    .mutation(async ({ ctx, input }) => {
+      const project = await ctx.services.projectService.changeStatus(
         ctx.auth.orgId,
         input.id,
         input.status,
-      ),
-    ),
+      );
+      ctx.analytics.capture({
+        event: ANALYTICS_EVENTS.PROJECT_STATUS_CHANGED,
+        distinctId: ctx.auth.userId,
+        groupId: ctx.auth.orgId,
+        properties: { projectId: input.id, status: input.status },
+      });
+      return project;
+    }),
 
   remove: orgProtectedProcedure
     .input(z.object({ id: z.string().min(1) }))

@@ -5,3 +5,4 @@
  */
 export const AUTH_CLIENT_TOKEN = "AuthClient";
 export const MAPS_CLIENT_TOKEN = "MapsClient";
+export const ANALYTICS_CLIENT_TOKEN = "AnalyticsClient";

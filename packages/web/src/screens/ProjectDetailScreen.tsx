@@ -5,6 +5,7 @@ import { queryClient, trpc } from "../trpc.ts";
 import { ErrorNote, inputClass } from "../components/ui.tsx";
 import { AddressAutocomplete } from "../components/AddressAutocomplete.tsx";
 import { formatCurrency } from "../lib/format.ts";
+import { track, WEB_EVENTS } from "../analytics/posthog.ts";
 import {
   NEXT_STATUSES,
   STATUS_LABEL,
@@ -201,7 +202,10 @@ export function ProjectDetailScreen() {
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-medium text-slate-600">Estimates</h2>
               <button
-                onClick={() => createEstimate.mutate({ projectId })}
+                onClick={() => {
+                  track(WEB_EVENTS.NEW_ESTIMATE_CLICKED, { projectId });
+                  createEstimate.mutate({ projectId });
+                }}
                 disabled={createEstimate.isPending}
                 className="rounded bg-gold px-3 py-1.5 text-sm font-medium text-white hover:bg-gold-light disabled:opacity-50"
               >

@@ -58,6 +58,35 @@ if [ -z "$CLERK_PUBLISHABLE_KEY" ]; then
   exit 1
 fi
 
+# ── PostHog analytics config (optional) ──────────────────────────────────────
+# PostHog's project key is PUBLIC (write-only ingestion), so — unlike the Clerk
+# secret / Mongo URI / Maps key — it does NOT belong in Secret Manager. The API
+# gets it as a plain env var; the web bundle bakes it in at build time. Both are
+# optional: without them, analytics simply no-ops and the deploy still works.
+POSTHOG_API_KEY_VALUE="${POSTHOG_API_KEY:-$(grep -E '^POSTHOG_API_KEY=' packages/api/.env 2>/dev/null | head -1 | cut -d= -f2-)}"
+POSTHOG_HOST_VALUE="${POSTHOG_HOST:-$(grep -E '^POSTHOG_HOST=' packages/api/.env 2>/dev/null | head -1 | cut -d= -f2-)}"
+WEB_POSTHOG_KEY="${VITE_POSTHOG_KEY:-$(grep -E '^VITE_POSTHOG_KEY=' packages/web/.env 2>/dev/null | head -1 | cut -d= -f2-)}"
+WEB_POSTHOG_HOST="${VITE_POSTHOG_HOST:-$(grep -E '^VITE_POSTHOG_HOST=' packages/web/.env 2>/dev/null | head -1 | cut -d= -f2-)}"
+
+API_ENV_EXTRA=()
+if [ -n "$POSTHOG_API_KEY_VALUE" ]; then
+  PH_ENV="POSTHOG_API_KEY=$POSTHOG_API_KEY_VALUE"
+  [ -n "$POSTHOG_HOST_VALUE" ] && PH_ENV="$PH_ENV,POSTHOG_HOST=$POSTHOG_HOST_VALUE"
+  API_ENV_EXTRA=(--set-env-vars "$PH_ENV")
+  echo "PostHog analytics key wired into the API (server-side events)."
+else
+  echo "No PostHog server key found — deploying without server-side analytics."
+fi
+
+WEB_POSTHOG_ARGS=()
+if [ -n "$WEB_POSTHOG_KEY" ]; then
+  WEB_POSTHOG_ARGS+=(--build-arg "VITE_POSTHOG_KEY=$WEB_POSTHOG_KEY")
+  [ -n "$WEB_POSTHOG_HOST" ] && WEB_POSTHOG_ARGS+=(--build-arg "VITE_POSTHOG_HOST=$WEB_POSTHOG_HOST")
+  echo "PostHog analytics key baked into the web bundle (browser-side events)."
+else
+  echo "No PostHog web key found — deploying without browser-side analytics."
+fi
+
 # Sensitive values (Clerk secret key, Mongo URI) live in Secret Manager and are
 # injected at runtime. Create each from packages/api/.env on first run, then
 # grant the Cloud Run runtime service account read access. All idempotent.
@@ -125,6 +154,7 @@ gcloud run deploy "$API_SERVICE" \
   --allow-unauthenticated \
   --set-env-vars ENVIRONMENT=production \
   --set-env-vars WEB_URL="$API_WEB_URL" \
+  "${API_ENV_EXTRA[@]+"${API_ENV_EXTRA[@]}"}" \
   --set-secrets "$API_SECRETS"
 
 API_URL=$(gcloud run services describe "$API_SERVICE" \
@@ -136,6 +166,7 @@ echo "Building web image (VITE_API_URL=$API_URL)..."
 docker build --platform linux/amd64 \
   --build-arg VITE_API_URL="$API_URL" \
   --build-arg VITE_CLERK_PUBLISHABLE_KEY="$CLERK_PUBLISHABLE_KEY" \
+  "${WEB_POSTHOG_ARGS[@]+"${WEB_POSTHOG_ARGS[@]}"}" \
   -t "$WEB_IMAGE" \
   -f packages/web/Dockerfile .
 
@@ -160,6 +191,7 @@ if [ "$WEB_URL" != "$API_WEB_URL" ]; then
     --project "$PROJECT" --region "$REGION" \
     --set-env-vars ENVIRONMENT=production \
     --set-env-vars WEB_URL="$WEB_URL" \
+    "${API_ENV_EXTRA[@]+"${API_ENV_EXTRA[@]}"}" \
     --set-secrets "$API_SECRETS"
 else
   echo "API already trusts $WEB_URL — skipping CORS update."

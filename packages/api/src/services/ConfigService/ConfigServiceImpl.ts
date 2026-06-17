@@ -1,6 +1,7 @@
 import { injectable } from "tsyringe";
 import { z } from "zod";
 import type {
+  AnalyticsConfig,
   ClerkConfig,
   ConfigService,
   DatabaseConfig,
@@ -8,6 +9,8 @@ import type {
   MapsConfig,
   ServerConfig,
 } from "./ConfigService.ts";
+
+const DEFAULT_POSTHOG_HOST = "https://us.i.posthog.com";
 
 const envSchema = z.object({
   environment: z
@@ -20,6 +23,10 @@ const envSchema = z.object({
   // Optional: the property-image feature is simply unavailable without it, so a
   // deploy that hasn't set the key still boots.
   googleMapsApiKey: z.string().min(1).optional(),
+  // Optional: PostHog's project key is public (write-only ingestion). Without
+  // it, analytics capture is a no-op and the server still boots.
+  posthogApiKey: z.string().min(1).optional(),
+  posthogHost: z.string().url().default(DEFAULT_POSTHOG_HOST),
 });
 
 @injectable()
@@ -35,6 +42,8 @@ export class ConfigServiceImpl implements ConfigService {
       clerkSecretKey: process.env.CLERK_SECRET_KEY,
       mongodbUri: process.env.MONGODB_URI,
       googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
+      posthogApiKey: process.env.POSTHOG_API_KEY,
+      posthogHost: process.env.POSTHOG_HOST,
     });
 
     if (!result.success) {
@@ -71,6 +80,13 @@ export class ConfigServiceImpl implements ConfigService {
   getMaps(): MapsConfig {
     return {
       apiKey: this.config.googleMapsApiKey ?? null,
+    };
+  }
+
+  getAnalytics(): AnalyticsConfig {
+    return {
+      apiKey: this.config.posthogApiKey ?? null,
+      host: this.config.posthogHost,
     };
   }
 }
