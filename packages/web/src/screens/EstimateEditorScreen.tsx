@@ -39,6 +39,25 @@ const STATUS_LABEL: Record<EstimateStatus, string> = {
   accepted: "Accepted",
 };
 
+const PHASES = [
+  "General Condition",
+  "Demolition",
+  "Drainage",
+  "Irrigation",
+  "Soil Preparation",
+  "Planting",
+  "Lawn Borders",
+  "Lighting/Electrical",
+  "Gravel/Boulders/Steppers",
+  "Carpentry",
+  "Concrete",
+  "Masonry: Walls",
+  "Masonry: Paving",
+  "Gas Line and Fire Ring",
+  "Water Features: Pre Fab",
+  "Water Features: Others",
+] as const;
+
 const phaseLabel = (phase: string | null) => phase || "General";
 
 export function EstimateEditorScreen() {
@@ -500,12 +519,18 @@ function AddLineItemForm({
       onSubmit={submit}
       className="grid grid-cols-2 gap-2 rounded-lg border border-dashed border-slate-300 p-4 sm:grid-cols-3"
     >
-      <input
+      <select
         className={inputClass}
-        placeholder="Phase (e.g. Irrigation)"
         value={form.phase}
         onChange={(e) => setForm({ ...form, phase: e.target.value })}
-      />
+      >
+        <option value="">Phase…</option>
+        {PHASES.map((phase) => (
+          <option key={phase} value={phase}>
+            {phase}
+          </option>
+        ))}
+      </select>
       <select
         className={inputClass}
         value={form.type}
