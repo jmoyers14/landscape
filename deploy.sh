@@ -52,7 +52,7 @@ gcloud artifacts repositories describe "$REPO" --location "$REGION" >/dev/null 2
 # ── Clerk config (validated up front, before the slow builds) ────────────────
 # Publishable key (pk_) is PUBLIC — baked into the web bundle at build time.
 # Source of truth is packages/web/.env, same as local dev.
-CLERK_PUBLISHABLE_KEY="${VITE_CLERK_PUBLISHABLE_KEY:-$(grep -E '^VITE_CLERK_PUBLISHABLE_KEY=' packages/web/.env 2>/dev/null | head -1 | cut -d= -f2-)}"
+CLERK_PUBLISHABLE_KEY="${VITE_CLERK_PUBLISHABLE_KEY:-$(grep -E '^VITE_CLERK_PUBLISHABLE_KEY=' packages/web/.env 2>/dev/null | head -1 | cut -d= -f2- || true)}"
 if [ -z "$CLERK_PUBLISHABLE_KEY" ]; then
   echo "ERROR: VITE_CLERK_PUBLISHABLE_KEY not set (env or packages/web/.env)." >&2
   exit 1
@@ -63,10 +63,10 @@ fi
 # secret / Mongo URI / Maps key — it does NOT belong in Secret Manager. The API
 # gets it as a plain env var; the web bundle bakes it in at build time. Both are
 # optional: without them, analytics simply no-ops and the deploy still works.
-POSTHOG_API_KEY_VALUE="${POSTHOG_API_KEY:-$(grep -E '^POSTHOG_API_KEY=' packages/api/.env 2>/dev/null | head -1 | cut -d= -f2-)}"
-POSTHOG_HOST_VALUE="${POSTHOG_HOST:-$(grep -E '^POSTHOG_HOST=' packages/api/.env 2>/dev/null | head -1 | cut -d= -f2-)}"
-WEB_POSTHOG_KEY="${VITE_POSTHOG_KEY:-$(grep -E '^VITE_POSTHOG_KEY=' packages/web/.env 2>/dev/null | head -1 | cut -d= -f2-)}"
-WEB_POSTHOG_HOST="${VITE_POSTHOG_HOST:-$(grep -E '^VITE_POSTHOG_HOST=' packages/web/.env 2>/dev/null | head -1 | cut -d= -f2-)}"
+POSTHOG_API_KEY_VALUE="${POSTHOG_API_KEY:-$(grep -E '^POSTHOG_API_KEY=' packages/api/.env 2>/dev/null | head -1 | cut -d= -f2- || true)}"
+POSTHOG_HOST_VALUE="${POSTHOG_HOST:-$(grep -E '^POSTHOG_HOST=' packages/api/.env 2>/dev/null | head -1 | cut -d= -f2- || true)}"
+WEB_POSTHOG_KEY="${VITE_POSTHOG_KEY:-$(grep -E '^VITE_POSTHOG_KEY=' packages/web/.env 2>/dev/null | head -1 | cut -d= -f2- || true)}"
+WEB_POSTHOG_HOST="${VITE_POSTHOG_HOST:-$(grep -E '^VITE_POSTHOG_HOST=' packages/web/.env 2>/dev/null | head -1 | cut -d= -f2- || true)}"
 
 API_ENV_EXTRA=()
 if [ -n "$POSTHOG_API_KEY_VALUE" ]; then
@@ -98,7 +98,7 @@ ensure_secret() {
   local secret_name="$1" env_var="$2"
   if ! gcloud secrets describe "$secret_name" --project "$PROJECT" >/dev/null 2>&1; then
     echo "Creating Secret Manager secret: $secret_name"
-    local value="${!env_var:-$(grep -E "^$env_var=" packages/api/.env 2>/dev/null | head -1 | cut -d= -f2-)}"
+    local value="${!env_var:-$(grep -E "^$env_var=" packages/api/.env 2>/dev/null | head -1 | cut -d= -f2- || true)}"
     if [ -z "$value" ]; then
       echo "ERROR: secret '$secret_name' missing and $env_var not in packages/api/.env." >&2
       exit 1
