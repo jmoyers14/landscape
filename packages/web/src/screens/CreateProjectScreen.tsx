@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient, trpc } from "../trpc.ts";
-import { ErrorNote, inputClass } from "../components/ui.tsx";
+import { ErrorNote, inputClass, Page } from "../components/ui.tsx";
 import { AddressAutocomplete } from "../components/AddressAutocomplete.tsx";
 
 export function CreateProjectScreen() {
@@ -83,7 +83,7 @@ export function CreateProjectScreen() {
   };
 
   return (
-    <div className="mx-auto max-w-xl space-y-4 p-8">
+    <Page max="xl" className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-slate-800">New Project</h1>
         <Link to="/" className="text-sm text-slate-500 hover:text-slate-700">
@@ -207,6 +207,6 @@ export function CreateProjectScreen() {
           </Link>
         </div>
       </form>
-    </div>
+    </Page>
   );
 }

@@ -4,7 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@landscape/api";
 import { queryClient, trpc } from "../trpc.ts";
-import { ErrorNote, inputClass } from "../components/ui.tsx";
+import { ErrorNote, inputClass, Page } from "../components/ui.tsx";
 import { formatCurrency } from "../lib/format.ts";
 
 type RouterOutput = inferRouterOutputs<AppRouter>;
@@ -114,15 +114,19 @@ export function EstimateEditorScreen() {
   );
 
   if (estimate.isLoading) {
-    return <div className="mx-auto max-w-3xl p-8 text-slate-400">Loading…</div>;
+    return (
+      <Page max="3xl">
+        <p className="text-slate-400">Loading…</p>
+      </Page>
+    );
   }
 
   if (!estimate.data) {
     return (
-      <div className="mx-auto max-w-3xl space-y-4 p-8">
+      <Page max="3xl" className="space-y-4">
         <BackLink projectId={projectId} />
         <p className="text-slate-500">Estimate not found.</p>
-      </div>
+      </Page>
     );
   }
 
@@ -137,7 +141,7 @@ export function EstimateEditorScreen() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-8">
+    <Page max="3xl" className="space-y-6">
       <BackLink projectId={projectId} />
       <ErrorNote message={error} />
 
@@ -177,7 +181,8 @@ export function EstimateEditorScreen() {
                   {formatCurrency(phase.subtotal)}
                 </span>
               </div>
-              <table className="w-full border-collapse text-sm">
+              <div className="overflow-x-auto">
+              <table className="w-full min-w-[36rem] border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-xs text-slate-400">
                     <th className="px-4 py-1.5 font-medium">Description</th>
@@ -213,6 +218,7 @@ export function EstimateEditorScreen() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           ))
         )}
@@ -224,7 +230,7 @@ export function EstimateEditorScreen() {
       </section>
 
       <TotalsPanel estimate={data} />
-    </div>
+    </Page>
   );
 }
 
@@ -254,7 +260,7 @@ function MetaHeader({
   const [title, setTitle] = useState(estimate.title);
 
   return (
-    <div className="flex items-start justify-between gap-4">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
       <input
         className="w-full max-w-sm rounded border border-transparent px-1 text-2xl font-bold text-slate-800 hover:border-slate-200 focus:border-slate-300 focus:outline-none"
         value={title}

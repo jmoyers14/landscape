@@ -8,11 +8,12 @@ import {
   useOrganization,
 } from "@clerk/react";
 import { queryClient } from "../trpc.ts";
+import { Page } from "../components/ui.tsx";
 import { LandingScreen } from "./LandingScreen.tsx";
 
 const Header = () => (
-  <header className="flex items-center justify-between border-b border-white/10 bg-earth px-6 py-3">
-    <div className="flex items-center gap-6">
+  <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-white/10 bg-earth px-4 py-3 md:px-6">
+    <div className="flex items-center gap-4 md:gap-6">
       <span className="font-display text-lg tracking-wide text-[#E8EDE6]">
         Land<span className="text-gold-light">scape</span>
       </span>
@@ -59,13 +60,13 @@ const SignedInArea = () => {
   }, [organization?.id]);
 
   if (!isLoaded) {
-    return <div className="p-8 text-slate-400">Loading…</div>;
+    return <div className="p-4 text-slate-400 md:p-8">Loading…</div>;
   }
 
   // B2B: a user must belong to an organization (their business) to do anything.
   if (!organization) {
     return (
-      <div className="mx-auto max-w-xl p-8">
+      <Page max="xl">
         <h1 className="text-xl font-bold text-slate-800">
           Create your organization
         </h1>
@@ -74,7 +75,7 @@ const SignedInArea = () => {
           afterward.
         </p>
         <CreateOrganization afterCreateOrganizationUrl="/" />
-      </div>
+      </Page>
     );
   }
 

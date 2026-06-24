@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient, trpc } from "../trpc.ts";
-import { ErrorNote, inputClass } from "../components/ui.tsx";
+import { ErrorNote, inputClass, Page } from "../components/ui.tsx";
 import { AddressAutocomplete } from "../components/AddressAutocomplete.tsx";
 import { formatCurrency } from "../lib/format.ts";
 import { track, WEB_EVENTS } from "../analytics/posthog.ts";
@@ -81,24 +81,28 @@ export function ProjectDetailScreen() {
   );
 
   if (project.isLoading) {
-    return <div className="mx-auto max-w-2xl p-8 text-slate-400">Loading…</div>;
+    return (
+      <Page max="2xl">
+        <p className="text-slate-400">Loading…</p>
+      </Page>
+    );
   }
 
   if (!project.data) {
     return (
-      <div className="mx-auto max-w-2xl space-y-4 p-8">
+      <Page max="2xl" className="space-y-4">
         <Link to="/" className="text-sm text-slate-500 hover:text-slate-700">
           ← Projects
         </Link>
         <p className="text-slate-500">Project not found.</p>
-      </div>
+      </Page>
     );
   }
 
   const data = project.data;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 p-8">
+    <Page max="2xl" className="space-y-6">
       <Link to="/" className="text-sm text-slate-500 hover:text-slate-700">
         ← Projects
       </Link>
@@ -248,7 +252,7 @@ export function ProjectDetailScreen() {
           </section>
         </>
       )}
-    </div>
+    </Page>
   );
 }
 

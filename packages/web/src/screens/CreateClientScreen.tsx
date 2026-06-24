@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { queryClient, trpc } from "../trpc.ts";
-import { ErrorNote, inputClass } from "../components/ui.tsx";
+import { ErrorNote, inputClass, Page } from "../components/ui.tsx";
 
 export function CreateClientScreen() {
   const navigate = useNavigate();
@@ -42,7 +42,7 @@ export function CreateClientScreen() {
   };
 
   return (
-    <div className="mx-auto max-w-xl space-y-4 p-8">
+    <Page max="xl" className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-slate-800">New Client</h1>
         <Link
@@ -96,6 +96,6 @@ export function CreateClientScreen() {
           </Link>
         </div>
       </form>
-    </div>
+    </Page>
   );
 }

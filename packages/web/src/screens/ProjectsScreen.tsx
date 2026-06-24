@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient, trpc } from "../trpc.ts";
-import { ErrorNote } from "../components/ui.tsx";
+import { ErrorNote, Page, TableScroll } from "../components/ui.tsx";
 import {
   NEXT_STATUSES,
   STATUS_LABEL,
@@ -36,7 +36,7 @@ export function ProjectsScreen() {
   );
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4 p-8">
+    <Page max="4xl" className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-slate-800">Projects</h1>
         <Link
@@ -52,8 +52,8 @@ export function ProjectsScreen() {
       {projects.isLoading ? (
         <p className="text-slate-400">Loading…</p>
       ) : projects.data && projects.data.length > 0 ? (
-        <div className="overflow-hidden rounded-lg border border-slate-200 shadow-sm">
-          <table className="w-full border-collapse text-sm">
+        <TableScroll>
+          <table className="w-full min-w-[36rem] border-collapse text-sm">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-500">
               <th className="px-4 py-2 font-medium">Name</th>
@@ -101,7 +101,7 @@ export function ProjectsScreen() {
             ))}
           </tbody>
           </table>
-        </div>
+        </TableScroll>
       ) : (
         <div className="rounded border border-dashed border-slate-300 p-8 text-center text-slate-500">
           No projects yet. Click{" "}
@@ -109,7 +109,7 @@ export function ProjectsScreen() {
           one.
         </div>
       )}
-    </div>
+    </Page>
   );
 }
 
