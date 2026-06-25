@@ -22,7 +22,7 @@ const lineSchema = new Schema(
     key: { type: String, required: true, trim: true },
     kind: { type: String, required: true, enum: ASSEMBLY_LINE_KINDS },
     description: { type: String, required: true, trim: true },
-    // Text expression resolved by services/EstimateService/formula.ts.
+    // Text expression resolved by engine/formula.ts.
     quantityFormula: { type: String, required: true, trim: true },
     materialId: { type: String, default: null },
     deliveriesFormula: { type: String, default: null },

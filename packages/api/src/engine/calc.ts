@@ -2,7 +2,7 @@ import type {
   Estimate,
   EstimateStatus,
   LineItem,
-} from "../../data-access/repositories/EstimateRepository/EstimateRepository.ts";
+} from "../data-access/repositories/EstimateRepository/EstimateRepository.ts";
 
 export interface LineItemView extends LineItem {
   lineTotal: number;

@@ -17,7 +17,7 @@ export interface AssemblyDriver {
 
 /**
  * Fields common to every assembly line. `quantityFormula` is a text expression
- * (evaluated by services/EstimateService/formula.ts) yielding units for a
+ * (evaluated by engine/formula.ts) yielding units for a
  * material line or hours for a labor line. Formulas may reference driver keys
  * and the `key` of any other line in the same assembly.
  */

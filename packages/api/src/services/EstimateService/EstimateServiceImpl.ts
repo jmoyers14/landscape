@@ -9,7 +9,7 @@ import type {
 } from "../../data-access/repositories/EstimateRepository/EstimateRepository.ts";
 import type { ProjectRepository } from "../../data-access/repositories/ProjectRepository/ProjectRepository.ts";
 import { ServiceError } from "../errors.ts";
-import { computeEstimate, type EstimateView } from "./calc.ts";
+import { computeEstimate, type EstimateView } from "../../engine/calc.ts";
 import type {
   EstimateService,
   EstimateSummary,

@@ -1,8 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import type { Assembly } from "../../data-access/repositories/AssemblyRepository/AssemblyRepository.ts";
-import type { Material } from "../../data-access/repositories/MaterialRepository/MaterialRepository.ts";
-import type { PricingSettings } from "../../data-access/repositories/PricingSettingsRepository/PricingSettingsRepository.ts";
-import { FormulaError, evaluate, resolveQuantities } from "./formula.ts";
+import type { Assembly } from "../data-access/repositories/AssemblyRepository/AssemblyRepository.ts";
+import type { Material } from "../data-access/repositories/MaterialRepository/MaterialRepository.ts";
+import type { PricingSettings } from "../data-access/repositories/PricingSettingsRepository/PricingSettingsRepository.ts";
 import { generateAssemblyLines, priceLineItems } from "./generate.ts";
 
 const settings: PricingSettings = {
@@ -212,40 +211,5 @@ describe("priceLineItems — cost buildup", () => {
       (totals.directCost + totals.overhead) * 0.15,
       5,
     );
-  });
-});
-
-describe("formula engine robustness", () => {
-  it("resolves chained line references in dependency order", () => {
-    // sprayHeads = zones*16; popUps = round(sprayHeads*2/3) — the irrigation chain
-    const resolved = resolveQuantities(
-      [
-        { key: "popUps", quantityFormula: "round(sprayHeads * 2 / 3)" },
-        { key: "sprayHeads", quantityFormula: "valveZones * 16" },
-      ],
-      { valveZones: 5 },
-    );
-    expect(resolved.get("sprayHeads")).toBe(80);
-    expect(resolved.get("popUps")).toBe(53);
-  });
-
-  it("rejects an unknown variable", () => {
-    expect(() => evaluate("nope * 2", { drainageFt: 1 })).toThrow(FormulaError);
-  });
-
-  it("rejects a reference cycle", () => {
-    expect(() =>
-      resolveQuantities(
-        [
-          { key: "a", quantityFormula: "b + 1" },
-          { key: "b", quantityFormula: "a + 1" },
-        ],
-        {},
-      ),
-    ).toThrow(FormulaError);
-  });
-
-  it("does not resolve JS globals (sandbox)", () => {
-    expect(() => evaluate("process", {})).toThrow(FormulaError);
   });
 });

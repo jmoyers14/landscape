@@ -7,14 +7,14 @@ export type {
   EstimateTotals,
   LineItemView,
   PhaseSummary,
-} from "./calc.ts";
+} from "../../engine/calc.ts";
 export type {
   EstimateStatus,
   LineItemInput,
   LineItemType,
 } from "../../data-access/repositories/EstimateRepository/EstimateRepository.ts";
 
-import type { EstimateView } from "./calc.ts";
+import type { EstimateView } from "../../engine/calc.ts";
 
 /** Lightweight row for listing a project's estimates (with its grand total). */
 export interface EstimateSummary {

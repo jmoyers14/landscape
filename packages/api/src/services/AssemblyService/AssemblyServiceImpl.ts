@@ -13,7 +13,7 @@ import {
   FormulaError,
   assertReferencesKnown,
   validateLineFormulas,
-} from "../EstimateService/formula.ts";
+} from "../../engine/formula.ts";
 import { ServiceError } from "../errors.ts";
 import type { PricingSettingsService } from "../PricingSettingsService/PricingSettingsService.ts";
 import type {
