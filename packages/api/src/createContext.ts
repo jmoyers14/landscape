@@ -6,12 +6,14 @@ import {
   PROJECT_SERVICE_TOKEN,
   ESTIMATE_SERVICE_TOKEN,
   ADDRESS_SERVICE_TOKEN,
+  PRICING_SETTINGS_SERVICE_TOKEN,
 } from "./services/index.ts";
 import { ANALYTICS_CLIENT_TOKEN } from "./integrations/index.ts";
 import type { ClientService } from "./services/ClientService/ClientService.ts";
 import type { ProjectService } from "./services/ProjectService/ProjectService.ts";
 import type { EstimateService } from "./services/EstimateService/EstimateService.ts";
 import type { AddressService } from "./services/AddressService/AddressService.ts";
+import type { PricingSettingsService } from "./services/PricingSettingsService/PricingSettingsService.ts";
 import type { AuthService } from "./services/AuthService/AuthService.ts";
 import type { AnalyticsClient } from "./integrations/analytics/AnalyticsClient.ts";
 import type { Context } from "./context.ts";
@@ -35,6 +37,9 @@ export async function createContext(
       projectService: container.resolve<ProjectService>(PROJECT_SERVICE_TOKEN),
       estimateService: container.resolve<EstimateService>(ESTIMATE_SERVICE_TOKEN),
       addressService: container.resolve<AddressService>(ADDRESS_SERVICE_TOKEN),
+      pricingSettingsService: container.resolve<PricingSettingsService>(
+        PRICING_SETTINGS_SERVICE_TOKEN,
+      ),
     },
   };
 }
