@@ -1,5 +1,5 @@
 import { injectable } from "tsyringe";
-import { ProjectModel } from "../models/Project.ts";
+import { ProjectModel } from "../../models/Project.ts";
 import type {
   NewProject,
   Project,

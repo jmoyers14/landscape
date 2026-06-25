@@ -6,8 +6,8 @@ import {
 import type {
   EstimateRepository,
   LineItemInput,
-} from "../../data-access/repositories/EstimateRepository.ts";
-import type { ProjectRepository } from "../../data-access/repositories/ProjectRepository.ts";
+} from "../../data-access/repositories/EstimateRepository/EstimateRepository.ts";
+import type { ProjectRepository } from "../../data-access/repositories/ProjectRepository/ProjectRepository.ts";
 import { ServiceError } from "../errors.ts";
 import { computeEstimate, type EstimateView } from "./calc.ts";
 import type {

@@ -1,19 +1,18 @@
 import type {
   EstimateStatus,
   LineItemInput,
-} from "../../data-access/repositories/EstimateRepository.ts";
-
+} from "../../data-access/repositories/EstimateRepository/EstimateRepository.ts";
 export type {
   EstimateView,
+  EstimateTotals,
   LineItemView,
   PhaseSummary,
-  EstimateTotals,
 } from "./calc.ts";
 export type {
   EstimateStatus,
   LineItemInput,
   LineItemType,
-} from "../../data-access/repositories/EstimateRepository.ts";
+} from "../../data-access/repositories/EstimateRepository/EstimateRepository.ts";
 
 import type { EstimateView } from "./calc.ts";
 
@@ -37,7 +36,11 @@ export interface UpdateEstimateMetaInput {
 export interface EstimateService {
   listByProject(orgId: string, projectId: string): Promise<EstimateSummary[]>;
   get(orgId: string, id: string): Promise<EstimateView | null>;
-  create(orgId: string, projectId: string, title?: string): Promise<EstimateView>;
+  create(
+    orgId: string,
+    projectId: string,
+    title?: string,
+  ): Promise<EstimateView>;
   updateMeta(
     orgId: string,
     id: string,

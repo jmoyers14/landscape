@@ -5,12 +5,12 @@ import {
 } from "../../data-access/tokens.ts";
 import { MAPS_CLIENT_TOKEN } from "../../integrations/tokens.ts";
 import type { MapsClient } from "../../integrations/maps/MapsClient.ts";
-import type { ClientRepository } from "../../data-access/repositories/ClientRepository.ts";
+import type { ClientRepository } from "../../data-access/repositories/ClientRepository/ClientRepository.ts";
 import type {
   Project,
   ProjectRepository,
   ProjectStatus,
-} from "../../data-access/repositories/ProjectRepository.ts";
+} from "../../data-access/repositories/ProjectRepository/ProjectRepository.ts";
 import { ServiceError } from "../errors.ts";
 import type {
   CreateProjectInput,

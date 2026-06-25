@@ -1,5 +1,5 @@
 import { injectable } from "tsyringe";
-import { ClientModel } from "../models/Client.ts";
+import { ClientModel } from "../../models/Client.ts";
 import type { Client, ClientInput, ClientRepository } from "./ClientRepository.ts";
 
 type ClientDoc = {

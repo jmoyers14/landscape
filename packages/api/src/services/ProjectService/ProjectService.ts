@@ -1,7 +1,7 @@
 import type {
   Project,
   ProjectStatus,
-} from "../../data-access/repositories/ProjectRepository.ts";
+} from "../../data-access/repositories/ProjectRepository/ProjectRepository.ts";
 
 export type { Project, ProjectStatus };
 

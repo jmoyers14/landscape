@@ -96,23 +96,28 @@ interface AssemblyDriver {
   defaultValue: number;  // seeds a new estimate
 }
 
-interface AssemblyLine {
+// AssemblyLine is a discriminated union on `kind`, so narrowing gives a
+// material line its non-null materialId or a labor line its laborRateKey, with
+// no cross-kind fields to null-check.
+interface AssemblyLineBase {
   key: string;           // "catchBasin" (unique within the assembly)
-  kind: "material" | "labor";
   description: string;   // shown on the estimate line
-
-  // quantity (material) or hours (labor):
-  quantityFormula: string;   // "round(drainageFt / 85)"
-
-  // kind === "material":
-  materialId: string | null;     // -> Material catalog
-  deliveriesFormula: string | null; // optional, defaults to "0"
-
-  // kind === "labor":
-  laborRateKey: string | null;   // "general" | "skilled" -> PricingSettings
-
+  quantityFormula: string; // "round(drainageFt / 85)" — units, or hours for labor
   sortOrder: number;
 }
+
+interface MaterialAssemblyLine extends AssemblyLineBase {
+  kind: "material";
+  materialId: string;               // -> Material catalog
+  deliveriesFormula: string | null; // null => 0 deliveries
+}
+
+interface LaborAssemblyLine extends AssemblyLineBase {
+  kind: "labor";
+  laborRateKey: string;  // "general" | "skilled" -> PricingSettings
+}
+
+type AssemblyLine = MaterialAssemblyLine | LaborAssemblyLine;
 
 interface Assembly {
   id: string;

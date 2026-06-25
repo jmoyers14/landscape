@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { injectable } from "tsyringe";
-import { EstimateModel } from "../models/Estimate.ts";
+import { EstimateModel } from "../../models/Estimate.ts";
 import type {
   Estimate,
   EstimateMetaChanges,

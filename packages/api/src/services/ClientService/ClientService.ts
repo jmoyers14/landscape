@@ -1,7 +1,7 @@
 import type {
   Client,
   ClientInput,
-} from "../../data-access/repositories/ClientRepository.ts";
+} from "../../data-access/repositories/ClientRepository/ClientRepository.ts";
 
 export type { Client, ClientInput };
 

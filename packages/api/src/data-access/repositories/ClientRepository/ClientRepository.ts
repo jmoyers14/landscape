@@ -1,23 +1,6 @@
-/**
- * Client entity — plain data, free of Mongoose types. The repository maps
- * documents to this shape so nothing driver-related leaks past the boundary.
- */
-export interface Client {
-  id: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  address: string | null;
-  createdAt: string;
-}
+import type { Client, ClientInput } from "./types.ts";
 
-/** Fields accepted when creating or replacing a client. */
-export interface ClientInput {
-  name: string;
-  email: string | null;
-  phone: string | null;
-  address: string | null;
-}
+export * from "./types.ts";
 
 /**
  * Persistence boundary for clients. Every method is org-scoped so the tenant

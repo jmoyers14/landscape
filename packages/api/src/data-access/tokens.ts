@@ -6,3 +6,6 @@
 export const CLIENT_REPOSITORY_TOKEN = "ClientRepository";
 export const PROJECT_REPOSITORY_TOKEN = "ProjectRepository";
 export const ESTIMATE_REPOSITORY_TOKEN = "EstimateRepository";
+export const MATERIAL_REPOSITORY_TOKEN = "MaterialRepository";
+export const ASSEMBLY_REPOSITORY_TOKEN = "AssemblyRepository";
+export const PRICING_SETTINGS_REPOSITORY_TOKEN = "PricingSettingsRepository";
