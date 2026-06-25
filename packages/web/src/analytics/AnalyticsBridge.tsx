@@ -14,7 +14,9 @@ export function AnalyticsBridge() {
   const { organization } = useOrganization();
 
   useEffect(() => {
-    if (!analyticsEnabled || !isLoaded) return;
+    if (!analyticsEnabled || !isLoaded) {
+      return;
+    }
     if (isSignedIn && userId) {
       posthog.identify(userId);
     } else {
@@ -24,14 +26,18 @@ export function AnalyticsBridge() {
   }, [isLoaded, isSignedIn, userId]);
 
   useEffect(() => {
-    if (!analyticsEnabled || !organization) return;
+    if (!analyticsEnabled || !organization) {
+      return;
+    }
     posthog.group("organization", organization.id, {
       name: organization.name,
     });
   }, [organization?.id, organization?.name]);
 
   useEffect(() => {
-    if (!analyticsEnabled) return;
+    if (!analyticsEnabled) {
+      return;
+    }
     // Auto pageview is off, so capture the initial load plus every navigation.
     posthog.capture("$pageview");
     return router.subscribe("onResolved", () => {

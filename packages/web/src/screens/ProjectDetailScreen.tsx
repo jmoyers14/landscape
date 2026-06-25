@@ -275,7 +275,11 @@ function EditForm({
   onCancel,
   onSave,
 }: {
-  project: { name: string; location: string | null; description: string | null };
+  project: {
+    name: string;
+    location: string | null;
+    description: string | null;
+  };
   pending: boolean;
   onCancel: () => void;
   onSave: (input: {
@@ -292,7 +296,9 @@ function EditForm({
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim()) return;
+    if (!form.name.trim()) {
+      return;
+    }
     onSave({
       name: form.name.trim(),
       location: form.location.trim() || null,

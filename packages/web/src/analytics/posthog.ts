@@ -13,7 +13,9 @@ export const analyticsEnabled = Boolean(KEY);
  * are masked in session replay because our forms hold customer PII.
  */
 export function initAnalytics(): void {
-  if (!KEY) return;
+  if (!KEY) {
+    return;
+  }
   posthog.init(KEY, {
     api_host: HOST,
     capture_pageview: false,
@@ -38,6 +40,8 @@ export function track(
   event: string,
   properties?: Record<string, unknown>,
 ): void {
-  if (!analyticsEnabled) return;
+  if (!analyticsEnabled) {
+    return;
+  }
   posthog.capture(event, properties);
 }

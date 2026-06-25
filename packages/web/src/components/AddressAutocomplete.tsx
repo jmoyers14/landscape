@@ -58,7 +58,9 @@ export function AddressAutocomplete({
           setOpen(results.length > 0);
         }
       } catch {
-        if (!cancelled) setSuggestions([]);
+        if (!cancelled) {
+          setSuggestions([]);
+        }
       }
     }, DEBOUNCE_MS);
 

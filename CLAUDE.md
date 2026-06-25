@@ -18,3 +18,13 @@ overrides for this project.
   // Avoid
   if (ids.length === 0) return [];
   ```
+
+## Tooling
+
+- **Prettier formats; Biome only lints.** Prettier (run on save) owns all
+  formatting. Biome runs **linter-only** (`formatter.enabled: false` in
+  `biome.json`) so the two never fight. Do not enable Biome's formatter.
+- Biome's linter is scoped to a single rule today (`style/useBlockStatements`,
+  enforcing the brace rule above). `bun run lint` checks; `bun run lint:fix`
+  auto-fixes (uses `--unsafe`, which is fine while that's the only rule — revisit
+  if more rules are added).

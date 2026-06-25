@@ -26,7 +26,9 @@ fns.roundDown = (x, places = 0) => roundTo(Math.floor, x, places);
 // Excel EVEN(): round away from zero to the next even integer.
 fns.even = (x) => {
   let n = Math.ceil(Math.abs(x));
-  if (n % 2 !== 0) n += 1;
+  if (n % 2 !== 0) {
+    n += 1;
+  }
   return x < 0 ? -n : n;
 };
 
@@ -126,7 +128,9 @@ export function resolveQuantities(
   const resolved = new Map<string, number>();
   const visiting = new Set<string>();
   const visit = (key: string): void => {
-    if (resolved.has(key)) return;
+    if (resolved.has(key)) {
+      return;
+    }
     if (visiting.has(key)) {
       throw new FormulaError(`Formula reference cycle through "${key}"`);
     }

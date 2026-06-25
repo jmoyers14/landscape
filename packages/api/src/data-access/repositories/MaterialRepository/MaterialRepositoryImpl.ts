@@ -23,7 +23,9 @@ export class MaterialRepositoryImpl implements MaterialRepository {
   }
 
   async findByIds(orgId: string, ids: string[]): Promise<Material[]> {
-    if (ids.length === 0) return [];
+    if (ids.length === 0) {
+      return [];
+    }
     const docs = await MaterialModel.find({ orgId, _id: { $in: ids } }).lean();
     return docs.map(toMaterial);
   }
@@ -38,9 +40,13 @@ export class MaterialRepositoryImpl implements MaterialRepository {
     id: string,
     changes: MaterialChanges,
   ): Promise<Material | null> {
-    const doc = await MaterialModel.findOneAndUpdate({ _id: id, orgId }, changes, {
-      new: true,
-    }).lean();
+    const doc = await MaterialModel.findOneAndUpdate(
+      { _id: id, orgId },
+      changes,
+      {
+        new: true,
+      },
+    ).lean();
     return doc ? toMaterial(doc) : null;
   }
 

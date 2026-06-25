@@ -67,7 +67,9 @@ export function EstimateEditorScreen() {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
 
-  const estimate = useQuery(trpc.estimates.get.queryOptions({ id: estimateId }));
+  const estimate = useQuery(
+    trpc.estimates.get.queryOptions({ id: estimateId }),
+  );
 
   const invalidate = () => {
     queryClient.invalidateQueries({
@@ -84,10 +86,16 @@ export function EstimateEditorScreen() {
   };
 
   const updateMeta = useMutation(
-    trpc.estimates.updateMeta.mutationOptions({ onSuccess: onMutated, onError }),
+    trpc.estimates.updateMeta.mutationOptions({
+      onSuccess: onMutated,
+      onError,
+    }),
   );
   const addLineItem = useMutation(
-    trpc.estimates.addLineItem.mutationOptions({ onSuccess: onMutated, onError }),
+    trpc.estimates.addLineItem.mutationOptions({
+      onSuccess: onMutated,
+      onError,
+    }),
   );
   const updateLineItem = useMutation(
     trpc.estimates.updateLineItem.mutationOptions({
@@ -157,7 +165,9 @@ export function EstimateEditorScreen() {
       <RatesEditor
         key={`rates-${data.id}`}
         estimate={data}
-        onCommit={(changes) => updateMeta.mutate({ id: estimateId, ...changes })}
+        onCommit={(changes) =>
+          updateMeta.mutate({ id: estimateId, ...changes })
+        }
       />
 
       <section className="space-y-4">
@@ -182,42 +192,48 @@ export function EstimateEditorScreen() {
                 </span>
               </div>
               <div className="overflow-x-auto">
-              <table className="w-full min-w-[36rem] border-collapse text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 text-left text-xs text-slate-400">
-                    <th className="px-4 py-1.5 font-medium">Description</th>
-                    <th className="px-4 py-1.5 font-medium">Type</th>
-                    <th className="px-4 py-1.5 text-right font-medium">Qty</th>
-                    <th className="px-4 py-1.5 text-right font-medium">
-                      Unit price
-                    </th>
-                    <th className="px-4 py-1.5 text-right font-medium">Total</th>
-                    <th className="px-4 py-1.5" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {(itemsByPhase.get(phase.phase) ?? []).map((item) => (
-                    <LineItemRow
-                      key={item.id}
-                      item={item}
-                      busy={updateLineItem.isPending || removeLineItem.isPending}
-                      onSave={(input) =>
-                        updateLineItem.mutate({
-                          id: estimateId,
-                          lineItemId: item.id,
-                          item: { ...input, phase: item.phase },
-                        })
-                      }
-                      onRemove={() =>
-                        removeLineItem.mutate({
-                          id: estimateId,
-                          lineItemId: item.id,
-                        })
-                      }
-                    />
-                  ))}
-                </tbody>
-              </table>
+                <table className="w-full min-w-[36rem] border-collapse text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-left text-xs text-slate-400">
+                      <th className="px-4 py-1.5 font-medium">Description</th>
+                      <th className="px-4 py-1.5 font-medium">Type</th>
+                      <th className="px-4 py-1.5 text-right font-medium">
+                        Qty
+                      </th>
+                      <th className="px-4 py-1.5 text-right font-medium">
+                        Unit price
+                      </th>
+                      <th className="px-4 py-1.5 text-right font-medium">
+                        Total
+                      </th>
+                      <th className="px-4 py-1.5" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(itemsByPhase.get(phase.phase) ?? []).map((item) => (
+                      <LineItemRow
+                        key={item.id}
+                        item={item}
+                        busy={
+                          updateLineItem.isPending || removeLineItem.isPending
+                        }
+                        onSave={(input) =>
+                          updateLineItem.mutate({
+                            id: estimateId,
+                            lineItemId: item.id,
+                            item: { ...input, phase: item.phase },
+                          })
+                        }
+                        onRemove={() =>
+                          removeLineItem.mutate({
+                            id: estimateId,
+                            lineItemId: item.id,
+                          })
+                        }
+                      />
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           ))
@@ -408,7 +424,9 @@ function LineItemRow({
   }
 
   const save = () => {
-    if (!form.description.trim()) return;
+    if (!form.description.trim()) {
+      return;
+    }
     onSave({
       type: form.type,
       description: form.description.trim(),
@@ -508,7 +526,9 @@ function AddLineItemForm({
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.description.trim()) return;
+    if (!form.description.trim()) {
+      return;
+    }
     onAdd({
       phase: form.phase.trim() || null,
       type: form.type,
@@ -594,7 +614,9 @@ function TotalsPanel({ estimate }: { estimate: EstimateView }) {
   const row = (label: string, value: number, strong = false) => (
     <div
       className={`flex justify-between ${
-        strong ? "border-t border-slate-200 pt-2 font-semibold text-slate-800" : "text-slate-600"
+        strong
+          ? "border-t border-slate-200 pt-2 font-semibold text-slate-800"
+          : "text-slate-600"
       }`}
     >
       <span>{label}</span>

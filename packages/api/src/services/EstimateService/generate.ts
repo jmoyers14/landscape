@@ -45,7 +45,9 @@ export function generateAssemblyLines(
   const { assembly, driverValues } = selection;
   const quantities = resolveQuantities(assembly.lines, driverValues);
   const scope: Record<string, number> = { ...driverValues };
-  for (const [key, value] of quantities) scope[key] = value;
+  for (const [key, value] of quantities) {
+    scope[key] = value;
+  }
 
   return assembly.lines
     .slice()

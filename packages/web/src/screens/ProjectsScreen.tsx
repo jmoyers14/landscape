@@ -54,52 +54,52 @@ export function ProjectsScreen() {
       ) : projects.data && projects.data.length > 0 ? (
         <TableScroll>
           <table className="w-full min-w-[36rem] border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-500">
-              <th className="px-4 py-2 font-medium">Name</th>
-              <th className="px-4 py-2 font-medium">Client</th>
-              <th className="px-4 py-2 font-medium">Location</th>
-              <th className="px-4 py-2 font-medium">Status</th>
-              <th className="px-4 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {projects.data.map((project) => (
-              <tr key={project.id} className="border-b border-slate-100">
-                <td className="px-4 py-2 font-medium">
-                  <Link
-                    to="/projects/$projectId"
-                    params={{ projectId: project.id }}
-                    className="text-slate-800 hover:text-slate-600 hover:underline"
-                  >
-                    {project.name}
-                  </Link>
-                </td>
-                <td className="px-4 py-2 text-slate-600">
-                  {project.clientName ?? "—"}
-                </td>
-                <td className="px-4 py-2 text-slate-600">
-                  {project.location ?? "—"}
-                </td>
-                <td className="px-4 py-2">
-                  <StatusSelect
-                    status={project.status}
-                    onChange={(status) =>
-                      changeStatus.mutate({ id: project.id, status })
-                    }
-                  />
-                </td>
-                <td className="px-4 py-2 text-right">
-                  <button
-                    onClick={() => remove.mutate({ id: project.id })}
-                    className="text-slate-400 hover:text-red-600"
-                  >
-                    Delete
-                  </button>
-                </td>
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-500">
+                <th className="px-4 py-2 font-medium">Name</th>
+                <th className="px-4 py-2 font-medium">Client</th>
+                <th className="px-4 py-2 font-medium">Location</th>
+                <th className="px-4 py-2 font-medium">Status</th>
+                <th className="px-4 py-2" />
               </tr>
-            ))}
-          </tbody>
+            </thead>
+            <tbody>
+              {projects.data.map((project) => (
+                <tr key={project.id} className="border-b border-slate-100">
+                  <td className="px-4 py-2 font-medium">
+                    <Link
+                      to="/projects/$projectId"
+                      params={{ projectId: project.id }}
+                      className="text-slate-800 hover:text-slate-600 hover:underline"
+                    >
+                      {project.name}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-2 text-slate-600">
+                    {project.clientName ?? "—"}
+                  </td>
+                  <td className="px-4 py-2 text-slate-600">
+                    {project.location ?? "—"}
+                  </td>
+                  <td className="px-4 py-2">
+                    <StatusSelect
+                      status={project.status}
+                      onChange={(status) =>
+                        changeStatus.mutate({ id: project.id, status })
+                      }
+                    />
+                  </td>
+                  <td className="px-4 py-2 text-right">
+                    <button
+                      onClick={() => remove.mutate({ id: project.id })}
+                      className="text-slate-400 hover:text-red-600"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
           </table>
         </TableScroll>
       ) : (
@@ -127,7 +127,9 @@ function StatusSelect({
       value={status}
       onChange={(e) => {
         const next = e.target.value as ProjectStatus;
-        if (next !== status) onChange(next);
+        if (next !== status) {
+          onChange(next);
+        }
       }}
       className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700"
     >
