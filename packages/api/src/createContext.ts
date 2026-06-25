@@ -8,6 +8,7 @@ import {
   ADDRESS_SERVICE_TOKEN,
   PRICING_SETTINGS_SERVICE_TOKEN,
   MATERIAL_SERVICE_TOKEN,
+  ASSEMBLY_SERVICE_TOKEN,
 } from "./services/index.ts";
 import { ANALYTICS_CLIENT_TOKEN } from "./integrations/index.ts";
 import type { ClientService } from "./services/ClientService/ClientService.ts";
@@ -16,6 +17,7 @@ import type { EstimateService } from "./services/EstimateService/EstimateService
 import type { AddressService } from "./services/AddressService/AddressService.ts";
 import type { PricingSettingsService } from "./services/PricingSettingsService/PricingSettingsService.ts";
 import type { MaterialService } from "./services/MaterialService/MaterialService.ts";
+import type { AssemblyService } from "./services/AssemblyService/AssemblyService.ts";
 import type { AuthService } from "./services/AuthService/AuthService.ts";
 import type { AnalyticsClient } from "./integrations/analytics/AnalyticsClient.ts";
 import type { Context } from "./context.ts";
@@ -44,6 +46,9 @@ export async function createContext(
       ),
       materialService: container.resolve<MaterialService>(
         MATERIAL_SERVICE_TOKEN,
+      ),
+      assemblyService: container.resolve<AssemblyService>(
+        ASSEMBLY_SERVICE_TOKEN,
       ),
     },
   };

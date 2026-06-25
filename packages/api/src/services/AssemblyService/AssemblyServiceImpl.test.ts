@@ -1,0 +1,185 @@
+import { describe, expect, it, mock } from "bun:test";
+import { AssemblyServiceImpl } from "./AssemblyServiceImpl.ts";
+import type { AssemblyServiceInput } from "./AssemblyService.ts";
+import type { PricingSettingsService } from "../PricingSettingsService/PricingSettingsService.ts";
+import {
+  makeAssemblyRepoMock,
+  makeMaterialRepoMock,
+} from "../../test-support/repoMocks.ts";
+import {
+  makeAssembly,
+  makeMaterial,
+  makePricingSettings,
+} from "../../test-support/factories.ts";
+import { ServiceError } from "../errors.ts";
+
+// A valid Drainage-style input: one labor line (rate "general") and one
+// material line (material "material_1"), both of which the mocks below resolve.
+const baseInput = (
+  over: Partial<AssemblyServiceInput> = {},
+): AssemblyServiceInput => ({
+  name: "Drainage",
+  category: "Drainage",
+  description: null,
+  sortOrder: 1,
+  active: true,
+  drivers: [
+    { key: "drainageFt", label: "Drainage length", unit: "ft.", defaultValue: 225 },
+  ],
+  lines: [
+    {
+      key: "layout",
+      kind: "labor",
+      description: "Lay out",
+      quantityFormula: "0.095 * drainageFt",
+      laborRateKey: "general",
+      sortOrder: 1,
+    },
+    {
+      key: "catchBasin",
+      kind: "material",
+      description: "Catch basin",
+      quantityFormula: "round(drainageFt / 85)",
+      materialId: "material_1",
+      deliveriesFormula: null,
+      sortOrder: 2,
+    },
+  ],
+  ...over,
+});
+
+const pricingStub = (
+  over: Partial<PricingSettingsService> = {},
+): PricingSettingsService => ({
+  get: mock(async () => makePricingSettings()),
+  update: mock(async () => makePricingSettings()),
+  ...over,
+});
+
+const materialsThatResolve = () =>
+  makeMaterialRepoMock({
+    findByIds: mock(async () => [makeMaterial({ id: "material_1" })]),
+  });
+
+const makeService = (
+  parts: {
+    assemblies?: ReturnType<typeof makeAssemblyRepoMock>;
+    materials?: ReturnType<typeof makeMaterialRepoMock>;
+    pricing?: PricingSettingsService;
+  } = {},
+) =>
+  new AssemblyServiceImpl(
+    parts.assemblies ??
+      makeAssemblyRepoMock({ create: mock(async (_o, d) => makeAssembly(d)) }),
+    parts.materials ?? materialsThatResolve(),
+    parts.pricing ?? pricingStub(),
+  );
+
+describe("AssemblyServiceImpl validation", () => {
+  it("creates a valid assembly and stamps it source=custom", async () => {
+    const assemblies = makeAssemblyRepoMock({
+      create: mock(async (_o, d) => makeAssembly(d)),
+    });
+    const service = makeService({ assemblies });
+
+    await service.create("org_1", baseInput());
+
+    const [, created] = (assemblies.create as ReturnType<typeof mock>).mock
+      .calls[0];
+    expect(created.source).toBe("custom");
+  });
+
+  it("rejects a formula that references an unknown variable", async () => {
+    const service = makeService();
+    expect(
+      service.create(
+        "org_1",
+        baseInput({
+          lines: [
+            {
+              key: "x",
+              kind: "labor",
+              description: "x",
+              quantityFormula: "nope * 2",
+              laborRateKey: "general",
+              sortOrder: 1,
+            },
+          ],
+        }),
+      ),
+    ).rejects.toThrow(ServiceError);
+  });
+
+  it("rejects a reference cycle between lines", async () => {
+    const service = makeService();
+    expect(
+      service.create(
+        "org_1",
+        baseInput({
+          lines: [
+            {
+              key: "a",
+              kind: "labor",
+              description: "a",
+              quantityFormula: "b + 1",
+              laborRateKey: "general",
+              sortOrder: 1,
+            },
+            {
+              key: "b",
+              kind: "labor",
+              description: "b",
+              quantityFormula: "a + 1",
+              laborRateKey: "general",
+              sortOrder: 2,
+            },
+          ],
+        }),
+      ),
+    ).rejects.toThrow(ServiceError);
+  });
+
+  it("rejects duplicate line keys", async () => {
+    const service = makeService();
+    const dupe = baseInput();
+    dupe.lines[1] = { ...dupe.lines[1], key: "layout" };
+    expect(service.create("org_1", dupe)).rejects.toThrow(ServiceError);
+  });
+
+  it("rejects a material line whose material does not exist", async () => {
+    const service = makeService({
+      materials: makeMaterialRepoMock({ findByIds: mock(async () => []) }),
+    });
+    expect(service.create("org_1", baseInput())).rejects.toThrow(ServiceError);
+  });
+
+  it("rejects a labor line whose rate key is not configured", async () => {
+    const service = makeService();
+    expect(
+      service.create(
+        "org_1",
+        baseInput({
+          lines: [
+            {
+              key: "layout",
+              kind: "labor",
+              description: "Lay out",
+              quantityFormula: "0.095 * drainageFt",
+              laborRateKey: "foreman",
+              sortOrder: 1,
+            },
+          ],
+        }),
+      ),
+    ).rejects.toThrow(ServiceError);
+  });
+
+  it("throws NOT_FOUND when updating a missing assembly", async () => {
+    const service = makeService({
+      assemblies: makeAssemblyRepoMock({ update: mock(async () => null) }),
+    });
+    expect(service.update("org_1", "missing", baseInput())).rejects.toThrow(
+      ServiceError,
+    );
+  });
+});

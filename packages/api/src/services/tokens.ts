@@ -11,3 +11,4 @@ export const ESTIMATE_SERVICE_TOKEN = "EstimateService";
 export const ADDRESS_SERVICE_TOKEN = "AddressService";
 export const PRICING_SETTINGS_SERVICE_TOKEN = "PricingSettingsService";
 export const MATERIAL_SERVICE_TOKEN = "MaterialService";
+export const ASSEMBLY_SERVICE_TOKEN = "AssemblyService";

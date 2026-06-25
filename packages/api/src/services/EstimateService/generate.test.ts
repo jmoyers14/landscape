@@ -50,6 +50,7 @@ const drainage: Assembly = {
   description: null,
   sortOrder: 1,
   active: true,
+  source: "starter",
   createdAt: "2026-01-01T00:00:00.000Z",
   drivers: [
     {

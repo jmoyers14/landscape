@@ -56,6 +56,7 @@ function toAssembly(doc: AssemblyDoc): Assembly {
       unit: d.unit,
       defaultValue: d.defaultValue,
     })),
+    source: doc.source,
     lines: (doc.lines ?? []).map(toAssemblyLine),
     createdAt: doc.createdAt.toISOString(),
   };

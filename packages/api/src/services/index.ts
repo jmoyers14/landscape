@@ -11,6 +11,7 @@ import {
   ADDRESS_SERVICE_TOKEN,
   PRICING_SETTINGS_SERVICE_TOKEN,
   MATERIAL_SERVICE_TOKEN,
+  ASSEMBLY_SERVICE_TOKEN,
 } from "./tokens.ts";
 import { ConfigServiceImpl } from "./ConfigService/ConfigServiceImpl.ts";
 import { AuthServiceImpl } from "./AuthService/AuthServiceImpl.ts";
@@ -20,6 +21,7 @@ import { EstimateServiceImpl } from "./EstimateService/EstimateServiceImpl.ts";
 import { AddressServiceImpl } from "./AddressService/AddressServiceImpl.ts";
 import { PricingSettingsServiceImpl } from "./PricingSettingsService/PricingSettingsServiceImpl.ts";
 import { MaterialServiceImpl } from "./MaterialService/MaterialServiceImpl.ts";
+import { AssemblyServiceImpl } from "./AssemblyService/AssemblyServiceImpl.ts";
 
 // registerSingleton: one shared instance for the process.
 // register: a fresh instance per resolution.
@@ -34,6 +36,7 @@ container.registerSingleton(
   PricingSettingsServiceImpl,
 );
 container.registerSingleton(MATERIAL_SERVICE_TOKEN, MaterialServiceImpl);
+container.registerSingleton(ASSEMBLY_SERVICE_TOKEN, AssemblyServiceImpl);
 
 export { container };
 export * from "./tokens.ts";

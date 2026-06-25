@@ -6,6 +6,7 @@ import { authRouter } from "./routers/auth.ts";
 import { addressRouter } from "./routers/address.ts";
 import { pricingSettingsRouter } from "./routers/pricingSettings.ts";
 import { materialsRouter } from "./routers/materials.ts";
+import { assembliesRouter } from "./routers/assemblies.ts";
 
 export const appRouter = router({
   clients: clientsRouter,
@@ -15,6 +16,7 @@ export const appRouter = router({
   address: addressRouter,
   pricingSettings: pricingSettingsRouter,
   materials: materialsRouter,
+  assemblies: assembliesRouter,
 });
 
 export type AppRouter = typeof appRouter;

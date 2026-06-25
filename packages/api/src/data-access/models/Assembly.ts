@@ -1,6 +1,9 @@
 import { Schema, model, type InferSchemaType, type Types } from "mongoose";
 
 const ASSEMBLY_LINE_KINDS = ["material", "labor"] as const;
+// "starter" = seeded from the platform's template catalog; "custom" = authored
+// in-app by the org. Lets us later offer "reset to default" / propagate updates.
+const ASSEMBLY_SOURCES = ["starter", "custom"] as const;
 
 // Drivers and lines are embedded: always loaded, saved, and versioned with the
 // assembly, never queried on their own.
@@ -41,6 +44,7 @@ const assemblySchema = new Schema(
     description: { type: String, default: null, trim: true },
     sortOrder: { type: Number, required: true, default: 0 },
     active: { type: Boolean, required: true, default: true },
+    source: { type: String, required: true, enum: ASSEMBLY_SOURCES, default: "custom" },
     drivers: { type: [driverSchema], default: [] },
     lines: { type: [lineSchema], default: [] },
   },

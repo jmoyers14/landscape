@@ -154,3 +154,80 @@ export function resolveQuantities(
   }
   return resolved;
 }
+
+/**
+ * Validate a set of line quantity formulas *without evaluating* them: each
+ * parses, every referenced variable is a known driver or another line's key,
+ * and there are no reference cycles. Used to validate an assembly when it's
+ * authored — skipping evaluation means a legitimate formula like
+ * `x / drainageFt` isn't rejected just because a driver's default value is 0.
+ * Throws FormulaError on the first problem.
+ */
+export function validateLineFormulas(
+  lines: ResolvableLine[],
+  driverKeys: Iterable<string>,
+): void {
+  const drivers = new Set(driverKeys);
+  const lineByKey = new Map<string, ResolvableLine>();
+  for (const line of lines) {
+    if (lineByKey.has(line.key)) {
+      throw new FormulaError(`Duplicate line key "${line.key}"`);
+    }
+    lineByKey.set(line.key, line);
+  }
+
+  const dependenciesByKey = new Map<string, string[]>();
+  for (const line of lines) {
+    const expr = compile(line.quantityFormula);
+    const dependencies: string[] = [];
+    for (const variable of expr.variables({ withMembers: false })) {
+      if (lineByKey.has(variable)) {
+        dependencies.push(variable);
+      } else if (!drivers.has(variable)) {
+        throw new FormulaError(
+          `Unknown variable "${variable}"`,
+          line.quantityFormula,
+        );
+      }
+    }
+    dependenciesByKey.set(line.key, dependencies);
+  }
+
+  const done = new Set<string>();
+  const onStack = new Set<string>();
+  const visit = (key: string): void => {
+    if (done.has(key)) {
+      return;
+    }
+    if (onStack.has(key)) {
+      throw new FormulaError(`Formula reference cycle through "${key}"`);
+    }
+    onStack.add(key);
+    for (const dependency of dependenciesByKey.get(key) ?? []) {
+      visit(dependency);
+    }
+    onStack.delete(key);
+    done.add(key);
+  };
+  for (const line of lines) {
+    visit(line.key);
+  }
+}
+
+/**
+ * Assert a single formula parses and references only the allowed variable keys.
+ * For standalone formulas that aren't part of the line graph (e.g. an assembly
+ * line's deliveries formula).
+ */
+export function assertReferencesKnown(
+  formula: string,
+  allowedKeys: Iterable<string>,
+): void {
+  const allowed = new Set(allowedKeys);
+  const expr = compile(formula);
+  for (const variable of expr.variables({ withMembers: false })) {
+    if (!allowed.has(variable)) {
+      throw new FormulaError(`Unknown variable "${variable}"`, formula);
+    }
+  }
+}

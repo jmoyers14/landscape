@@ -1,5 +1,9 @@
 export type AssemblyLineKind = "material" | "labor";
 
+// "starter" = seeded from the platform's template catalog; "custom" = authored
+// in-app by the org.
+export type AssemblySource = "starter" | "custom";
+
 /**
  * A named input to an assembly's formulas (e.g. `drainageFt`). Driver `key`s
  * are the variables every line formula in the assembly may reference.
@@ -56,6 +60,7 @@ export interface Assembly {
   description: string | null;
   sortOrder: number;
   active: boolean;
+  source: AssemblySource;
   drivers: AssemblyDriver[];
   lines: AssemblyLine[];
   createdAt: string;
