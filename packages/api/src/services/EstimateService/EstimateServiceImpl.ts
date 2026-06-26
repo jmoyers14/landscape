@@ -1,31 +1,40 @@
 import { inject, injectable } from "tsyringe";
 import {
+  ASSEMBLY_REPOSITORY_TOKEN,
   ESTIMATE_REPOSITORY_TOKEN,
+  MATERIAL_REPOSITORY_TOKEN,
   PROJECT_REPOSITORY_TOKEN,
 } from "../../data-access/tokens.ts";
+import { PRICING_SETTINGS_SERVICE_TOKEN } from "../tokens.ts";
 import type {
+  Estimate,
+  EstimateAssembly,
   EstimateRepository,
   LineItemInput,
 } from "../../data-access/repositories/EstimateRepository/EstimateRepository.ts";
 import type { ProjectRepository } from "../../data-access/repositories/ProjectRepository/ProjectRepository.ts";
+import type {
+  Assembly,
+  AssemblyRepository,
+} from "../../data-access/repositories/AssemblyRepository/AssemblyRepository.ts";
+import type { MaterialRepository } from "../../data-access/repositories/MaterialRepository/MaterialRepository.ts";
+import type { PricingSettingsService } from "../PricingSettingsService/PricingSettingsService.ts";
 import { ServiceError } from "../errors.ts";
 import { computeEstimate, type EstimateView } from "../../engine/calc.ts";
+import { generateAssemblyLines } from "../../engine/generate.ts";
 import type {
   EstimateService,
   EstimateSummary,
+  SelectAssemblyInput,
   UpdateEstimateMetaInput,
 } from "./EstimateService.ts";
 
-// Defaults for a fresh estimate. These will move to OrgSettings later so each
-// business can set its own house rates.
-const DEFAULT_OVERHEAD = 40;
-const DEFAULT_PROFIT = 15;
-const DEFAULT_TAX = 0;
-
 /**
- * Estimate business logic: validates the parent project, defaults a new
- * estimate's rates/title, and runs every read/mutation through the calc engine
- * so callers always get freshly computed totals. Orchestrates two repositories.
+ * Estimate business logic. An estimate's line items are a generated snapshot:
+ * `setAssemblies` runs the chosen catalog assemblies + driver values through the
+ * engine and freezes the result (with the rates used), so a sent estimate's
+ * money never drifts when the catalog changes. Reads always recompute totals
+ * from the stored snapshot via the calc engine.
  */
 @injectable()
 export class EstimateServiceImpl implements EstimateService {
@@ -34,6 +43,12 @@ export class EstimateServiceImpl implements EstimateService {
     private readonly estimates: EstimateRepository,
     @inject(PROJECT_REPOSITORY_TOKEN)
     private readonly projects: ProjectRepository,
+    @inject(ASSEMBLY_REPOSITORY_TOKEN)
+    private readonly assemblies: AssemblyRepository,
+    @inject(MATERIAL_REPOSITORY_TOKEN)
+    private readonly materials: MaterialRepository,
+    @inject(PRICING_SETTINGS_SERVICE_TOKEN)
+    private readonly pricingSettings: PricingSettingsService,
   ) {}
 
   async listByProject(
@@ -74,13 +89,16 @@ export class EstimateServiceImpl implements EstimateService {
       resolvedTitle = `Estimate ${existing.length + 1}`;
     }
 
+    // Snapshot the org's current rates so a fresh estimate has sensible defaults
+    // before any assemblies are added; setAssemblies re-snapshots on generation.
+    const settings = await this.pricingSettings.get(orgId);
     const estimate = await this.estimates.create(orgId, {
       projectId,
       title: resolvedTitle,
       status: "draft",
-      overheadRate: DEFAULT_OVERHEAD,
-      profitRate: DEFAULT_PROFIT,
-      taxRate: DEFAULT_TAX,
+      overheadRate: settings.overheadRate,
+      profitRate: settings.profitRate,
+      taxRate: settings.taxRate,
     });
     return computeEstimate(estimate);
   }
@@ -94,49 +112,105 @@ export class EstimateServiceImpl implements EstimateService {
     return this.requireView(estimate);
   }
 
-  async addLineItem(
+  async setAssemblies(
     orgId: string,
     id: string,
-    item: LineItemInput,
+    selections: SelectAssemblyInput[],
   ): Promise<EstimateView> {
-    const estimate = await this.estimates.addLineItem(orgId, id, item);
-    return this.requireView(estimate);
-  }
+    const estimate = await this.estimates.findById(orgId, id);
+    if (!estimate) {
+      throw new ServiceError("NOT_FOUND", "Estimate not found");
+    }
+    if (estimate.status !== "draft") {
+      throw new ServiceError(
+        "BAD_REQUEST",
+        "Only draft estimates can be regenerated",
+      );
+    }
 
-  async updateLineItem(
-    orgId: string,
-    id: string,
-    lineItemId: string,
-    item: LineItemInput,
-  ): Promise<EstimateView> {
-    const estimate = await this.estimates.updateLineItem(
-      orgId,
-      id,
-      lineItemId,
-      item,
+    const settings = await this.pricingSettings.get(orgId);
+
+    // Load each chosen assembly and resolve its driver values up front.
+    const chosen = [];
+    for (const selection of selections) {
+      const assembly = await this.assemblies.findById(
+        orgId,
+        selection.assemblyId,
+      );
+      if (!assembly) {
+        throw new ServiceError(
+          "BAD_REQUEST",
+          `Assembly ${selection.assemblyId} does not exist`,
+        );
+      }
+      chosen.push({
+        assembly,
+        driverValues: resolveDriverValues(assembly, selection.driverValues),
+      });
+    }
+
+    // Load every referenced material once, across all chosen assemblies.
+    const materialIds = new Set<string>();
+    for (const { assembly } of chosen) {
+      for (const line of assembly.lines) {
+        if (line.kind === "material") {
+          materialIds.add(line.materialId);
+        }
+      }
+    }
+    const materials = await this.materials.findByIds(orgId, [...materialIds]);
+    const materialsById = new Map(
+      materials.map((material) => [material.id, material]),
     );
-    return this.requireView(estimate);
-  }
 
-  async removeLineItem(
-    orgId: string,
-    id: string,
-    lineItemId: string,
-  ): Promise<EstimateView> {
-    const estimate = await this.estimates.removeLineItem(orgId, id, lineItemId);
-    return this.requireView(estimate);
+    // Generate each assembly's lines in selection order.
+    const lineItems: LineItemInput[] = [];
+    const assemblies: EstimateAssembly[] = [];
+    for (const { assembly, driverValues } of chosen) {
+      const generated = generateAssemblyLines(
+        { assembly, driverValues },
+        materialsById,
+        settings,
+      );
+      lineItems.push(...generated);
+      assemblies.push({
+        assemblyId: assembly.id,
+        name: assembly.name,
+        driverValues,
+      });
+    }
+
+    const updated = await this.estimates.replaceSnapshot(orgId, id, {
+      assemblies,
+      lineItems,
+      overheadRate: settings.overheadRate,
+      profitRate: settings.profitRate,
+      taxRate: settings.taxRate,
+    });
+    return this.requireView(updated);
   }
 
   async remove(orgId: string, id: string): Promise<void> {
     await this.estimates.deleteById(orgId, id);
   }
 
-  private requireView(
-    estimate: Parameters<typeof computeEstimate>[0] | null,
-  ): EstimateView {
+  private requireView(estimate: Estimate | null): EstimateView {
     if (!estimate) {
       throw new ServiceError("NOT_FOUND", "Estimate not found");
     }
     return computeEstimate(estimate);
   }
+}
+
+// Each declared driver takes the caller's value if given, else its default.
+// Values for undeclared keys are ignored so only real drivers reach the engine.
+function resolveDriverValues(
+  assembly: Assembly,
+  provided?: Record<string, number>,
+): Record<string, number> {
+  const values: Record<string, number> = {};
+  for (const driver of assembly.drivers) {
+    values[driver.key] = provided?.[driver.key] ?? driver.defaultValue;
+  }
+  return values;
 }

@@ -14,7 +14,8 @@ import {
   assertReferencesKnown,
   validateLineFormulas,
 } from "../../engine/formula.ts";
-import { generateAssemblyLines, priceLineItems } from "../../engine/generate.ts";
+import { generateAssemblyLines } from "../../engine/generate.ts";
+import { priceLines } from "../../engine/calc.ts";
 import { ServiceError } from "../errors.ts";
 import type { PricingSettingsService } from "../PricingSettingsService/PricingSettingsService.ts";
 import type {
@@ -109,7 +110,7 @@ export class AssemblyServiceImpl implements AssemblyService {
       materialsById,
       settings,
     );
-    const totals = priceLineItems(lineItems, settings);
+    const totals = priceLines(lineItems, settings);
     return { lineItems, totals };
   }
 

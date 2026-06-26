@@ -1,7 +1,4 @@
-import type {
-  EstimateStatus,
-  LineItemInput,
-} from "../../data-access/repositories/EstimateRepository/EstimateRepository.ts";
+import type { EstimateStatus } from "../../data-access/repositories/EstimateRepository/EstimateRepository.ts";
 export type {
   EstimateView,
   EstimateTotals,
@@ -10,7 +7,7 @@ export type {
 } from "../../engine/calc.ts";
 export type {
   EstimateStatus,
-  LineItemInput,
+  EstimateAssembly,
   LineItemType,
 } from "../../data-access/repositories/EstimateRepository/EstimateRepository.ts";
 
@@ -25,12 +22,19 @@ export interface EstimateSummary {
   createdAt: string;
 }
 
+/** Meta a user can edit directly. Rates are snapshotted at generation, not here. */
 export interface UpdateEstimateMetaInput {
   title?: string;
   status?: EstimateStatus;
-  overheadRate?: number;
-  profitRate?: number;
-  taxRate?: number;
+}
+
+/**
+ * One assembly the estimate should include. `driverValues` overrides each
+ * driver's default; omitted drivers fall back to the assembly's defaults.
+ */
+export interface SelectAssemblyInput {
+  assemblyId: string;
+  driverValues?: Record<string, number>;
 }
 
 export interface EstimateService {
@@ -46,21 +50,15 @@ export interface EstimateService {
     id: string,
     input: UpdateEstimateMetaInput,
   ): Promise<EstimateView>;
-  addLineItem(
+  /**
+   * Replace the estimate's chosen assemblies and regenerate its line-item
+   * snapshot from the live catalog + pricing settings. Only permitted while the
+   * estimate is a draft.
+   */
+  setAssemblies(
     orgId: string,
     id: string,
-    item: LineItemInput,
-  ): Promise<EstimateView>;
-  updateLineItem(
-    orgId: string,
-    id: string,
-    lineItemId: string,
-    item: LineItemInput,
-  ): Promise<EstimateView>;
-  removeLineItem(
-    orgId: string,
-    id: string,
-    lineItemId: string,
+    selections: SelectAssemblyInput[],
   ): Promise<EstimateView>;
   remove(orgId: string, id: string): Promise<void>;
 }

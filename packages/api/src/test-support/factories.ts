@@ -42,6 +42,7 @@ export const makeEstimate = (over: Partial<Estimate> = {}): Estimate => ({
   overheadRate: 40,
   profitRate: 15,
   taxRate: 0,
+  assemblies: [],
   lineItems: [],
   createdAt: CREATED_AT,
   ...over,

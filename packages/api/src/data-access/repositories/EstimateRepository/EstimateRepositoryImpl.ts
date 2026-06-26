@@ -1,61 +1,43 @@
 import mongoose from "mongoose";
 import { injectable } from "tsyringe";
-import { EstimateModel } from "../../models/Estimate.ts";
+import { EstimateModel, type EstimateDoc } from "../../models/Estimate.ts";
 import type {
   Estimate,
+  EstimateAssembly,
   EstimateMetaChanges,
   EstimateRepository,
-  EstimateStatus,
+  EstimateSnapshot,
   LineItem,
-  LineItemInput,
-  LineItemType,
   NewEstimate,
 } from "./EstimateRepository.ts";
 
-type LineItemDoc = {
-  _id: unknown;
-  phase: string | null;
-  type: LineItemType;
-  description: string;
-  quantity: number;
-  unit: string | null;
-  unitPrice: number;
-};
-
-type EstimateDoc = {
-  _id: unknown;
-  projectId: string;
-  title: string;
-  status: EstimateStatus;
-  overheadRate: number;
-  profitRate: number;
-  taxRate: number;
-  lineItems: LineItemDoc[];
-  createdAt: Date;
-};
-
 /**
- * Mongoose-backed EstimateRepository. Line-item edits use array update
- * operators (rather than hydrated subdocuments) so reads stay lean and the
- * mapping to plain entities is straightforward. Every query is org-scoped.
+ * Mongoose-backed EstimateRepository. The line-item snapshot is replaced as a
+ * whole on (re)generation rather than mutated piecemeal. Every query is
+ * org-scoped.
  */
 @injectable()
 export class EstimateRepositoryImpl implements EstimateRepository {
   async findByProject(orgId: string, projectId: string): Promise<Estimate[]> {
     const docs = await EstimateModel.find({ orgId, projectId })
       .sort({ createdAt: -1 })
-      .lean<EstimateDoc[]>();
+      .lean();
     return docs.map(toEstimate);
   }
 
   async findById(orgId: string, id: string): Promise<Estimate | null> {
-    const doc = await EstimateModel.findOne({ _id: id, orgId }).lean<EstimateDoc | null>();
+    const doc = await EstimateModel.findOne({ _id: id, orgId }).lean();
     return doc ? toEstimate(doc) : null;
   }
 
   async create(orgId: string, data: NewEstimate): Promise<Estimate> {
-    const doc = await EstimateModel.create({ orgId, ...data, lineItems: [] });
-    return toEstimate(doc.toObject() as EstimateDoc);
+    const doc = await EstimateModel.create({
+      orgId,
+      ...data,
+      assemblies: [],
+      lineItems: [],
+    });
+    return toEstimate(doc.toObject());
   }
 
   async updateMeta(
@@ -65,49 +47,32 @@ export class EstimateRepositoryImpl implements EstimateRepository {
   ): Promise<Estimate | null> {
     const doc = await EstimateModel.findOneAndUpdate({ _id: id, orgId }, changes, {
       returnDocument: "after",
-    }).lean<EstimateDoc | null>();
+    }).lean();
     return doc ? toEstimate(doc) : null;
   }
 
-  async addLineItem(
+  async replaceSnapshot(
     orgId: string,
     id: string,
-    item: LineItemInput,
+    snapshot: EstimateSnapshot,
   ): Promise<Estimate | null> {
-    const _id = new mongoose.Types.ObjectId();
+    const lineItems = snapshot.lineItems.map((item) => ({
+      _id: new mongoose.Types.ObjectId(),
+      ...item,
+    }));
     const doc = await EstimateModel.findOneAndUpdate(
       { _id: id, orgId },
-      { $push: { lineItems: { _id, ...item } } },
+      {
+        $set: {
+          assemblies: snapshot.assemblies,
+          lineItems,
+          overheadRate: snapshot.overheadRate,
+          profitRate: snapshot.profitRate,
+          taxRate: snapshot.taxRate,
+        },
+      },
       { returnDocument: "after" },
-    ).lean<EstimateDoc | null>();
-    return doc ? toEstimate(doc) : null;
-  }
-
-  async updateLineItem(
-    orgId: string,
-    id: string,
-    lineItemId: string,
-    item: LineItemInput,
-  ): Promise<Estimate | null> {
-    const itemId = new mongoose.Types.ObjectId(lineItemId);
-    const doc = await EstimateModel.findOneAndUpdate(
-      { _id: id, orgId },
-      { $set: { "lineItems.$[el]": { _id: itemId, ...item } } },
-      { returnDocument: "after", arrayFilters: [{ "el._id": itemId }] },
-    ).lean<EstimateDoc | null>();
-    return doc ? toEstimate(doc) : null;
-  }
-
-  async removeLineItem(
-    orgId: string,
-    id: string,
-    lineItemId: string,
-  ): Promise<Estimate | null> {
-    const doc = await EstimateModel.findOneAndUpdate(
-      { _id: id, orgId },
-      { $pull: { lineItems: { _id: new mongoose.Types.ObjectId(lineItemId) } } },
-      { returnDocument: "after" },
-    ).lean<EstimateDoc | null>();
+    ).lean();
     return doc ? toEstimate(doc) : null;
   }
 
@@ -116,7 +81,7 @@ export class EstimateRepositoryImpl implements EstimateRepository {
   }
 }
 
-function toLineItem(doc: LineItemDoc): LineItem {
+function toLineItem(doc: EstimateDoc["lineItems"][number]): LineItem {
   return {
     id: String(doc._id),
     phase: doc.phase ?? null,
@@ -125,6 +90,22 @@ function toLineItem(doc: LineItemDoc): LineItem {
     quantity: doc.quantity,
     unit: doc.unit ?? null,
     unitPrice: doc.unitPrice,
+    taxable: doc.taxable,
+    deliveryCost: doc.deliveryCost,
+    quantityFormula: doc.quantityFormula,
+    sourceAssemblyId: doc.sourceAssemblyId ?? null,
+    sourceLineKey: doc.sourceLineKey ?? null,
+  };
+}
+
+function toEstimateAssembly(
+  doc: EstimateDoc["assemblies"][number],
+): EstimateAssembly {
+  return {
+    assemblyId: doc.assemblyId,
+    name: doc.name,
+    // driverValues is a Mixed map; it round-trips as a plain object.
+    driverValues: (doc.driverValues ?? {}) as Record<string, number>,
   };
 }
 
@@ -137,6 +118,7 @@ function toEstimate(doc: EstimateDoc): Estimate {
     overheadRate: doc.overheadRate,
     profitRate: doc.profitRate,
     taxRate: doc.taxRate,
+    assemblies: (doc.assemblies ?? []).map(toEstimateAssembly),
     lineItems: (doc.lineItems ?? []).map(toLineItem),
     createdAt: doc.createdAt.toISOString(),
   };

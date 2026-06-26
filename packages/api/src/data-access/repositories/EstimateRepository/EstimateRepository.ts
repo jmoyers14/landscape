@@ -1,17 +1,17 @@
 import type {
   Estimate,
   EstimateMetaChanges,
-  LineItemInput,
+  EstimateSnapshot,
   NewEstimate,
 } from "./types.ts";
 
 export * from "./types.ts";
 
 /**
- * Persistence boundary for estimates, org-scoped throughout. Line-item
- * operations live here because they manipulate embedded subdocuments — a
- * persistence concern — and return the whole updated estimate so the service
- * can recompute totals.
+ * Persistence boundary for estimates, org-scoped throughout. An estimate's
+ * line items are a generated snapshot, replaced wholesale (`replaceSnapshot`)
+ * rather than edited one at a time — generation is the only thing that produces
+ * them.
  */
 export interface EstimateRepository {
   findByProject(orgId: string, projectId: string): Promise<Estimate[]>;
@@ -22,21 +22,10 @@ export interface EstimateRepository {
     id: string,
     changes: EstimateMetaChanges,
   ): Promise<Estimate | null>;
-  addLineItem(
+  replaceSnapshot(
     orgId: string,
     id: string,
-    item: LineItemInput,
-  ): Promise<Estimate | null>;
-  updateLineItem(
-    orgId: string,
-    id: string,
-    lineItemId: string,
-    item: LineItemInput,
-  ): Promise<Estimate | null>;
-  removeLineItem(
-    orgId: string,
-    id: string,
-    lineItemId: string,
+    snapshot: EstimateSnapshot,
   ): Promise<Estimate | null>;
   deleteById(orgId: string, id: string): Promise<void>;
 }

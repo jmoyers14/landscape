@@ -2,22 +2,17 @@ import { z } from "zod";
 import { orgProtectedProcedure, router } from "../trpc.ts";
 import { ANALYTICS_EVENTS } from "../analytics/events.ts";
 
-const lineItemInput = z.object({
-  phase: z.string().nullable().default(null),
-  type: z.enum(["material", "labor", "equipment", "other"]),
-  description: z.string().min(1),
-  quantity: z.number().min(0),
-  unit: z.string().nullable().default(null),
-  unitPrice: z.number().min(0),
+// One chosen assembly: which one, and the driver values to generate it with.
+// Omitted drivers fall back to the assembly's defaults in the service.
+const selectAssemblyInput = z.object({
+  assemblyId: z.string().min(1),
+  driverValues: z.record(z.string(), z.number()).optional(),
 });
 
 const metaInput = z.object({
   id: z.string().min(1),
   title: z.string().min(1).optional(),
   status: z.enum(["draft", "sent", "accepted"]).optional(),
-  overheadRate: z.number().min(0).optional(),
-  profitRate: z.number().min(0).optional(),
-  taxRate: z.number().min(0).optional(),
 });
 
 export const estimatesRouter = router({
@@ -74,40 +69,18 @@ export const estimatesRouter = router({
       return estimate;
     }),
 
-  addLineItem: orgProtectedProcedure
-    .input(z.object({ id: z.string().min(1), item: lineItemInput }))
-    .mutation(({ ctx, input }) =>
-      ctx.services.estimateService.addLineItem(
-        ctx.auth.orgId,
-        input.id,
-        input.item,
-      ),
-    ),
-
-  updateLineItem: orgProtectedProcedure
+  setAssemblies: orgProtectedProcedure
     .input(
       z.object({
         id: z.string().min(1),
-        lineItemId: z.string().min(1),
-        item: lineItemInput,
+        assemblies: z.array(selectAssemblyInput),
       }),
     )
     .mutation(({ ctx, input }) =>
-      ctx.services.estimateService.updateLineItem(
+      ctx.services.estimateService.setAssemblies(
         ctx.auth.orgId,
         input.id,
-        input.lineItemId,
-        input.item,
-      ),
-    ),
-
-  removeLineItem: orgProtectedProcedure
-    .input(z.object({ id: z.string().min(1), lineItemId: z.string().min(1) }))
-    .mutation(({ ctx, input }) =>
-      ctx.services.estimateService.removeLineItem(
-        ctx.auth.orgId,
-        input.id,
-        input.lineItemId,
+        input.assemblies,
       ),
     ),
 

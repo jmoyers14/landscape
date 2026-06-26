@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { generateAssemblyLines, priceLineItems } from "./generate.ts";
+import { generateAssemblyLines } from "./generate.ts";
 import {
   drainageAssembly,
   drainageMaterials,
@@ -38,67 +38,6 @@ describe("generateAssemblyLines — fidelity to the spreadsheet", () => {
   it("freezes the source formula on each generated line", () => {
     expect(byKey("catchBasinSingle").quantityFormula).toBe(
       "round(drainageFt / 85)",
-    );
-  });
-});
-
-describe("priceLineItems — cost buildup", () => {
-  it("taxes material lines before markup, matching the sheet's M11", () => {
-    const lines = generateAssemblyLines(
-      { assembly: drainage, driverValues: { drainageFt: 225 } },
-      materials,
-      settings,
-    );
-    // M11 in the sheet: 3 × 6.853 = 20.559, +7.75% tax = 22.1523225
-    const single = lines.find((l) => l.sourceLineKey === "catchBasinSingle")!;
-    const base = single.quantity * single.unitPrice;
-    const withTax = base * (1 + settings.taxRate / 100);
-    expect(withTax).toBeCloseTo(22.1523225, 5);
-  });
-
-  it("applies margin-basis overhead and profit on cost+overhead", () => {
-    const totals = priceLineItems(
-      [
-        {
-          phase: "T",
-          type: "material",
-          description: "m",
-          quantity: 3,
-          unit: "ea",
-          unitPrice: 6.853,
-          taxable: true,
-          deliveryCost: 0,
-          quantityFormula: "3",
-          sourceAssemblyId: null,
-          sourceLineKey: "m",
-        },
-        {
-          phase: "T",
-          type: "labor",
-          description: "l",
-          quantity: 21.375,
-          unit: "hr",
-          unitPrice: 35,
-          taxable: false,
-          deliveryCost: 0,
-          quantityFormula: "21.375",
-          sourceAssemblyId: null,
-          sourceLineKey: "l",
-        },
-      ],
-      settings,
-    );
-    // labor untaxed: 748.125; material taxed: 22.1523225
-    expect(totals.laborCost).toBeCloseTo(748.125, 5);
-    expect(totals.directCost).toBeCloseTo(770.2773225, 5);
-    // overhead = cost/0.6 - cost
-    expect(totals.directCost + totals.overhead).toBeCloseTo(
-      totals.directCost / 0.6,
-      5,
-    );
-    expect(totals.profit).toBeCloseTo(
-      (totals.directCost + totals.overhead) * 0.15,
-      5,
     );
   });
 });

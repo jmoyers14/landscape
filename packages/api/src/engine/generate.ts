@@ -4,8 +4,9 @@ import type { PricingSettings } from "../data-access/repositories/PricingSetting
 import { FormulaError, evaluate, resolveQuantities } from "./formula.ts";
 
 /**
- * Turns chosen assemblies + driver values into priced line items, then runs the
- * cost buildup — the generative engine described in docs/data-model.md.
+ * Turns chosen assemblies + driver values into priced line items — the
+ * generation half of the engine described in docs/data-model.md. The cost
+ * buildup over these lines lives in calc.ts (`priceLines`).
  *
  * Each generated line freezes the formula it was produced from
  * (`quantityFormula`) alongside its resolved numbers, so an estimate can always
@@ -100,47 +101,4 @@ export function generateAssemblyLines(
         deliveryCost: material.deliveryCost * deliveries,
       };
     });
-}
-
-export interface EstimateTotals {
-  materialCost: number;
-  laborCost: number;
-  tax: number;
-  directCost: number; // material + labor + tax + delivery
-  overhead: number;
-  profit: number;
-  total: number;
-}
-
-/**
- * The cost buildup, faithful to the spreadsheet. Material lines carry their
- * sales tax and delivery inside direct cost; labor is untaxed. Overhead is
- * margin-basis (`cost / 0.6 − cost` when overheadRate is 40); profit is a markup
- * on cost + overhead.
- */
-export function priceLineItems(
-  items: GeneratedLineItem[],
-  settings: PricingSettings,
-): EstimateTotals {
-  let materialCost = 0;
-  let laborCost = 0;
-  let tax = 0;
-
-  for (const item of items) {
-    const base = item.quantity * item.unitPrice;
-    if (item.type === "labor") {
-      laborCost += base;
-      continue;
-    }
-    const lineTax = item.taxable ? base * (settings.taxRate / 100) : 0;
-    tax += lineTax;
-    materialCost += base + item.deliveryCost + lineTax;
-  }
-
-  const directCost = materialCost + laborCost;
-  const overhead = directCost * (1 / (1 - settings.overheadRate / 100) - 1);
-  const profit = (directCost + overhead) * (settings.profitRate / 100);
-  const total = directCost + overhead + profit;
-
-  return { materialCost, laborCost, tax, directCost, overhead, profit, total };
 }

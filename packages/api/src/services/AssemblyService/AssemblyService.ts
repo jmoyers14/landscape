@@ -2,10 +2,8 @@ import type {
   Assembly,
   AssemblyInput,
 } from "../../data-access/repositories/AssemblyRepository/AssemblyRepository.ts";
-import type {
-  EstimateTotals,
-  GeneratedLineItem,
-} from "../../engine/generate.ts";
+import type { GeneratedLineItem } from "../../engine/generate.ts";
+import type { EstimateTotals } from "../../engine/calc.ts";
 
 export type { Assembly };
 
