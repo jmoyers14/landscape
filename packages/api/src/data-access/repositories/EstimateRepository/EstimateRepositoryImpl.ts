@@ -64,7 +64,7 @@ export class EstimateRepositoryImpl implements EstimateRepository {
     changes: EstimateMetaChanges,
   ): Promise<Estimate | null> {
     const doc = await EstimateModel.findOneAndUpdate({ _id: id, orgId }, changes, {
-      new: true,
+      returnDocument: "after",
     }).lean<EstimateDoc | null>();
     return doc ? toEstimate(doc) : null;
   }
@@ -78,7 +78,7 @@ export class EstimateRepositoryImpl implements EstimateRepository {
     const doc = await EstimateModel.findOneAndUpdate(
       { _id: id, orgId },
       { $push: { lineItems: { _id, ...item } } },
-      { new: true },
+      { returnDocument: "after" },
     ).lean<EstimateDoc | null>();
     return doc ? toEstimate(doc) : null;
   }
@@ -93,7 +93,7 @@ export class EstimateRepositoryImpl implements EstimateRepository {
     const doc = await EstimateModel.findOneAndUpdate(
       { _id: id, orgId },
       { $set: { "lineItems.$[el]": { _id: itemId, ...item } } },
-      { new: true, arrayFilters: [{ "el._id": itemId }] },
+      { returnDocument: "after", arrayFilters: [{ "el._id": itemId }] },
     ).lean<EstimateDoc | null>();
     return doc ? toEstimate(doc) : null;
   }
@@ -106,7 +106,7 @@ export class EstimateRepositoryImpl implements EstimateRepository {
     const doc = await EstimateModel.findOneAndUpdate(
       { _id: id, orgId },
       { $pull: { lineItems: { _id: new mongoose.Types.ObjectId(lineItemId) } } },
-      { new: true },
+      { returnDocument: "after" },
     ).lean<EstimateDoc | null>();
     return doc ? toEstimate(doc) : null;
   }

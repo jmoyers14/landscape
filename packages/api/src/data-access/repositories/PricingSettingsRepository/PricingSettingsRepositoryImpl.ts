@@ -23,7 +23,7 @@ export class PricingSettingsRepositoryImpl implements PricingSettingsRepository 
     const doc = await PricingSettingsModel.findOneAndUpdate(
       { orgId },
       { orgId, ...settings },
-      { new: true, upsert: true, setDefaultsOnInsert: true },
+      { returnDocument: "after", upsert: true, setDefaultsOnInsert: true },
     ).lean();
     return toSettings(doc);
   }

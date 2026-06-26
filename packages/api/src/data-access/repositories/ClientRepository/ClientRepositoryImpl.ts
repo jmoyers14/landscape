@@ -42,7 +42,7 @@ export class ClientRepositoryImpl implements ClientRepository {
 
   async update(orgId: string, id: string, data: ClientInput): Promise<Client | null> {
     const doc = await ClientModel.findOneAndUpdate({ _id: id, orgId }, data, {
-      new: true,
+      returnDocument: "after",
     }).lean<ClientDoc | null>();
     return doc ? toClient(doc) : null;
   }

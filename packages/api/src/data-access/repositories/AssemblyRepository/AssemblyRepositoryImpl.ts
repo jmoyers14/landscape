@@ -32,7 +32,7 @@ export class AssemblyRepositoryImpl implements AssemblyRepository {
     changes: AssemblyChanges,
   ): Promise<Assembly | null> {
     const doc = await AssemblyModel.findOneAndUpdate({ _id: id, orgId }, changes, {
-      new: true,
+      returnDocument: "after",
     }).lean();
     return doc ? toAssembly(doc) : null;
   }

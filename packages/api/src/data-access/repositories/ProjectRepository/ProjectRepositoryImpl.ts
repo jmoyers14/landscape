@@ -52,7 +52,7 @@ export class ProjectRepositoryImpl implements ProjectRepository {
     changes: ProjectChanges,
   ): Promise<Project | null> {
     const doc = await ProjectModel.findOneAndUpdate({ _id: id, orgId }, changes, {
-      new: true,
+      returnDocument: "after",
     }).lean<ProjectDoc | null>();
     return doc ? toProject(doc) : null;
   }

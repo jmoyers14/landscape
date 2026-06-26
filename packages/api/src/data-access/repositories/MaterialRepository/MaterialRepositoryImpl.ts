@@ -44,7 +44,7 @@ export class MaterialRepositoryImpl implements MaterialRepository {
       { _id: id, orgId },
       changes,
       {
-        new: true,
+        returnDocument: "after",
       },
     ).lean();
     return doc ? toMaterial(doc) : null;
