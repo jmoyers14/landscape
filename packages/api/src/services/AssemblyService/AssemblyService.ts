@@ -2,8 +2,18 @@ import type {
   Assembly,
   AssemblyInput,
 } from "../../data-access/repositories/AssemblyRepository/AssemblyRepository.ts";
+import type {
+  EstimateTotals,
+  GeneratedLineItem,
+} from "../../engine/generate.ts";
 
 export type { Assembly };
+
+/** The priced result of running an assembly against driver values; saves nothing. */
+export interface AssemblyPreview {
+  lineItems: GeneratedLineItem[];
+  totals: EstimateTotals;
+}
 
 /**
  * Client-facing input for an assembly: everything an org provides, minus the
@@ -27,4 +37,16 @@ export interface AssemblyService {
     input: AssemblyServiceInput,
   ): Promise<Assembly>;
   remove(orgId: string, id: string): Promise<void>;
+
+  /**
+   * Compute the priced line items + totals an assembly produces for the given
+   * driver values, reading the catalog through the repositories. Read-only —
+   * persists nothing (an Estimate, later, will snapshot this). Driver values
+   * default to each driver's `defaultValue` when omitted.
+   */
+  preview(
+    orgId: string,
+    assemblyId: string,
+    driverValues?: Record<string, number>,
+  ): Promise<AssemblyPreview>;
 }

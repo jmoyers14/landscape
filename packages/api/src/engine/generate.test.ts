@@ -1,128 +1,17 @@
 import { describe, expect, it } from "bun:test";
-import type { Assembly } from "../data-access/repositories/AssemblyRepository/AssemblyRepository.ts";
-import type { Material } from "../data-access/repositories/MaterialRepository/MaterialRepository.ts";
-import type { PricingSettings } from "../data-access/repositories/PricingSettingsRepository/PricingSettingsRepository.ts";
 import { generateAssemblyLines, priceLineItems } from "./generate.ts";
+import {
+  drainageAssembly,
+  drainageMaterials,
+  drainagePricing,
+} from "../test-support/drainageFixture.ts";
 
-const settings: PricingSettings = {
-  taxRate: 7.75,
-  overheadRate: 40,
-  profitRate: 15,
-  laborRates: [
-    { key: "general", label: "General labor", rate: 35 },
-    { key: "skilled", label: "Skilled labor", rate: 55 },
-  ],
-};
-
-// A material with sane defaults; override per case.
-const material = (id: string, over: Partial<Material> = {}): Material => ({
-  id,
-  name: id,
-  category: "Drainage",
-  unit: "unit(s)",
-  unitPrice: 0,
-  deliveryCost: 0,
-  taxable: true,
-  active: true,
-  createdAt: "2026-01-01T00:00:00.000Z",
-  ...over,
-});
-
-// The Drainage section from "Package", driven by drainageFt = 225. Quantities,
-// unit prices, and the per-line material total below are the values the
-// spreadsheet itself computes (cells E11/E12/E21/E22/E25, M11, N9/P9).
-const materials = new Map<string, Material>([
-  ["catch-basin-single", material("catch-basin-single", { unitPrice: 6.853 })],
-  ["catch-basin-double", material("catch-basin-double", { unitPrice: 6.853 })],
-  ["solid-pipe-3", material("solid-pipe-3", { unitPrice: 4.13, unit: "pcs." })],
-  [
-    "solid-pipe-6",
-    material("solid-pipe-6", { unitPrice: 13.94, unit: "pcs." }),
-  ],
-  ["curb-core", material("curb-core", { unitPrice: 75, unit: "core" })],
-]);
-
-const drainage: Assembly = {
-  id: "drainage",
-  name: "Drainage",
-  category: "Drainage",
-  description: null,
-  sortOrder: 1,
-  active: true,
-  source: "starter",
-  createdAt: "2026-01-01T00:00:00.000Z",
-  drivers: [
-    {
-      key: "drainageFt",
-      label: "Drainage length",
-      unit: "ft.",
-      defaultValue: 225,
-    },
-  ],
-  lines: [
-    {
-      key: "layout",
-      kind: "labor",
-      description: "Lay out, trenching, and back filling",
-      quantityFormula: "0.095 * drainageFt",
-      laborRateKey: "general",
-      sortOrder: 1,
-    },
-    {
-      key: "install",
-      kind: "labor",
-      description: "Installing pipe, basins, grates",
-      quantityFormula: "0.05273 * drainageFt",
-      laborRateKey: "general",
-      sortOrder: 2,
-    },
-    {
-      key: "catchBasinSingle",
-      kind: "material",
-      description: "Single outlet catch basin",
-      quantityFormula: "round(drainageFt / 85)",
-      materialId: "catch-basin-single",
-      deliveriesFormula: null,
-      sortOrder: 3,
-    },
-    {
-      key: "catchBasinDouble",
-      kind: "material",
-      description: "Double outlet catch basin",
-      quantityFormula: "round((drainageFt / 85) * 2)",
-      materialId: "catch-basin-double",
-      deliveriesFormula: null,
-      sortOrder: 4,
-    },
-    {
-      key: "solidPipe3",
-      kind: "material",
-      description: "Solid drain pipe 3\" x 10'",
-      quantityFormula: "roundUp(drainageFt / 10)",
-      materialId: "solid-pipe-3",
-      deliveriesFormula: null,
-      sortOrder: 5,
-    },
-    {
-      key: "solidPipe6",
-      kind: "material",
-      description: "Solid drain pipe 6\" x 10'",
-      quantityFormula: "round((drainageFt / 150) * 1, 1)",
-      materialId: "solid-pipe-6",
-      deliveriesFormula: null,
-      sortOrder: 6,
-    },
-    {
-      key: "curbCore",
-      kind: "material",
-      description: "Curb core",
-      quantityFormula: "drainageFt < 175 ? 1 : 2",
-      materialId: "curb-core",
-      deliveriesFormula: null,
-      sortOrder: 7,
-    },
-  ],
-};
+// The Drainage subset (drainageFt = 225). Quantities, prices, and the per-line
+// material total asserted below are the values the spreadsheet itself computes
+// (cells E11/E12/E21/E22/E25, M11, N9/P9).
+const settings = drainagePricing();
+const materials = new Map(drainageMaterials().map((m) => [m.id, m]));
+const drainage = drainageAssembly();
 
 describe("generateAssemblyLines — fidelity to the spreadsheet", () => {
   const lines = generateAssemblyLines(

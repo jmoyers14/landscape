@@ -11,6 +11,11 @@ import {
   makeMaterial,
   makePricingSettings,
 } from "../../test-support/factories.ts";
+import {
+  drainageAssembly,
+  drainageMaterials,
+  drainagePricing,
+} from "../../test-support/drainageFixture.ts";
 import { ServiceError } from "../errors.ts";
 
 // A valid Drainage-style input: one labor line (rate "general") and one
@@ -181,5 +186,66 @@ describe("AssemblyServiceImpl validation", () => {
     expect(service.update("org_1", "missing", baseInput())).rejects.toThrow(
       ServiceError,
     );
+  });
+});
+
+describe("AssemblyServiceImpl.preview", () => {
+  // Drainage fixture from test-support (independent of the production seed).
+  const fixtureMaterials = drainageMaterials();
+  const fixtureAssembly = drainageAssembly();
+
+  const previewService = () =>
+    makeService({
+      assemblies: makeAssemblyRepoMock({
+        findById: mock(async () => fixtureAssembly),
+      }),
+      materials: makeMaterialRepoMock({
+        findByIds: mock(async () => fixtureMaterials),
+      }),
+      pricing: pricingStub({ get: mock(async () => drainagePricing()) }),
+    });
+
+  it("generates Drainage line items matching the spreadsheet", async () => {
+    const { lineItems, totals } = await previewService().preview(
+      "org_1",
+      "drainage",
+      { drainageFt: 225 },
+    );
+    const byKey = (key: string) =>
+      lineItems.find((line) => line.sourceLineKey === key)!;
+
+    // quantities resolved from the seeded formulas (cells E11/E21/E25, N9)
+    expect(byKey("catchBasinSingle").quantity).toBe(3);
+    expect(byKey("solidPipe3").quantity).toBe(23);
+    expect(byKey("curbCore").quantity).toBe(2);
+    expect(byKey("layout").quantity).toBeCloseTo(21.375, 5);
+
+    // unit prices came from the loaded material / labor rate — proves the repos
+    // and settings were wired in, not just the formulas.
+    expect(byKey("catchBasinSingle").unitPrice).toBe(6.853);
+    expect(byKey("layout").unitPrice).toBe(35);
+
+    // the cost buildup ran
+    expect(totals.directCost).toBeCloseTo(
+      totals.materialCost + totals.laborCost,
+      5,
+    );
+    expect(totals.total).toBeGreaterThan(totals.directCost);
+  });
+
+  it("falls back to each driver's default when no value is given", async () => {
+    const { lineItems } = await previewService().preview("org_1", "drainage");
+    // default drainageFt = 225 -> catch basins = 3
+    const single = lineItems.find(
+      (line) => line.sourceLineKey === "catchBasinSingle",
+    )!;
+    expect(single.quantity).toBe(3);
+  });
+
+  it("throws NOT_FOUND for an unknown assembly", async () => {
+    const service = makeService({
+      assemblies: makeAssemblyRepoMock({ findById: mock(async () => null) }),
+    });
+    expect(service.preview("org_1", "missing")).rejects.toThrow(ServiceError);
   });
 });

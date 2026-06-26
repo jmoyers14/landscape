@@ -74,4 +74,21 @@ export const assembliesRouter = router({
     .mutation(({ ctx, input }) =>
       ctx.services.assemblyService.remove(ctx.auth.orgId, input.id),
     ),
+
+  // Read-only: priced line items + totals for an assembly at the given driver
+  // values (saves nothing). Powers a "what does this cost" catalog preview.
+  preview: orgProtectedProcedure
+    .input(
+      z.object({
+        assemblyId: z.string().min(1),
+        driverValues: z.record(z.string(), z.number()).default({}),
+      }),
+    )
+    .query(({ ctx, input }) =>
+      ctx.services.assemblyService.preview(
+        ctx.auth.orgId,
+        input.assemblyId,
+        input.driverValues,
+      ),
+    ),
 });

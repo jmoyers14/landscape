@@ -14,9 +14,11 @@ import {
   assertReferencesKnown,
   validateLineFormulas,
 } from "../../engine/formula.ts";
+import { generateAssemblyLines, priceLineItems } from "../../engine/generate.ts";
 import { ServiceError } from "../errors.ts";
 import type { PricingSettingsService } from "../PricingSettingsService/PricingSettingsService.ts";
 import type {
+  AssemblyPreview,
   AssemblyService,
   AssemblyServiceInput,
 } from "./AssemblyService.ts";
@@ -71,6 +73,44 @@ export class AssemblyServiceImpl implements AssemblyService {
 
   remove(orgId: string, id: string): Promise<void> {
     return this.assemblies.deleteById(orgId, id);
+  }
+
+  async preview(
+    orgId: string,
+    assemblyId: string,
+    driverValues: Record<string, number> = {},
+  ): Promise<AssemblyPreview> {
+    const assembly = await this.assemblies.findById(orgId, assemblyId);
+    if (!assembly) {
+      throw new ServiceError("NOT_FOUND", "Assembly not found");
+    }
+
+    // Provided values override each driver's default.
+    const drivers: Record<string, number> = {};
+    for (const driver of assembly.drivers) {
+      drivers[driver.key] = driver.defaultValue;
+    }
+    for (const [key, value] of Object.entries(driverValues)) {
+      drivers[key] = value;
+    }
+
+    const materialIds = new Set<string>();
+    for (const line of assembly.lines) {
+      if (line.kind === "material") {
+        materialIds.add(line.materialId);
+      }
+    }
+    const materials = await this.materials.findByIds(orgId, [...materialIds]);
+    const materialsById = new Map(materials.map((material) => [material.id, material]));
+
+    const settings = await this.pricingSettings.get(orgId);
+    const lineItems = generateAssemblyLines(
+      { assembly, driverValues: drivers },
+      materialsById,
+      settings,
+    );
+    const totals = priceLineItems(lineItems, settings);
+    return { lineItems, totals };
   }
 
   // Validates + normalizes an assembly. Throws BAD_REQUEST on any structural
