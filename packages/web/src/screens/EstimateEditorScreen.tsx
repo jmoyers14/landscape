@@ -4,7 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@landscape/api";
 import { queryClient, trpc } from "../trpc.ts";
-import { ErrorNote, inputClass, Page } from "../components/ui.tsx";
+import { ErrorNote, Page } from "../components/ui.tsx";
 import { formatCurrency } from "../lib/format.ts";
 
 type RouterOutput = inferRouterOutputs<AppRouter>;
@@ -12,13 +12,6 @@ type EstimateView = NonNullable<RouterOutput["estimates"]["get"]>;
 type LineItemView = EstimateView["lineItems"][number];
 type LineItemType = LineItemView["type"];
 type EstimateStatus = EstimateView["status"];
-
-const LINE_ITEM_TYPES = [
-  "material",
-  "labor",
-  "equipment",
-  "other",
-] as const satisfies readonly LineItemType[];
 
 const TYPE_LABEL: Record<LineItemType, string> = {
   material: "Material",
@@ -39,27 +32,11 @@ const STATUS_LABEL: Record<EstimateStatus, string> = {
   accepted: "Accepted",
 };
 
-const PHASES = [
-  "General Condition",
-  "Demolition",
-  "Drainage",
-  "Irrigation",
-  "Soil Preparation",
-  "Planting",
-  "Lawn Borders",
-  "Lighting/Electrical",
-  "Gravel/Boulders/Steppers",
-  "Carpentry",
-  "Concrete",
-  "Masonry: Walls",
-  "Masonry: Paving",
-  "Gas Line and Fire Ring",
-  "Water Features: Pre Fab",
-  "Water Features: Others",
-] as const;
-
 const phaseLabel = (phase: string | null) => phase || "General";
 
+// NOTE: Line items are now a generated snapshot — they come from the assemblies
+// chosen for the estimate (estimates.setAssemblies), not hand entry. This screen
+// is read-only for now; the assembly picker + driver inputs land in Phase E.
 export function EstimateEditorScreen() {
   const { projectId, estimateId } = useParams({
     from: "/projects/$projectId/estimates/$estimateId",
@@ -80,32 +57,13 @@ export function EstimateEditorScreen() {
     });
   };
   const onError = (e: { message: string }) => setError(e.message);
-  const onMutated = () => {
-    invalidate();
-    setError(null);
-  };
 
   const updateMeta = useMutation(
     trpc.estimates.updateMeta.mutationOptions({
-      onSuccess: onMutated,
-      onError,
-    }),
-  );
-  const addLineItem = useMutation(
-    trpc.estimates.addLineItem.mutationOptions({
-      onSuccess: onMutated,
-      onError,
-    }),
-  );
-  const updateLineItem = useMutation(
-    trpc.estimates.updateLineItem.mutationOptions({
-      onSuccess: onMutated,
-      onError,
-    }),
-  );
-  const removeLineItem = useMutation(
-    trpc.estimates.removeLineItem.mutationOptions({
-      onSuccess: onMutated,
+      onSuccess: () => {
+        invalidate();
+        setError(null);
+      },
       onError,
     }),
   );
@@ -162,20 +120,15 @@ export function EstimateEditorScreen() {
         onDelete={() => removeEstimate.mutate({ id: estimateId })}
       />
 
-      <RatesEditor
-        key={`rates-${data.id}`}
-        estimate={data}
-        onCommit={(changes) =>
-          updateMeta.mutate({ id: estimateId, ...changes })
-        }
-      />
+      <AssembliesSummary estimate={data} />
 
       <section className="space-y-4">
         <h2 className="text-sm font-medium text-slate-600">Line items</h2>
 
         {data.lineItems.length === 0 ? (
           <p className="text-sm text-slate-400">
-            No line items yet — add one below.
+            No line items yet. Line items are generated from the assemblies
+            chosen for this estimate — the assembly picker is coming soon.
           </p>
         ) : (
           data.phases.map((phase) => (
@@ -192,45 +145,40 @@ export function EstimateEditorScreen() {
                 </span>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[36rem] border-collapse text-sm">
+                <table className="w-full min-w-[32rem] border-collapse text-sm">
                   <thead>
                     <tr className="border-b border-slate-200 text-left text-xs text-slate-400">
                       <th className="px-4 py-1.5 font-medium">Description</th>
                       <th className="px-4 py-1.5 font-medium">Type</th>
-                      <th className="px-4 py-1.5 text-right font-medium">
-                        Qty
-                      </th>
+                      <th className="px-4 py-1.5 text-right font-medium">Qty</th>
                       <th className="px-4 py-1.5 text-right font-medium">
                         Unit price
                       </th>
                       <th className="px-4 py-1.5 text-right font-medium">
                         Total
                       </th>
-                      <th className="px-4 py-1.5" />
                     </tr>
                   </thead>
                   <tbody>
                     {(itemsByPhase.get(phase.phase) ?? []).map((item) => (
-                      <LineItemRow
-                        key={item.id}
-                        item={item}
-                        busy={
-                          updateLineItem.isPending || removeLineItem.isPending
-                        }
-                        onSave={(input) =>
-                          updateLineItem.mutate({
-                            id: estimateId,
-                            lineItemId: item.id,
-                            item: { ...input, phase: item.phase },
-                          })
-                        }
-                        onRemove={() =>
-                          removeLineItem.mutate({
-                            id: estimateId,
-                            lineItemId: item.id,
-                          })
-                        }
-                      />
+                      <tr key={item.id} className="border-b border-slate-100">
+                        <td className="px-4 py-2 text-slate-800">
+                          {item.description}
+                        </td>
+                        <td className="px-4 py-2 text-slate-500">
+                          {TYPE_LABEL[item.type]}
+                        </td>
+                        <td className="px-4 py-2 text-right text-slate-600">
+                          {item.quantity}
+                          {item.unit ? ` ${item.unit}` : ""}
+                        </td>
+                        <td className="px-4 py-2 text-right text-slate-600">
+                          {formatCurrency(item.unitPrice)}
+                        </td>
+                        <td className="px-4 py-2 text-right font-medium text-slate-800">
+                          {formatCurrency(item.lineTotal)}
+                        </td>
+                      </tr>
                     ))}
                   </tbody>
                 </table>
@@ -238,11 +186,6 @@ export function EstimateEditorScreen() {
             </div>
           ))
         )}
-
-        <AddLineItemForm
-          busy={addLineItem.isPending}
-          onAdd={(item) => addLineItem.mutate({ id: estimateId, item })}
-        />
       </section>
 
       <TotalsPanel estimate={data} />
@@ -314,298 +257,30 @@ function MetaHeader({
   );
 }
 
-function RatesEditor({
-  estimate,
-  onCommit,
-}: {
-  estimate: EstimateView;
-  onCommit: (changes: {
-    overheadRate?: number;
-    profitRate?: number;
-    taxRate?: number;
-  }) => void;
-}) {
-  const [overhead, setOverhead] = useState(String(estimate.overheadRate));
-  const [profit, setProfit] = useState(String(estimate.profitRate));
-  const [tax, setTax] = useState(String(estimate.taxRate));
-
-  const field = (
-    label: string,
-    value: string,
-    setValue: (v: string) => void,
-    commit: (n: number) => void,
-  ) => (
-    <label className="flex items-center gap-2 text-sm text-slate-600">
-      {label}
-      <div className="flex items-center">
-        <input
-          type="number"
-          min={0}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onBlur={() => commit(Number(value) || 0)}
-          className="w-20 rounded border border-slate-300 px-2 py-1 text-right text-sm"
-        />
-        <span className="ml-1 text-slate-400">%</span>
-      </div>
-    </label>
-  );
-
-  return (
-    <div className="flex flex-wrap gap-6 rounded-lg border border-slate-200 p-4 shadow-sm">
-      {field("Overhead", overhead, setOverhead, (n) =>
-        onCommit({ overheadRate: n }),
-      )}
-      {field("Profit", profit, setProfit, (n) => onCommit({ profitRate: n }))}
-      {field("Tax", tax, setTax, (n) => onCommit({ taxRate: n }))}
-    </div>
-  );
-}
-
-type LineItemFormValue = {
-  type: LineItemType;
-  description: string;
-  quantity: number;
-  unit: string | null;
-  unitPrice: number;
-};
-
-function LineItemRow({
-  item,
-  busy,
-  onSave,
-  onRemove,
-}: {
-  item: LineItemView;
-  busy: boolean;
-  onSave: (input: LineItemFormValue) => void;
-  onRemove: () => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({
-    type: item.type,
-    description: item.description,
-    quantity: String(item.quantity),
-    unit: item.unit ?? "",
-    unitPrice: String(item.unitPrice),
-  });
-
-  if (!editing) {
-    return (
-      <tr className="border-b border-slate-100">
-        <td className="px-4 py-2 text-slate-800">{item.description}</td>
-        <td className="px-4 py-2 text-slate-500">{TYPE_LABEL[item.type]}</td>
-        <td className="px-4 py-2 text-right text-slate-600">
-          {item.quantity}
-          {item.unit ? ` ${item.unit}` : ""}
-        </td>
-        <td className="px-4 py-2 text-right text-slate-600">
-          {formatCurrency(item.unitPrice)}
-        </td>
-        <td className="px-4 py-2 text-right font-medium text-slate-800">
-          {formatCurrency(item.lineTotal)}
-        </td>
-        <td className="px-4 py-2 text-right whitespace-nowrap">
-          <button
-            onClick={() => setEditing(true)}
-            className="text-slate-400 hover:text-slate-700"
-          >
-            Edit
-          </button>
-          <button
-            onClick={onRemove}
-            className="ml-3 text-slate-400 hover:text-red-600"
-          >
-            Delete
-          </button>
-        </td>
-      </tr>
-    );
+// Read-only summary of the assemblies this estimate was generated from.
+function AssembliesSummary({ estimate }: { estimate: EstimateView }) {
+  if (estimate.assemblies.length === 0) {
+    return null;
   }
-
-  const save = () => {
-    if (!form.description.trim()) {
-      return;
-    }
-    onSave({
-      type: form.type,
-      description: form.description.trim(),
-      quantity: Number(form.quantity) || 0,
-      unit: form.unit.trim() || null,
-      unitPrice: Number(form.unitPrice) || 0,
-    });
-    setEditing(false);
-  };
-
   return (
-    <tr className="border-b border-slate-100 bg-slate-50">
-      <td className="px-4 py-2">
-        <input
-          className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
-          value={form.description}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
-        />
-      </td>
-      <td className="px-4 py-2">
-        <select
-          className="rounded border border-slate-300 px-2 py-1 text-sm"
-          value={form.type}
-          onChange={(e) =>
-            setForm({ ...form, type: e.target.value as LineItemType })
-          }
-        >
-          {LINE_ITEM_TYPES.map((type) => (
-            <option key={type} value={type}>
-              {TYPE_LABEL[type]}
-            </option>
-          ))}
-        </select>
-      </td>
-      <td className="px-4 py-2">
-        <div className="flex items-center justify-end gap-1">
-          <input
-            type="number"
-            min={0}
-            className="w-16 rounded border border-slate-300 px-2 py-1 text-right text-sm"
-            value={form.quantity}
-            onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-          />
-          <input
-            className="w-14 rounded border border-slate-300 px-2 py-1 text-sm"
-            placeholder="unit"
-            value={form.unit}
-            onChange={(e) => setForm({ ...form, unit: e.target.value })}
-          />
-        </div>
-      </td>
-      <td className="px-4 py-2">
-        <input
-          type="number"
-          min={0}
-          className="w-24 rounded border border-slate-300 px-2 py-1 text-right text-sm"
-          value={form.unitPrice}
-          onChange={(e) => setForm({ ...form, unitPrice: e.target.value })}
-        />
-      </td>
-      <td className="px-4 py-2" />
-      <td className="px-4 py-2 text-right whitespace-nowrap">
-        <button
-          onClick={save}
-          disabled={busy}
-          className="text-slate-700 hover:text-slate-900 disabled:opacity-50"
-        >
-          Save
-        </button>
-        <button
-          onClick={() => setEditing(false)}
-          className="ml-3 text-slate-400 hover:text-slate-700"
-        >
-          Cancel
-        </button>
-      </td>
-    </tr>
-  );
-}
-
-function AddLineItemForm({
-  busy,
-  onAdd,
-}: {
-  busy: boolean;
-  onAdd: (item: LineItemFormValue & { phase: string | null }) => void;
-}) {
-  const empty = {
-    phase: "",
-    type: "material" as LineItemType,
-    description: "",
-    quantity: "",
-    unit: "",
-    unitPrice: "",
-  };
-  const [form, setForm] = useState(empty);
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.description.trim()) {
-      return;
-    }
-    onAdd({
-      phase: form.phase.trim() || null,
-      type: form.type,
-      description: form.description.trim(),
-      quantity: Number(form.quantity) || 0,
-      unit: form.unit.trim() || null,
-      unitPrice: Number(form.unitPrice) || 0,
-    });
-    setForm(empty);
-  };
-
-  return (
-    <form
-      onSubmit={submit}
-      className="grid grid-cols-2 gap-2 rounded-lg border border-dashed border-slate-300 p-4 sm:grid-cols-3"
-    >
-      <select
-        className={inputClass}
-        value={form.phase}
-        onChange={(e) => setForm({ ...form, phase: e.target.value })}
-      >
-        <option value="">Phase…</option>
-        {PHASES.map((phase) => (
-          <option key={phase} value={phase}>
-            {phase}
-          </option>
+    <section className="space-y-2">
+      <h2 className="text-sm font-medium text-slate-600">Assemblies</h2>
+      <ul className="space-y-1 rounded-lg border border-slate-200 p-4 text-sm shadow-sm">
+        {estimate.assemblies.map((assembly) => (
+          <li
+            key={assembly.assemblyId}
+            className="flex flex-wrap items-baseline justify-between gap-2"
+          >
+            <span className="font-medium text-slate-700">{assembly.name}</span>
+            <span className="text-slate-500">
+              {Object.entries(assembly.driverValues)
+                .map(([key, value]) => `${key}: ${value}`)
+                .join(", ")}
+            </span>
+          </li>
         ))}
-      </select>
-      <select
-        className={inputClass}
-        value={form.type}
-        onChange={(e) =>
-          setForm({ ...form, type: e.target.value as LineItemType })
-        }
-      >
-        {LINE_ITEM_TYPES.map((type) => (
-          <option key={type} value={type}>
-            {TYPE_LABEL[type]}
-          </option>
-        ))}
-      </select>
-      <input
-        className={inputClass}
-        placeholder="Description *"
-        value={form.description}
-        onChange={(e) => setForm({ ...form, description: e.target.value })}
-      />
-      <input
-        type="number"
-        min={0}
-        className={inputClass}
-        placeholder="Quantity"
-        value={form.quantity}
-        onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-      />
-      <input
-        className={inputClass}
-        placeholder="Unit (e.g. sq ft)"
-        value={form.unit}
-        onChange={(e) => setForm({ ...form, unit: e.target.value })}
-      />
-      <input
-        type="number"
-        min={0}
-        className={inputClass}
-        placeholder="Unit price"
-        value={form.unitPrice}
-        onChange={(e) => setForm({ ...form, unitPrice: e.target.value })}
-      />
-      <button
-        type="submit"
-        disabled={busy}
-        className="col-span-2 rounded bg-gold px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gold-light disabled:opacity-50 sm:col-span-3"
-      >
-        Add line item
-      </button>
-    </form>
+      </ul>
+    </section>
   );
 }
 
