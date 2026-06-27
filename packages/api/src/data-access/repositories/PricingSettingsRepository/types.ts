@@ -1,21 +1,4 @@
-/**
- * A named labor rate (e.g. general $35/hr, skilled $55/hr). Labor lines point
- * at one of these by `key`.
- */
-export interface LaborRate {
-  key: string;
-  label: string;
-  rate: number;
-}
-
-/**
- * The org's global pricing knobs for the cost buildup. Rates are percentages.
- * `overheadRate` is margin-basis: overhead = cost × (1 / (1 − rate/100) − 1),
- * so 40 reproduces the spreadsheet's `cost / 0.6 − cost`.
- */
-export interface PricingSettings {
-  taxRate: number;
-  overheadRate: number;
-  profitRate: number;
-  laborRates: LaborRate[];
-}
+// PricingSettings (and its labor-rate rows) are shared domain types the engine's
+// cost buildup reads, so they live in @landscape/core. There are no persistence
+// derivations beyond the entity itself.
+export type { LaborRate, PricingSettings } from "@landscape/core";

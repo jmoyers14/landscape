@@ -28,6 +28,12 @@ export const estimatesRouter = router({
       ctx.services.estimateService.get(ctx.auth.orgId, input.id),
     ),
 
+  // The catalog snapshot (assemblies + materials + pricing) the editor prices
+  // against for live, no-round-trip recalculation as drivers change.
+  context: orgProtectedProcedure.query(({ ctx }) =>
+    ctx.services.estimateService.getContext(ctx.auth.orgId),
+  ),
+
   create: orgProtectedProcedure
     .input(
       z.object({ projectId: z.string().min(1), title: z.string().optional() }),

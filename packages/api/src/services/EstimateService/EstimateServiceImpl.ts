@@ -13,16 +13,18 @@ import type {
   LineItemInput,
 } from "../../data-access/repositories/EstimateRepository/EstimateRepository.ts";
 import type { ProjectRepository } from "../../data-access/repositories/ProjectRepository/ProjectRepository.ts";
-import type {
-  Assembly,
-  AssemblyRepository,
-} from "../../data-access/repositories/AssemblyRepository/AssemblyRepository.ts";
+import type { AssemblyRepository } from "../../data-access/repositories/AssemblyRepository/AssemblyRepository.ts";
 import type { MaterialRepository } from "../../data-access/repositories/MaterialRepository/MaterialRepository.ts";
 import type { PricingSettingsService } from "../PricingSettingsService/PricingSettingsService.ts";
 import { ServiceError } from "../errors.ts";
-import { computeEstimate, type EstimateView } from "../../engine/calc.ts";
-import { generateAssemblyLines } from "../../engine/generate.ts";
+import {
+  computeEstimate,
+  generateAssemblyLines,
+  resolveDriverValues,
+  type EstimateView,
+} from "@landscape/core";
 import type {
+  EstimateContext,
   EstimateService,
   EstimateSummary,
   SelectAssemblyInput,
@@ -66,6 +68,15 @@ export class EstimateServiceImpl implements EstimateService {
         createdAt: estimate.createdAt,
       };
     });
+  }
+
+  async getContext(orgId: string): Promise<EstimateContext> {
+    const [assemblies, materials, pricing] = await Promise.all([
+      this.assemblies.findByOrg(orgId),
+      this.materials.findByOrg(orgId),
+      this.pricingSettings.get(orgId),
+    ]);
+    return { assemblies, materials, pricing };
   }
 
   async get(orgId: string, id: string): Promise<EstimateView | null> {
@@ -200,17 +211,4 @@ export class EstimateServiceImpl implements EstimateService {
     }
     return computeEstimate(estimate);
   }
-}
-
-// Each declared driver takes the caller's value if given, else its default.
-// Values for undeclared keys are ignored so only real drivers reach the engine.
-function resolveDriverValues(
-  assembly: Assembly,
-  provided?: Record<string, number>,
-): Record<string, number> {
-  const values: Record<string, number> = {};
-  for (const driver of assembly.drivers) {
-    values[driver.key] = provided?.[driver.key] ?? driver.defaultValue;
-  }
-  return values;
 }

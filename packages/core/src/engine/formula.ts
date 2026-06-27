@@ -6,7 +6,7 @@ import { Parser, type Expression } from "expr-eval";
  *
  * expr-eval is sandboxed: a formula can only reach the variables we pass in and
  * the functions we register below — never JS globals — so user-authored
- * formulas are safe to evaluate server-side.
+ * formulas are safe to evaluate on either the server or the client.
  */
 
 // A single shared parser. The registered functions mirror the Excel functions

@@ -1,6 +1,6 @@
-import type { Assembly } from "../data-access/repositories/AssemblyRepository/AssemblyRepository.ts";
-import type { Material } from "../data-access/repositories/MaterialRepository/MaterialRepository.ts";
-import type { PricingSettings } from "../data-access/repositories/PricingSettingsRepository/PricingSettingsRepository.ts";
+import type { Assembly } from "../types/assembly.ts";
+import type { Material } from "../types/material.ts";
+import type { PricingSettings } from "../types/pricing.ts";
 import { FormulaError, evaluate, resolveQuantities } from "./formula.ts";
 
 /**

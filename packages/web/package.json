@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@clerk/react": "^6.9.0",
+    "@landscape/core": "workspace:*",
     "@tanstack/react-query": "^5.90.16",
     "@tanstack/react-router": "^1.170.15",
     "@trpc/client": "^11.8.1",

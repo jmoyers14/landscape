@@ -4,14 +4,31 @@ export type {
   EstimateTotals,
   LineItemView,
   PhaseSummary,
-} from "../../engine/calc.ts";
+} from "@landscape/core";
 export type {
   EstimateStatus,
   EstimateAssembly,
   LineItemType,
 } from "../../data-access/repositories/EstimateRepository/EstimateRepository.ts";
 
-import type { EstimateView } from "../../engine/calc.ts";
+import type {
+  Assembly,
+  EstimateView,
+  Material,
+  PricingSettings,
+} from "@landscape/core";
+
+/**
+ * The catalog snapshot the editor needs to recompute an estimate locally: the
+ * org's assemblies (drivers + lines), every material those lines can reference,
+ * and the pricing settings. With this in hand the client runs the same engine
+ * the server does, so driver edits reprice instantly without a round-trip.
+ */
+export interface EstimateContext {
+  assemblies: Assembly[];
+  materials: Material[];
+  pricing: PricingSettings;
+}
 
 /** Lightweight row for listing a project's estimates (with its grand total). */
 export interface EstimateSummary {
@@ -39,6 +56,11 @@ export interface SelectAssemblyInput {
 
 export interface EstimateService {
   listByProject(orgId: string, projectId: string): Promise<EstimateSummary[]>;
+  /**
+   * The catalog snapshot (assemblies + materials + pricing) the editor prices
+   * against for live recalculation. Read-only.
+   */
+  getContext(orgId: string): Promise<EstimateContext>;
   get(orgId: string, id: string): Promise<EstimateView | null>;
   create(
     orgId: string,

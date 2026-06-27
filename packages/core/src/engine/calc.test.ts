@@ -5,8 +5,8 @@ import {
   drainageAssembly,
   drainageMaterials,
   drainagePricing,
-} from "../test-support/drainageFixture.ts";
-import { makeEstimate } from "../test-support/factories.ts";
+  makeEstimate,
+} from "../test-support/fixture.ts";
 
 const settings = drainagePricing();
 const materials = new Map(drainageMaterials().map((m) => [m.id, m]));

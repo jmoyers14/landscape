@@ -1,7 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import type { Material } from "../data-access/repositories/MaterialRepository/MaterialRepository.ts";
-import { generateAssemblyLines } from "../engine/generate.ts";
-import { priceLines } from "../engine/calc.ts";
+import { generateAssemblyLines, priceLines } from "@landscape/core";
 import { STARTER_ASSEMBLIES } from "./catalog.ts";
 import { STARTER_PRICING } from "./pricing.ts";
 import type { SeedAssembly } from "./types.ts";

@@ -20,9 +20,9 @@
       "version": "1.0.0",
       "dependencies": {
         "@clerk/backend": "^3.6.1",
+        "@landscape/core": "workspace:*",
         "@trpc/server": "^11.8.1",
         "cors": "^2.8.5",
-        "expr-eval": "^2.0.2",
         "mongoose": "^9.7.0",
         "posthog-node": "^5.38.0",
         "reflect-metadata": "^0.2.1",
@@ -35,11 +35,23 @@
         "typescript": "^5.3.3",
       },
     },
+    "packages/core": {
+      "name": "@landscape/core",
+      "version": "1.0.0",
+      "dependencies": {
+        "expr-eval": "^2.0.2",
+      },
+      "devDependencies": {
+        "bun-types": "^1.0.0",
+        "typescript": "^5.3.3",
+      },
+    },
     "packages/web": {
       "name": "@landscape/web",
       "version": "1.0.0",
       "dependencies": {
         "@clerk/react": "^6.9.0",
+        "@landscape/core": "workspace:*",
         "@tanstack/react-query": "^5.90.16",
         "@tanstack/react-router": "^1.170.15",
         "@trpc/client": "^11.8.1",
@@ -183,6 +195,8 @@
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
     "@landscape/api": ["@landscape/api@workspace:packages/api"],
+
+    "@landscape/core": ["@landscape/core@workspace:packages/core"],
 
     "@landscape/web": ["@landscape/web@workspace:packages/web"],
 

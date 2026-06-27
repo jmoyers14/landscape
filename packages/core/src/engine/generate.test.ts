@@ -4,7 +4,7 @@ import {
   drainageAssembly,
   drainageMaterials,
   drainagePricing,
-} from "../test-support/drainageFixture.ts";
+} from "../test-support/fixture.ts";
 
 // The Drainage subset (drainageFt = 225). Quantities, prices, and the per-line
 // material total asserted below are the values the spreadsheet itself computes

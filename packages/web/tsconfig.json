@@ -13,7 +13,8 @@
     "skipLibCheck": true,
     "esModuleInterop": true,
     "paths": {
-      "@landscape/api": ["../api/src/router.ts"]
+      "@landscape/api": ["../api/src/router.ts"],
+      "@landscape/core": ["../core/src/index.ts"]
     }
   },
   "include": ["src"],

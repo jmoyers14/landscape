@@ -1,18 +1,24 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@landscape/api";
+import {
+  previewEstimate,
+  type CatalogContext,
+  type EstimateSelection,
+  type EstimateView,
+} from "@landscape/core";
 import { queryClient, trpc } from "../trpc.ts";
 import { ErrorNote, Page } from "../components/ui.tsx";
 import { formatCurrency } from "../lib/format.ts";
 
 type RouterOutput = inferRouterOutputs<AppRouter>;
-type EstimateView = NonNullable<RouterOutput["estimates"]["get"]>;
+type SavedEstimate = NonNullable<RouterOutput["estimates"]["get"]>;
 type LineItemView = EstimateView["lineItems"][number];
 type LineItemType = LineItemView["type"];
-type EstimateStatus = EstimateView["status"];
-type CatalogAssembly = RouterOutput["assemblies"]["list"][number];
+type EstimateStatus = SavedEstimate["status"];
+type CatalogAssembly = CatalogContext["assemblies"][number];
 type Driver = CatalogAssembly["drivers"][number];
 
 const TYPE_LABEL: Record<LineItemType, string> = {
@@ -44,7 +50,7 @@ export function EstimateEditorScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const estimate = useQuery(trpc.estimates.get.queryOptions({ id: estimateId }));
-  const catalog = useQuery(trpc.assemblies.list.queryOptions());
+  const context = useQuery(trpc.estimates.context.queryOptions());
 
   const invalidate = () => {
     queryClient.invalidateQueries({
@@ -101,14 +107,6 @@ export function EstimateEditorScreen() {
   const data = estimate.data;
   const isDraft = data.status === "draft";
 
-  // Group line items by phase, preserving the phase order from the calc engine.
-  const itemsByPhase = new Map<string | null, LineItemView[]>();
-  for (const item of data.lineItems) {
-    const group = itemsByPhase.get(item.phase) ?? [];
-    group.push(item);
-    itemsByPhase.set(item.phase, group);
-  }
-
   return (
     <Page max="3xl" className="space-y-6">
       <BackLink projectId={projectId} />
@@ -124,94 +122,28 @@ export function EstimateEditorScreen() {
       />
 
       {isDraft ? (
-        catalog.data ? (
-          <AssemblyEditor
+        context.data ? (
+          <DraftEditor
             // Re-seed the local draft whenever the saved selection changes
             // (e.g. after a successful regenerate).
             key={JSON.stringify(data.assemblies)}
-            initial={buildSelections(data.assemblies, catalog.data)}
-            catalog={catalog.data}
+            initial={buildSelections(data.assemblies, context.data.assemblies)}
+            context={context.data}
             busy={setAssemblies.isPending}
             onSave={(assemblies) =>
               setAssemblies.mutate({ id: estimateId, assemblies })
             }
           />
         ) : (
-          <p className="text-sm text-slate-400">Loading assemblies…</p>
+          <p className="text-sm text-slate-400">Loading catalog…</p>
         )
       ) : (
-        <AssembliesSummary estimate={data} />
+        <>
+          <AssembliesSummary estimate={data} />
+          <LineItemsSection view={data} isDraft={false} />
+          <TotalsPanel estimate={data} />
+        </>
       )}
-
-      <section className="space-y-4">
-        <h2 className="text-sm font-medium text-slate-600">Line items</h2>
-
-        {data.lineItems.length === 0 ? (
-          <p className="text-sm text-slate-400">
-            No line items yet.{" "}
-            {isDraft
-              ? "Add assemblies above and save to generate them."
-              : "This estimate has no assemblies."}
-          </p>
-        ) : (
-          data.phases.map((phase) => (
-            <div
-              key={phaseLabel(phase.phase)}
-              className="overflow-hidden rounded-lg border border-slate-200 shadow-sm"
-            >
-              <div className="flex items-center justify-between bg-slate-50 px-4 py-2">
-                <span className="text-sm font-medium text-slate-700">
-                  {phaseLabel(phase.phase)}
-                </span>
-                <span className="text-sm font-medium text-slate-700">
-                  {formatCurrency(phase.subtotal)}
-                </span>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[32rem] border-collapse text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-left text-xs text-slate-400">
-                      <th className="px-4 py-1.5 font-medium">Description</th>
-                      <th className="px-4 py-1.5 font-medium">Type</th>
-                      <th className="px-4 py-1.5 text-right font-medium">Qty</th>
-                      <th className="px-4 py-1.5 text-right font-medium">
-                        Unit price
-                      </th>
-                      <th className="px-4 py-1.5 text-right font-medium">
-                        Total
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(itemsByPhase.get(phase.phase) ?? []).map((item) => (
-                      <tr key={item.id} className="border-b border-slate-100">
-                        <td className="px-4 py-2 text-slate-800">
-                          {item.description}
-                        </td>
-                        <td className="px-4 py-2 text-slate-500">
-                          {TYPE_LABEL[item.type]}
-                        </td>
-                        <td className="px-4 py-2 text-right text-slate-600">
-                          {item.quantity}
-                          {item.unit ? ` ${item.unit}` : ""}
-                        </td>
-                        <td className="px-4 py-2 text-right text-slate-600">
-                          {formatCurrency(item.unitPrice)}
-                        </td>
-                        <td className="px-4 py-2 text-right font-medium text-slate-800">
-                          {formatCurrency(item.lineTotal)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ))
-        )}
-      </section>
-
-      <TotalsPanel estimate={data} />
     </Page>
   );
 }
@@ -240,7 +172,7 @@ interface Selection {
 // driver definitions. A saved assembly that's since left the catalog still shows
 // (by name, with its stored driver keys) so it can be removed.
 function buildSelections(
-  saved: EstimateView["assemblies"],
+  saved: SavedEstimate["assemblies"],
   catalog: CatalogAssembly[],
 ): Selection[] {
   return saved.map((entry) => {
@@ -255,26 +187,53 @@ function buildSelections(
       }));
     const values: Record<string, string> = {};
     for (const driver of drivers) {
-      values[driver.key] = String(entry.driverValues[driver.key] ?? driver.defaultValue);
+      values[driver.key] = String(
+        entry.driverValues[driver.key] ?? driver.defaultValue,
+      );
     }
-    return { assemblyId: entry.assemblyId, name: match?.name ?? entry.name, drivers, values };
+    return {
+      assemblyId: entry.assemblyId,
+      name: match?.name ?? entry.name,
+      drivers,
+      values,
+    };
   });
 }
 
-function AssemblyEditor({
+// Convert the editable form state into the engine's selection input (numbers).
+function toSelections(selections: Selection[]): EstimateSelection[] {
+  return selections.map((s) => {
+    const driverValues: Record<string, number> = {};
+    for (const driver of s.drivers) {
+      driverValues[driver.key] = Number(s.values[driver.key]) || 0;
+    }
+    return { assemblyId: s.assemblyId, driverValues };
+  });
+}
+
+// The draft editor: pick assemblies + edit driver values, and watch the line
+// items and totals recompute live (no round-trip) via the shared engine.
+// "Save & regenerate" persists; the server re-runs the same engine and freezes
+// the snapshot, so the saved estimate matches what's shown here.
+function DraftEditor({
   initial,
-  catalog,
+  context,
   busy,
   onSave,
 }: {
   initial: Selection[];
-  catalog: CatalogAssembly[];
+  context: CatalogContext;
   busy: boolean;
-  onSave: (
-    assemblies: { assemblyId: string; driverValues: Record<string, number> }[],
-  ) => void;
+  onSave: (assemblies: EstimateSelection[]) => void;
 }) {
   const [selections, setSelections] = useState<Selection[]>(initial);
+  const catalog = context.assemblies;
+
+  // Live preview: re-priced on every selection/driver change, in-memory.
+  const view = useMemo(
+    () => previewEstimate(toSelections(selections), context),
+    [selections, context],
+  );
 
   const selectedIds = new Set(selections.map((s) => s.assemblyId));
   const addable = catalog.filter((a) => !selectedIds.has(a.id));
@@ -308,106 +267,189 @@ function AssemblyEditor({
     );
   };
 
-  const save = () => {
-    onSave(
-      selections.map((s) => {
-        const driverValues: Record<string, number> = {};
-        for (const driver of s.drivers) {
-          driverValues[driver.key] = Number(s.values[driver.key]) || 0;
-        }
-        return { assemblyId: s.assemblyId, driverValues };
-      }),
-    );
-  };
+  return (
+    <>
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium text-slate-600">Assemblies</h2>
+          <button
+            onClick={() => onSave(toSelections(selections))}
+            disabled={busy}
+            className="rounded bg-gold px-3 py-1.5 text-sm font-medium text-white hover:bg-gold-light disabled:opacity-50"
+          >
+            {busy ? "Saving…" : "Save & regenerate"}
+          </button>
+        </div>
+
+        {selections.length === 0 ? (
+          <p className="text-sm text-slate-400">
+            No assemblies selected. Add one below and set its quantities — the
+            estimate updates as you type.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {selections.map((selection) => (
+              <div
+                key={selection.assemblyId}
+                className="rounded-lg border border-slate-200 p-4 shadow-sm"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-slate-800">
+                    {selection.name}
+                  </span>
+                  <button
+                    onClick={() => removeAssembly(selection.assemblyId)}
+                    className="text-sm text-slate-400 hover:text-red-600"
+                  >
+                    Remove
+                  </button>
+                </div>
+                {selection.drivers.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-4">
+                    {selection.drivers.map((driver) => (
+                      <label
+                        key={driver.key}
+                        className="flex items-center gap-2 text-sm text-slate-600"
+                      >
+                        {driver.label}
+                        <input
+                          type="number"
+                          min={0}
+                          value={selection.values[driver.key] ?? ""}
+                          onChange={(e) =>
+                            setValue(
+                              selection.assemblyId,
+                              driver.key,
+                              e.target.value,
+                            )
+                          }
+                          className="w-24 rounded border border-slate-300 px-2 py-1 text-right text-sm"
+                        />
+                        {driver.unit && (
+                          <span className="text-slate-400">{driver.unit}</span>
+                        )}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {addable.length > 0 && (
+          <select
+            value=""
+            onChange={(e) => {
+              if (e.target.value) {
+                addAssembly(e.target.value);
+              }
+            }}
+            className="rounded border border-dashed border-slate-300 bg-white px-3 py-2 text-sm text-slate-600"
+          >
+            <option value="">+ Add assembly…</option>
+            {addable.map((assembly) => (
+              <option key={assembly.id} value={assembly.id}>
+                {assembly.name}
+              </option>
+            ))}
+          </select>
+        )}
+      </section>
+
+      <LineItemsSection view={view} isDraft />
+      <TotalsPanel estimate={view} />
+    </>
+  );
+}
+
+// Line items grouped by phase, preserving the phase order from the calc engine.
+// Shared by the live draft preview and the read-only saved estimate.
+function LineItemsSection({
+  view,
+  isDraft,
+}: {
+  view: EstimateView;
+  isDraft: boolean;
+}) {
+  const itemsByPhase = new Map<string | null, LineItemView[]>();
+  for (const item of view.lineItems) {
+    const group = itemsByPhase.get(item.phase) ?? [];
+    group.push(item);
+    itemsByPhase.set(item.phase, group);
+  }
 
   return (
-    <section className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-medium text-slate-600">Assemblies</h2>
-        <button
-          onClick={save}
-          disabled={busy}
-          className="rounded bg-gold px-3 py-1.5 text-sm font-medium text-white hover:bg-gold-light disabled:opacity-50"
-        >
-          {busy ? "Saving…" : "Save & regenerate"}
-        </button>
-      </div>
+    <section className="space-y-4">
+      <h2 className="text-sm font-medium text-slate-600">Line items</h2>
 
-      {selections.length === 0 ? (
+      {view.lineItems.length === 0 ? (
         <p className="text-sm text-slate-400">
-          No assemblies selected. Add one below, set its quantities, then save.
+          No line items yet.{" "}
+          {isDraft
+            ? "Add assemblies above to generate them."
+            : "This estimate has no assemblies."}
         </p>
       ) : (
-        <div className="space-y-3">
-          {selections.map((selection) => (
-            <div
-              key={selection.assemblyId}
-              className="rounded-lg border border-slate-200 p-4 shadow-sm"
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-medium text-slate-800">
-                  {selection.name}
-                </span>
-                <button
-                  onClick={() => removeAssembly(selection.assemblyId)}
-                  className="text-sm text-slate-400 hover:text-red-600"
-                >
-                  Remove
-                </button>
-              </div>
-              {selection.drivers.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-4">
-                  {selection.drivers.map((driver) => (
-                    <label
-                      key={driver.key}
-                      className="flex items-center gap-2 text-sm text-slate-600"
-                    >
-                      {driver.label}
-                      <input
-                        type="number"
-                        min={0}
-                        value={selection.values[driver.key] ?? ""}
-                        onChange={(e) =>
-                          setValue(selection.assemblyId, driver.key, e.target.value)
-                        }
-                        className="w-24 rounded border border-slate-300 px-2 py-1 text-right text-sm"
-                      />
-                      {driver.unit && (
-                        <span className="text-slate-400">{driver.unit}</span>
-                      )}
-                    </label>
-                  ))}
-                </div>
-              )}
+        view.phases.map((phase) => (
+          <div
+            key={phaseLabel(phase.phase)}
+            className="overflow-hidden rounded-lg border border-slate-200 shadow-sm"
+          >
+            <div className="flex items-center justify-between bg-slate-50 px-4 py-2">
+              <span className="text-sm font-medium text-slate-700">
+                {phaseLabel(phase.phase)}
+              </span>
+              <span className="text-sm font-medium text-slate-700">
+                {formatCurrency(phase.subtotal)}
+              </span>
             </div>
-          ))}
-        </div>
-      )}
-
-      {addable.length > 0 && (
-        <select
-          value=""
-          onChange={(e) => {
-            if (e.target.value) {
-              addAssembly(e.target.value);
-            }
-          }}
-          className="rounded border border-dashed border-slate-300 bg-white px-3 py-2 text-sm text-slate-600"
-        >
-          <option value="">+ Add assembly…</option>
-          {addable.map((assembly) => (
-            <option key={assembly.id} value={assembly.id}>
-              {assembly.name}
-            </option>
-          ))}
-        </select>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[32rem] border-collapse text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-left text-xs text-slate-400">
+                    <th className="px-4 py-1.5 font-medium">Description</th>
+                    <th className="px-4 py-1.5 font-medium">Type</th>
+                    <th className="px-4 py-1.5 text-right font-medium">Qty</th>
+                    <th className="px-4 py-1.5 text-right font-medium">
+                      Unit price
+                    </th>
+                    <th className="px-4 py-1.5 text-right font-medium">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(itemsByPhase.get(phase.phase) ?? []).map((item) => (
+                    <tr key={item.id} className="border-b border-slate-100">
+                      <td className="px-4 py-2 text-slate-800">
+                        {item.description}
+                      </td>
+                      <td className="px-4 py-2 text-slate-500">
+                        {TYPE_LABEL[item.type]}
+                      </td>
+                      <td className="px-4 py-2 text-right text-slate-600">
+                        {item.quantity}
+                        {item.unit ? ` ${item.unit}` : ""}
+                      </td>
+                      <td className="px-4 py-2 text-right text-slate-600">
+                        {formatCurrency(item.unitPrice)}
+                      </td>
+                      <td className="px-4 py-2 text-right font-medium text-slate-800">
+                        {formatCurrency(item.lineTotal)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ))
       )}
     </section>
   );
 }
 
 // Read-only summary of the assemblies a non-draft estimate was generated from.
-function AssembliesSummary({ estimate }: { estimate: EstimateView }) {
+function AssembliesSummary({ estimate }: { estimate: SavedEstimate }) {
   if (estimate.assemblies.length === 0) {
     return null;
   }
@@ -440,7 +482,7 @@ function MetaHeader({
   onStatus,
   onDelete,
 }: {
-  estimate: EstimateView;
+  estimate: SavedEstimate;
   busy: boolean;
   onTitle: (title: string) => void;
   onStatus: (status: EstimateStatus) => void;

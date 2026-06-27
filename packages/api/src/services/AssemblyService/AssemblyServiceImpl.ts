@@ -13,9 +13,9 @@ import {
   FormulaError,
   assertReferencesKnown,
   validateLineFormulas,
-} from "../../engine/formula.ts";
-import { generateAssemblyLines } from "../../engine/generate.ts";
-import { priceLines } from "../../engine/calc.ts";
+  generateAssemblyLines,
+  priceLines,
+} from "@landscape/core";
 import { ServiceError } from "../errors.ts";
 import type { PricingSettingsService } from "../PricingSettingsService/PricingSettingsService.ts";
 import type {
