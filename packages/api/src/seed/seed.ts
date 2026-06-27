@@ -15,7 +15,7 @@ import type { PricingSettingsRepository } from "../data-access/repositories/Pric
 import { seedOrg } from "./seedOrg.ts";
 
 /**
- * Dev script: populate an org's catalog with the Drainage starter data.
+ * Dev script: populate an org's catalog with the starter data (Package sheet).
  *   bun run --cwd packages/api seed <orgId>     (or set SEED_ORG_ID)
  */
 const orgId = process.argv[2] ?? process.env.SEED_ORG_ID;
@@ -38,5 +38,5 @@ await seedOrg(orgId, {
   ),
 });
 
-console.log(`Seeded Drainage catalog for org ${orgId}`);
+console.log(`Seeded starter catalog for org ${orgId}`);
 await mongoose.disconnect();

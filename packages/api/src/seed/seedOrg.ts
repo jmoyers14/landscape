@@ -1,11 +1,8 @@
 import type { MaterialRepository } from "../data-access/repositories/MaterialRepository/MaterialRepository.ts";
 import type { AssemblyRepository } from "../data-access/repositories/AssemblyRepository/AssemblyRepository.ts";
 import type { PricingSettingsRepository } from "../data-access/repositories/PricingSettingsRepository/PricingSettingsRepository.ts";
-import {
-  DRAINAGE_MATERIALS,
-  DRAINAGE_PRICING,
-  buildDrainageAssembly,
-} from "./drainage.ts";
+import { STARTER_PRICING } from "./pricing.ts";
+import { STARTER_ASSEMBLIES } from "./catalog.ts";
 
 export interface SeedDeps {
   materials: MaterialRepository;
@@ -14,10 +11,11 @@ export interface SeedDeps {
 }
 
 /**
- * Populates an org with the starter catalog (currently just Drainage). Inserts
- * materials first to capture their database-assigned ids, then builds the
- * assembly around them. Uses repositories directly (not the services) so it can
- * stamp the assembly `source: "starter"`, which the services force to "custom".
+ * Populates an org with the starter catalog (the workbook's Package sheet).
+ * Inserts each assembly's materials first to capture their database-assigned
+ * ids, then builds the assemblies around them. Uses repositories directly (not
+ * the services) so it can stamp `source: "starter"`, which the services force to
+ * "custom".
  */
 export async function seedOrg(orgId: string, deps: SeedDeps): Promise<void> {
   // The seed is a re-runnable dev tool, so start from a clean slate. Without
@@ -26,15 +24,19 @@ export async function seedOrg(orgId: string, deps: SeedDeps): Promise<void> {
   // idempotent and needs no clearing.)
   await clearCatalog(orgId, deps);
 
-  await deps.pricingSettings.upsert(orgId, DRAINAGE_PRICING);
+  await deps.pricingSettings.upsert(orgId, STARTER_PRICING);
 
   const materialIdBySlug: Record<string, string> = {};
-  for (const { slug, input } of DRAINAGE_MATERIALS) {
-    const created = await deps.materials.create(orgId, input);
-    materialIdBySlug[slug] = created.id;
+  for (const assembly of STARTER_ASSEMBLIES) {
+    for (const { slug, input } of assembly.materials) {
+      const created = await deps.materials.create(orgId, input);
+      materialIdBySlug[slug] = created.id;
+    }
   }
 
-  await deps.assemblies.create(orgId, buildDrainageAssembly(materialIdBySlug));
+  for (const assembly of STARTER_ASSEMBLIES) {
+    await deps.assemblies.create(orgId, assembly.build(materialIdBySlug));
+  }
 }
 
 async function clearCatalog(orgId: string, deps: SeedDeps): Promise<void> {
