@@ -12,6 +12,8 @@ type EstimateView = NonNullable<RouterOutput["estimates"]["get"]>;
 type LineItemView = EstimateView["lineItems"][number];
 type LineItemType = LineItemView["type"];
 type EstimateStatus = EstimateView["status"];
+type CatalogAssembly = RouterOutput["assemblies"]["list"][number];
+type Driver = CatalogAssembly["drivers"][number];
 
 const TYPE_LABEL: Record<LineItemType, string> = {
   material: "Material",
@@ -34,9 +36,6 @@ const STATUS_LABEL: Record<EstimateStatus, string> = {
 
 const phaseLabel = (phase: string | null) => phase || "General";
 
-// NOTE: Line items are now a generated snapshot — they come from the assemblies
-// chosen for the estimate (estimates.setAssemblies), not hand entry. This screen
-// is read-only for now; the assembly picker + driver inputs land in Phase E.
 export function EstimateEditorScreen() {
   const { projectId, estimateId } = useParams({
     from: "/projects/$projectId/estimates/$estimateId",
@@ -44,9 +43,8 @@ export function EstimateEditorScreen() {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
 
-  const estimate = useQuery(
-    trpc.estimates.get.queryOptions({ id: estimateId }),
-  );
+  const estimate = useQuery(trpc.estimates.get.queryOptions({ id: estimateId }));
+  const catalog = useQuery(trpc.assemblies.list.queryOptions());
 
   const invalidate = () => {
     queryClient.invalidateQueries({
@@ -57,13 +55,17 @@ export function EstimateEditorScreen() {
     });
   };
   const onError = (e: { message: string }) => setError(e.message);
+  const onMutated = () => {
+    invalidate();
+    setError(null);
+  };
 
   const updateMeta = useMutation(
-    trpc.estimates.updateMeta.mutationOptions({
-      onSuccess: () => {
-        invalidate();
-        setError(null);
-      },
+    trpc.estimates.updateMeta.mutationOptions({ onSuccess: onMutated, onError }),
+  );
+  const setAssemblies = useMutation(
+    trpc.estimates.setAssemblies.mutationOptions({
+      onSuccess: onMutated,
       onError,
     }),
   );
@@ -97,6 +99,7 @@ export function EstimateEditorScreen() {
   }
 
   const data = estimate.data;
+  const isDraft = data.status === "draft";
 
   // Group line items by phase, preserving the phase order from the calc engine.
   const itemsByPhase = new Map<string | null, LineItemView[]>();
@@ -120,15 +123,35 @@ export function EstimateEditorScreen() {
         onDelete={() => removeEstimate.mutate({ id: estimateId })}
       />
 
-      <AssembliesSummary estimate={data} />
+      {isDraft ? (
+        catalog.data ? (
+          <AssemblyEditor
+            // Re-seed the local draft whenever the saved selection changes
+            // (e.g. after a successful regenerate).
+            key={JSON.stringify(data.assemblies)}
+            initial={buildSelections(data.assemblies, catalog.data)}
+            catalog={catalog.data}
+            busy={setAssemblies.isPending}
+            onSave={(assemblies) =>
+              setAssemblies.mutate({ id: estimateId, assemblies })
+            }
+          />
+        ) : (
+          <p className="text-sm text-slate-400">Loading assemblies…</p>
+        )
+      ) : (
+        <AssembliesSummary estimate={data} />
+      )}
 
       <section className="space-y-4">
         <h2 className="text-sm font-medium text-slate-600">Line items</h2>
 
         {data.lineItems.length === 0 ? (
           <p className="text-sm text-slate-400">
-            No line items yet. Line items are generated from the assemblies
-            chosen for this estimate — the assembly picker is coming soon.
+            No line items yet.{" "}
+            {isDraft
+              ? "Add assemblies above and save to generate them."
+              : "This estimate has no assemblies."}
           </p>
         ) : (
           data.phases.map((phase) => (
@@ -203,6 +226,213 @@ const BackLink = ({ projectId }: { projectId: string }) => (
   </Link>
 );
 
+// A locally-editable selected assembly: which assembly, its driver definitions
+// (from the catalog, for labels/units), and the working driver values as form
+// strings.
+interface Selection {
+  assemblyId: string;
+  name: string;
+  drivers: Driver[];
+  values: Record<string, string>;
+}
+
+// Joins the estimate's saved selection with the catalog so each row knows its
+// driver definitions. A saved assembly that's since left the catalog still shows
+// (by name, with its stored driver keys) so it can be removed.
+function buildSelections(
+  saved: EstimateView["assemblies"],
+  catalog: CatalogAssembly[],
+): Selection[] {
+  return saved.map((entry) => {
+    const match = catalog.find((a) => a.id === entry.assemblyId);
+    const drivers =
+      match?.drivers ??
+      Object.keys(entry.driverValues).map((key) => ({
+        key,
+        label: key,
+        unit: "",
+        defaultValue: 0,
+      }));
+    const values: Record<string, string> = {};
+    for (const driver of drivers) {
+      values[driver.key] = String(entry.driverValues[driver.key] ?? driver.defaultValue);
+    }
+    return { assemblyId: entry.assemblyId, name: match?.name ?? entry.name, drivers, values };
+  });
+}
+
+function AssemblyEditor({
+  initial,
+  catalog,
+  busy,
+  onSave,
+}: {
+  initial: Selection[];
+  catalog: CatalogAssembly[];
+  busy: boolean;
+  onSave: (
+    assemblies: { assemblyId: string; driverValues: Record<string, number> }[],
+  ) => void;
+}) {
+  const [selections, setSelections] = useState<Selection[]>(initial);
+
+  const selectedIds = new Set(selections.map((s) => s.assemblyId));
+  const addable = catalog.filter((a) => !selectedIds.has(a.id));
+
+  const addAssembly = (assemblyId: string) => {
+    const assembly = catalog.find((a) => a.id === assemblyId);
+    if (!assembly) {
+      return;
+    }
+    const values: Record<string, string> = {};
+    for (const driver of assembly.drivers) {
+      values[driver.key] = String(driver.defaultValue);
+    }
+    setSelections([
+      ...selections,
+      { assemblyId, name: assembly.name, drivers: assembly.drivers, values },
+    ]);
+  };
+
+  const removeAssembly = (assemblyId: string) => {
+    setSelections(selections.filter((s) => s.assemblyId !== assemblyId));
+  };
+
+  const setValue = (assemblyId: string, key: string, value: string) => {
+    setSelections(
+      selections.map((s) =>
+        s.assemblyId === assemblyId
+          ? { ...s, values: { ...s.values, [key]: value } }
+          : s,
+      ),
+    );
+  };
+
+  const save = () => {
+    onSave(
+      selections.map((s) => {
+        const driverValues: Record<string, number> = {};
+        for (const driver of s.drivers) {
+          driverValues[driver.key] = Number(s.values[driver.key]) || 0;
+        }
+        return { assemblyId: s.assemblyId, driverValues };
+      }),
+    );
+  };
+
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-medium text-slate-600">Assemblies</h2>
+        <button
+          onClick={save}
+          disabled={busy}
+          className="rounded bg-gold px-3 py-1.5 text-sm font-medium text-white hover:bg-gold-light disabled:opacity-50"
+        >
+          {busy ? "Saving…" : "Save & regenerate"}
+        </button>
+      </div>
+
+      {selections.length === 0 ? (
+        <p className="text-sm text-slate-400">
+          No assemblies selected. Add one below, set its quantities, then save.
+        </p>
+      ) : (
+        <div className="space-y-3">
+          {selections.map((selection) => (
+            <div
+              key={selection.assemblyId}
+              className="rounded-lg border border-slate-200 p-4 shadow-sm"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-slate-800">
+                  {selection.name}
+                </span>
+                <button
+                  onClick={() => removeAssembly(selection.assemblyId)}
+                  className="text-sm text-slate-400 hover:text-red-600"
+                >
+                  Remove
+                </button>
+              </div>
+              {selection.drivers.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-4">
+                  {selection.drivers.map((driver) => (
+                    <label
+                      key={driver.key}
+                      className="flex items-center gap-2 text-sm text-slate-600"
+                    >
+                      {driver.label}
+                      <input
+                        type="number"
+                        min={0}
+                        value={selection.values[driver.key] ?? ""}
+                        onChange={(e) =>
+                          setValue(selection.assemblyId, driver.key, e.target.value)
+                        }
+                        className="w-24 rounded border border-slate-300 px-2 py-1 text-right text-sm"
+                      />
+                      {driver.unit && (
+                        <span className="text-slate-400">{driver.unit}</span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {addable.length > 0 && (
+        <select
+          value=""
+          onChange={(e) => {
+            if (e.target.value) {
+              addAssembly(e.target.value);
+            }
+          }}
+          className="rounded border border-dashed border-slate-300 bg-white px-3 py-2 text-sm text-slate-600"
+        >
+          <option value="">+ Add assembly…</option>
+          {addable.map((assembly) => (
+            <option key={assembly.id} value={assembly.id}>
+              {assembly.name}
+            </option>
+          ))}
+        </select>
+      )}
+    </section>
+  );
+}
+
+// Read-only summary of the assemblies a non-draft estimate was generated from.
+function AssembliesSummary({ estimate }: { estimate: EstimateView }) {
+  if (estimate.assemblies.length === 0) {
+    return null;
+  }
+  return (
+    <section className="space-y-2">
+      <h2 className="text-sm font-medium text-slate-600">Assemblies</h2>
+      <ul className="space-y-1 rounded-lg border border-slate-200 p-4 text-sm shadow-sm">
+        {estimate.assemblies.map((assembly) => (
+          <li
+            key={assembly.assemblyId}
+            className="flex flex-wrap items-baseline justify-between gap-2"
+          >
+            <span className="font-medium text-slate-700">{assembly.name}</span>
+            <span className="text-slate-500">
+              {Object.entries(assembly.driverValues)
+                .map(([key, value]) => `${key}: ${value}`)
+                .join(", ")}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function MetaHeader({
   estimate,
   busy,
@@ -254,33 +484,6 @@ function MetaHeader({
         </button>
       </div>
     </div>
-  );
-}
-
-// Read-only summary of the assemblies this estimate was generated from.
-function AssembliesSummary({ estimate }: { estimate: EstimateView }) {
-  if (estimate.assemblies.length === 0) {
-    return null;
-  }
-  return (
-    <section className="space-y-2">
-      <h2 className="text-sm font-medium text-slate-600">Assemblies</h2>
-      <ul className="space-y-1 rounded-lg border border-slate-200 p-4 text-sm shadow-sm">
-        {estimate.assemblies.map((assembly) => (
-          <li
-            key={assembly.assemblyId}
-            className="flex flex-wrap items-baseline justify-between gap-2"
-          >
-            <span className="font-medium text-slate-700">{assembly.name}</span>
-            <span className="text-slate-500">
-              {Object.entries(assembly.driverValues)
-                .map(([key, value]) => `${key}: ${value}`)
-                .join(", ")}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </section>
   );
 }
 
