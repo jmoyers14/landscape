@@ -231,7 +231,7 @@ interface Estimate {
 
 ## Cost buildup (the calc engine)
 
-Faithful to the spreadsheet. Lives in `EstimateService/calc.ts` as a pure
+Faithful to the spreadsheet. Lives in `engine/calc.ts` as a pure
 function, like the current one.
 
 ```
@@ -268,6 +268,12 @@ being replaced, not preserved). Two things to note:
   `Contract Price Breakdown`) — a presentation concern on top of the estimate.
 - **General Conditions** (`=SUM(...)*0.06`) — a whole-estimate rollup line;
   modeled later as a special computed line or an estimate-level surcharge.
+- **Concrete assembly & flat-fee lines** — the Concrete section has line items
+  that are neither hourly labor nor taxable materials (e.g. "Finishers" at a flat
+  `$350 × 8`, the concrete pump's setup fee). `AssemblyLine` is only
+  `material | labor` today, so Concrete is deferred until we add a flat-cost
+  ("equipment"/"other") line kind. The other five Package-sheet assemblies are
+  seeded.
 
 ## Seeding
 
