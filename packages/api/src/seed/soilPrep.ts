@@ -5,6 +5,7 @@ import {
   materialIdResolver,
   materialLine,
   seedMaterial,
+  task,
 } from "./types.ts";
 
 /**
@@ -38,16 +39,20 @@ export function buildSoilPrepAssembly(
     drivers: [
       { key: "soilSqFt", label: "Soil prep area", unit: "sq. ft.", defaultValue: 3000 },
     ],
+    tasks: [
+      task(1, "prep", "Soil preparation"),
+    ],
     lines: [
       laborLine(
         1,
         "prep",
         "Install 2\" compost, fertilizer, gypsum, rototill, and rough grade",
         "0.01172 * soilSqFt",
+        { taskKey: "prep" },
       ),
-      materialLine(2, "compost", "Compost", "(soilSqFt / 1000) * 3", id("soil-compost"), { groupKey: "prep" }),
-      materialLine(3, "fertilizer", "Fertilizer (50 lb.)", "round((soilSqFt / 1000) * 1.5)", id("soil-fertilizer"), { groupKey: "prep" }),
-      materialLine(4, "gypsum", "Gypsum (50 lb.)", "round((soilSqFt / 1000) * 3)", id("soil-gypsum"), { groupKey: "prep" }),
+      materialLine(2, "compost", "Compost", "(soilSqFt / 1000) * 3", id("soil-compost"), { taskKey: "prep" }),
+      materialLine(3, "fertilizer", "Fertilizer (50 lb.)", "round((soilSqFt / 1000) * 1.5)", id("soil-fertilizer"), { taskKey: "prep" }),
+      materialLine(4, "gypsum", "Gypsum (50 lb.)", "round((soilSqFt / 1000) * 3)", id("soil-gypsum"), { taskKey: "prep" }),
     ],
   };
 }

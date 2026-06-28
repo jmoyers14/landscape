@@ -1,6 +1,7 @@
 import type { MaterialInput } from "../data-access/repositories/MaterialRepository/MaterialRepository.ts";
 import type {
   AssemblyInput,
+  AssemblyTask,
   LaborAssemblyLine,
   MaterialAssemblyLine,
 } from "../data-access/repositories/AssemblyRepository/AssemblyRepository.ts";
@@ -70,20 +71,43 @@ export function materialIdResolver(
 // Line builders — keep the (long) assembly transcriptions terse and uniform.
 // sortOrder is positional so the lines read in sheet order.
 
+/** Builds an AssemblyTask; sortOrder is positional so tasks read in sheet order. */
+export function task(
+  sortOrder: number,
+  key: string,
+  name: string,
+): AssemblyTask {
+  return { key, name, sortOrder };
+}
+
+interface LaborLineOptions {
+  laborRateKey?: string;
+  // The task (group) this labor line belongs to. Omit for an ungrouped line.
+  taskKey?: string | null;
+}
+
 export function laborLine(
   sortOrder: number,
   key: string,
   description: string,
   quantityFormula: string,
-  laborRateKey = "general",
+  options: LaborLineOptions = {},
 ): LaborAssemblyLine {
-  return { key, kind: "labor", description, quantityFormula, laborRateKey, sortOrder };
+  return {
+    key,
+    kind: "labor",
+    description,
+    quantityFormula,
+    laborRateKey: options.laborRateKey ?? "general",
+    taskKey: options.taskKey ?? null,
+    sortOrder,
+  };
 }
 
 interface MaterialLineOptions {
-  // The labor line key this material is grouped under (its task). Omit for an
-  // ungrouped material (rendered on its own, not nested under a task).
-  groupKey?: string | null;
+  // The task (group) this material belongs to. Omit for an ungrouped material
+  // (rendered on its own, not nested under a task).
+  taskKey?: string | null;
   deliveriesFormula?: string | null;
 }
 
@@ -102,7 +126,7 @@ export function materialLine(
     quantityFormula,
     materialId,
     deliveriesFormula: options.deliveriesFormula ?? null,
-    groupKey: options.groupKey ?? null,
+    taskKey: options.taskKey ?? null,
     sortOrder,
   };
 }

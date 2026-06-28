@@ -41,10 +41,16 @@ describe("generateAssemblyLines — fidelity to the spreadsheet", () => {
     );
   });
 
-  it("tags each line with its group: a labor line heads its own group, a material joins its task", () => {
-    // The fixture nests the materials under the "install" labor task.
-    expect(byKey("install").groupKey).toBe("install");
-    expect(byKey("layout").groupKey).toBe("layout");
-    expect(byKey("catchBasinSingle").groupKey).toBe("install");
+  it("tags each line with its task, denormalizing the task name onto the line", () => {
+    // The fixture splits Drainage into a "layout" task and an "install" task;
+    // the materials all belong to "install" alongside its labor line.
+    expect(byKey("layout").taskKey).toBe("layout");
+    expect(byKey("layout").taskName).toBe("Lay out, trenching, and back filling");
+    expect(byKey("install").taskKey).toBe("install");
+    expect(byKey("install").taskName).toBe("Installing pipe, basins, grates");
+    expect(byKey("catchBasinSingle").taskKey).toBe("install");
+    expect(byKey("catchBasinSingle").taskName).toBe(
+      "Installing pipe, basins, grates",
+    );
   });
 });

@@ -57,6 +57,11 @@ function toAssembly(doc: AssemblyDoc): Assembly {
       defaultValue: d.defaultValue,
     })),
     source: doc.source,
+    tasks: (doc.tasks ?? []).map((t) => ({
+      key: t.key,
+      name: t.name,
+      sortOrder: t.sortOrder,
+    })),
     lines: (doc.lines ?? []).map(toAssemblyLine),
     createdAt: doc.createdAt.toISOString(),
   };
@@ -71,6 +76,7 @@ function toAssemblyLine(l: AssemblyDoc["lines"][number]): AssemblyLine {
     description: l.description,
     quantityFormula: l.quantityFormula,
     sortOrder: l.sortOrder,
+    taskKey: l.taskKey ?? null,
   };
   if (l.kind === "labor") {
     return { ...base, kind: "labor", laborRateKey: l.laborRateKey ?? "" };
@@ -80,6 +86,5 @@ function toAssemblyLine(l: AssemblyDoc["lines"][number]): AssemblyLine {
     kind: "material",
     materialId: l.materialId ?? "",
     deliveriesFormula: l.deliveriesFormula ?? null,
-    groupKey: l.groupKey ?? null,
   };
 }

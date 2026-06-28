@@ -16,6 +16,19 @@ export interface AssemblyDriver {
 }
 
 /**
+ * A task: a named grouping of work within an assembly (e.g. "Lay out, install
+ * trees…"). It's independent of any line — both labor and material lines belong
+ * to a task by `key`. This is what the UI groups and subtotals; a task can hold
+ * any mix of labor and material lines (one labor + its materials, or many of
+ * each, as in per-tree planting).
+ */
+export interface AssemblyTask {
+  key: string;
+  name: string;
+  sortOrder: number;
+}
+
+/**
  * Fields common to every assembly line. `quantityFormula` is a text expression
  * (evaluated by the engine's formula module) yielding units for a material line
  * or hours for a labor line. Formulas may reference driver keys and the `key` of
@@ -26,6 +39,9 @@ interface AssemblyLineBase {
   description: string;
   quantityFormula: string;
   sortOrder: number;
+  // The task (group) this line belongs to, by AssemblyTask.key. Both labor and
+  // material lines carry it. null/undefined = ungrouped (rendered on its own).
+  taskKey?: string | null;
 }
 
 /** A line that draws a priced item from the material catalog. */
@@ -33,9 +49,6 @@ export interface MaterialAssemblyLine extends AssemblyLineBase {
   kind: "material";
   materialId: string; // -> Material catalog document
   deliveriesFormula: string | null; // resolves to a delivery count; null => 0
-  // The labor line `key` this material belongs to (the task it's consumed by),
-  // for grouping/indentation. null/undefined = ungrouped (rendered on its own).
-  groupKey?: string | null;
 }
 
 /** A line of labor: hours (from `quantityFormula`) at a named labor rate. */
@@ -65,6 +78,7 @@ export interface Assembly {
   active: boolean;
   source: AssemblySource;
   drivers: AssemblyDriver[];
+  tasks: AssemblyTask[];
   lines: AssemblyLine[];
   createdAt: string;
 }

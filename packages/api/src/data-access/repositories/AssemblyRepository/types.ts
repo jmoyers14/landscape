@@ -9,6 +9,7 @@ export type {
   AssemblyLine,
   AssemblyLineKind,
   AssemblySource,
+  AssemblyTask,
   LaborAssemblyLine,
   MaterialAssemblyLine,
 } from "@landscape/core";

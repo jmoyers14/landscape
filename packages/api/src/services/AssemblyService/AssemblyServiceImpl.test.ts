@@ -31,6 +31,7 @@ const baseInput = (
   drivers: [
     { key: "drainageFt", label: "Drainage length", unit: "ft.", defaultValue: 225 },
   ],
+  tasks: [],
   lines: [
     {
       key: "layout",
@@ -179,8 +180,16 @@ describe("AssemblyServiceImpl validation", () => {
     ).rejects.toThrow(ServiceError);
   });
 
-  const groupedInput = (groupKey: string): AssemblyServiceInput =>
+  // `defineTask` controls whether the assembly declares the "install" task that
+  // the lines reference, so we can exercise both the valid and dangling cases.
+  const groupedInput = (
+    taskKey: string,
+    defineTask = true,
+  ): AssemblyServiceInput =>
     baseInput({
+      tasks: defineTask
+        ? [{ key: "install", name: "Install", sortOrder: 1 }]
+        : [],
       lines: [
         {
           key: "layout",
@@ -188,6 +197,7 @@ describe("AssemblyServiceImpl validation", () => {
           description: "Lay out",
           quantityFormula: "0.095 * drainageFt",
           laborRateKey: "general",
+          taskKey,
           sortOrder: 1,
         },
         {
@@ -197,28 +207,28 @@ describe("AssemblyServiceImpl validation", () => {
           quantityFormula: "round(drainageFt / 85)",
           materialId: "material_1",
           deliveriesFormula: null,
-          groupKey,
+          taskKey,
           sortOrder: 2,
         },
       ],
     });
 
-  it("rejects a material grouped under a labor task that doesn't exist", async () => {
+  it("rejects a line referencing a task that doesn't exist", async () => {
     const service = makeService();
-    expect(service.create("org_1", groupedInput("nope"))).rejects.toThrow(
-      ServiceError,
-    );
+    expect(
+      service.create("org_1", groupedInput("install", false)),
+    ).rejects.toThrow(ServiceError);
   });
 
-  it("accepts a material grouped under a real labor line", async () => {
+  it("accepts lines referencing a declared task", async () => {
     const assemblies = makeAssemblyRepoMock({
       create: mock(async (_o, d) => makeAssembly(d)),
     });
     const service = makeService({ assemblies });
-    await service.create("org_1", groupedInput("layout"));
+    await service.create("org_1", groupedInput("install"));
     const [, created] = (assemblies.create as ReturnType<typeof mock>).mock
       .calls[0];
-    expect(created.lines[1].groupKey).toBe("layout");
+    expect(created.lines[1].taskKey).toBe("install");
   });
 
   it("throws NOT_FOUND when updating a missing assembly", async () => {

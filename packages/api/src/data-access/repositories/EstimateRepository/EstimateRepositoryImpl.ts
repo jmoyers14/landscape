@@ -95,7 +95,8 @@ function toLineItem(doc: EstimateDoc["lineItems"][number]): LineItem {
     quantityFormula: doc.quantityFormula,
     sourceAssemblyId: doc.sourceAssemblyId ?? null,
     sourceLineKey: doc.sourceLineKey ?? null,
-    groupKey: doc.groupKey ?? null,
+    taskKey: doc.taskKey ?? null,
+    taskName: doc.taskName ?? null,
   };
 }
 

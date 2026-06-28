@@ -25,9 +25,10 @@ export interface GeneratedLineItem {
   quantityFormula: string; // frozen, for auditability
   sourceAssemblyId: string | null;
   sourceLineKey: string;
-  // The labor task this line belongs to: a labor line's own key, or the labor
-  // key a material is grouped under (null = ungrouped). See LineItem.groupKey.
-  groupKey: string | null;
+  // The task (group) this line belongs to, with its name denormalized for the
+  // snapshot. null = ungrouped. See LineItem.taskKey/taskName.
+  taskKey: string | null;
+  taskName: string | null;
 }
 
 export interface SelectedAssembly {
@@ -52,12 +53,14 @@ export function generateAssemblyLines(
   for (const [key, value] of quantities) {
     scope[key] = value;
   }
+  const taskNameByKey = new Map(assembly.tasks.map((t) => [t.key, t.name]));
 
   return assembly.lines
     .slice()
     .sort((a, b) => a.sortOrder - b.sortOrder)
     .map((line): GeneratedLineItem => {
       const quantity = quantities.get(line.key) ?? 0;
+      const taskKey = line.taskKey ?? null;
       const base = {
         phase: assembly.name,
         description: line.description,
@@ -65,8 +68,8 @@ export function generateAssemblyLines(
         quantityFormula: line.quantityFormula,
         sourceAssemblyId: assembly.id,
         sourceLineKey: line.key,
-        // A labor line heads its own group; a material joins its labor's group.
-        groupKey: line.kind === "labor" ? line.key : (line.groupKey ?? null),
+        taskKey,
+        taskName: taskKey ? (taskNameByKey.get(taskKey) ?? null) : null,
       };
 
       if (line.kind === "labor") {

@@ -458,14 +458,14 @@ function BlockHeader({
   );
 }
 
-// A task group for display: its labor line (the header) plus the materials
-// consumed by it. Loose lines are ungrouped materials shown on their own.
+// A task group for display: a named grouping that owns a mix of labor and
+// material lines. Loose lines are ungrouped lines shown on their own.
 interface TaskGroup {
   kind: "group";
   key: string;
-  labor: LineItemView | null;
-  materials: LineItemView[];
-  total: number; // direct cost of the whole task (labor + its materials)
+  name: string;
+  lines: LineItemView[];
+  total: number; // direct cost of the whole task
 }
 interface LooseLine {
   kind: "loose";
@@ -473,27 +473,29 @@ interface LooseLine {
 }
 type LineBlock = TaskGroup | LooseLine;
 
-// Buckets the flat (engine-ordered) lines into task groups by groupKey, keeping
+// Buckets the flat (engine-ordered) lines into task groups by taskKey, keeping
 // each group at the position of its first line. Ungrouped lines stay loose.
 function toBlocks(lines: LineItemView[]): LineBlock[] {
   const blocks: LineBlock[] = [];
   const byKey = new Map<string, TaskGroup>();
   for (const line of lines) {
-    if (line.groupKey == null) {
+    if (line.taskKey == null) {
       blocks.push({ kind: "loose", line });
       continue;
     }
-    let group = byKey.get(line.groupKey);
+    let group = byKey.get(line.taskKey);
     if (!group) {
-      group = { kind: "group", key: line.groupKey, labor: null, materials: [], total: 0 };
-      byKey.set(line.groupKey, group);
+      group = {
+        kind: "group",
+        key: line.taskKey,
+        name: line.taskName ?? line.taskKey,
+        lines: [],
+        total: 0,
+      };
+      byKey.set(line.taskKey, group);
       blocks.push(group);
     }
-    if (line.type === "labor") {
-      group.labor = line;
-    } else {
-      group.materials.push(line);
-    }
+    group.lines.push(line);
     group.total += line.cost;
   }
   return blocks;
@@ -506,6 +508,10 @@ function AssemblyLines({ lines }: { lines: LineItemView[] }) {
     );
   }
   const blocks = toBlocks(lines);
+  // Flatten a single-task assembly (e.g. Soil Prep): the assembly header already
+  // names it and shows its subtotal, so repeating a task header would be noise.
+  const flat =
+    blocks.length === 1 && blocks[0].kind === "group" ? blocks[0] : null;
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[32rem] border-collapse text-sm">
@@ -518,79 +524,71 @@ function AssemblyLines({ lines }: { lines: LineItemView[] }) {
           </tr>
         </thead>
         <tbody>
-          {blocks.map((block) =>
-            block.kind === "group" ? (
-              <GroupRows key={block.key} group={block} />
-            ) : (
-              <MaterialRow key={block.line.id} line={block.line} />
-            ),
-          )}
+          {flat
+            ? flat.lines.map((line) => <LineRow key={line.id} line={line} />)
+            : blocks.map((block) =>
+                block.kind === "group" ? (
+                  <GroupRows key={block.key} group={block} />
+                ) : (
+                  <LineRow key={block.line.id} line={block.line} />
+                ),
+              )}
         </tbody>
       </table>
     </div>
   );
 }
 
-// A task: the labor line as the lead row, its materials indented beneath, and a
-// "Task total" row so labor + materials visibly add up. A labor-only task skips
-// the subtotal (its single row already is the total).
+// A task: a header row naming the task, its lines (labor + materials, uniform)
+// indented beneath, and a "Task total" row so the lines visibly add up. A
+// single-line task collapses to just that line — a header + subtotal around one
+// row is only noise.
 function GroupRows({ group }: { group: TaskGroup }) {
-  const hasMaterials = group.materials.length > 0;
+  if (group.lines.length === 1) {
+    return <LineRow line={group.lines[0]} />;
+  }
   return (
     <>
-      {group.labor && (
-        <tr className="border-b border-slate-100">
-          <td className="px-4 py-2 font-medium text-slate-800">
-            {group.labor.description}
-          </td>
-          <td className="px-4 py-2 text-right text-slate-600">
-            {formatQuantity(group.labor.quantity)} hr
-          </td>
-          <td className="px-4 py-2 text-right text-slate-600">
-            {formatCurrency(group.labor.unitPrice)}
-          </td>
-          <td className="px-4 py-2 text-right text-slate-700">
-            {formatCurrency(group.labor.cost)}
-          </td>
-        </tr>
-      )}
-      {group.materials.map((line) => (
-        <MaterialRow key={line.id} line={line} indented />
+      <tr className="border-b border-slate-100 bg-slate-50/60">
+        <td colSpan={4} className="px-4 py-2 font-medium text-slate-800">
+          {group.name}
+        </td>
+      </tr>
+      {group.lines.map((line) => (
+        <LineRow key={line.id} line={line} indented />
       ))}
-      {hasMaterials && (
-        <tr className="border-b border-slate-200">
-          <td
-            colSpan={3}
-            className="px-4 pb-2 pt-1 text-right text-xs font-medium uppercase tracking-wide text-slate-400"
-          >
-            Task total
-          </td>
-          <td className="px-4 pb-2 pt-1 text-right font-semibold text-slate-800">
-            {formatCurrency(group.total)}
-          </td>
-        </tr>
-      )}
+      <tr className="border-b border-slate-200">
+        <td
+          colSpan={3}
+          className="px-4 pb-2 pt-1 text-right text-xs font-medium uppercase tracking-wide text-slate-400"
+        >
+          Task total
+        </td>
+        <td className="px-4 pb-2 pt-1 text-right font-semibold text-slate-800">
+          {formatCurrency(group.total)}
+        </td>
+      </tr>
     </>
   );
 }
 
-function MaterialRow({
+// One line item row, uniform for labor (qty in hours) and material (qty + unit).
+function LineRow({
   line,
   indented = false,
 }: {
   line: LineItemView;
   indented?: boolean;
 }) {
+  const isLabor = line.type === "labor";
   return (
     <tr className="border-b border-slate-100">
-      <td
-        className={`py-2 text-slate-700 ${indented ? "pl-10 pr-4" : "px-4"}`}
-      >
+      <td className={`py-2 text-slate-700 ${indented ? "pl-8 pr-4" : "px-4"}`}>
         {line.description}
       </td>
       <td className="px-4 py-2 text-right text-slate-600">
         {formatQuantity(line.quantity)}
-        {line.unit ? ` ${line.unit}` : ""}
+        {isLabor ? " hr" : line.unit ? ` ${line.unit}` : ""}
       </td>
       <td className="px-4 py-2 text-right text-slate-600">
         {formatCurrency(line.unitPrice)}

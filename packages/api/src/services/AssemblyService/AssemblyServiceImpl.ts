@@ -134,19 +134,19 @@ export class AssemblyServiceImpl implements AssemblyService {
       input.lines.map((line) => line.key),
     );
 
-    // A material's groupKey must name a labor line in this assembly — that labor
-    // line is the task it's grouped under.
-    const laborKeys = new Set(
-      input.lines.filter((line) => line.kind === "labor").map((line) => line.key),
+    // Tasks are named groupings; their keys must be unique within the assembly.
+    const taskKeys = collectKeys(
+      "task",
+      input.tasks.map((task) => task.key),
     );
+
+    // Every line's taskKey (labor or material) must name a task in this assembly.
     for (const line of input.lines) {
-      if (line.kind === "material" && line.groupKey) {
-        if (!laborKeys.has(line.groupKey)) {
-          throw new ServiceError(
-            "BAD_REQUEST",
-            `Material line "${line.key}" is grouped under unknown labor task "${line.groupKey}"`,
-          );
-        }
+      if (line.taskKey && !taskKeys.has(line.taskKey)) {
+        throw new ServiceError(
+          "BAD_REQUEST",
+          `Line "${line.key}" references unknown task "${line.taskKey}"`,
+        );
       }
     }
 

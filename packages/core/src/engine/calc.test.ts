@@ -99,7 +99,8 @@ describe("computeEstimate — pricing a stored snapshot", () => {
           quantityFormula: "round(drainageFt / 85)",
           sourceAssemblyId: "drainage",
           sourceLineKey: "catchBasinSingle",
-          groupKey: "layout",
+          taskKey: "install",
+          taskName: "Installing pipe, basins, grates",
         },
         {
           id: "li_2",
@@ -114,7 +115,8 @@ describe("computeEstimate — pricing a stored snapshot", () => {
           quantityFormula: "0.095 * drainageFt",
           sourceAssemblyId: "drainage",
           sourceLineKey: "layout",
-          groupKey: "layout",
+          taskKey: "layout",
+          taskName: "Lay out, trenching, and back filling",
         },
       ],
     });

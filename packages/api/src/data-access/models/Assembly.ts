@@ -17,6 +17,17 @@ const driverSchema = new Schema(
   { _id: false },
 );
 
+// A named grouping of work within an assembly. Both labor and material lines
+// belong to a task via taskKey; the UI groups and subtotals by it.
+const taskSchema = new Schema(
+  {
+    key: { type: String, required: true, trim: true },
+    name: { type: String, required: true, trim: true },
+    sortOrder: { type: Number, required: true, default: 0 },
+  },
+  { _id: false },
+);
+
 const lineSchema = new Schema(
   {
     key: { type: String, required: true, trim: true },
@@ -26,8 +37,8 @@ const lineSchema = new Schema(
     quantityFormula: { type: String, required: true, trim: true },
     materialId: { type: String, default: null },
     deliveriesFormula: { type: String, default: null },
-    // The labor line key a material is grouped under (its task); null = ungrouped.
-    groupKey: { type: String, default: null },
+    // The task (group) this line belongs to, by AssemblyTask.key; null = ungrouped.
+    taskKey: { type: String, default: null },
     laborRateKey: { type: String, default: null },
     sortOrder: { type: Number, required: true, default: 0 },
   },
@@ -48,6 +59,7 @@ const assemblySchema = new Schema(
     active: { type: Boolean, required: true, default: true },
     source: { type: String, required: true, enum: ASSEMBLY_SOURCES, default: "custom" },
     drivers: { type: [driverSchema], default: [] },
+    tasks: { type: [taskSchema], default: [] },
     lines: { type: [lineSchema], default: [] },
   },
   { timestamps: true },

@@ -30,9 +30,10 @@ const lineItemSchema = new Schema(
     quantityFormula: { type: String, required: true, default: "" },
     sourceAssemblyId: { type: String, default: null },
     sourceLineKey: { type: String, default: null },
-    // The labor task this line belongs to (labor = own key, material = its task);
-    // null = ungrouped. Frozen with the snapshot so grouping survives catalog edits.
-    groupKey: { type: String, default: null },
+    // The task (group) this line belongs to; null = ungrouped. taskName is
+    // denormalized so the snapshot keeps its label even after catalog edits.
+    taskKey: { type: String, default: null },
+    taskName: { type: String, default: null },
   },
   { _id: true },
 );

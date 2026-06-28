@@ -70,6 +70,7 @@ export const makeAssembly = (over: Partial<Assembly> = {}): Assembly => ({
   active: true,
   source: "custom",
   drivers: [{ key: "qty", label: "Quantity", unit: "unit(s)", defaultValue: 1 }],
+  tasks: [],
   lines: [],
   createdAt: CREATED_AT,
   ...over,

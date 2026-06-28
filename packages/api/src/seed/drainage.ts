@@ -5,6 +5,7 @@ import {
   materialIdResolver,
   materialLine,
   seedMaterial,
+  task,
 } from "./types.ts";
 
 /**
@@ -55,25 +56,30 @@ export function buildDrainageAssembly(
     drivers: [
       { key: "drainageFt", label: "Drainage length", unit: "ft.", defaultValue: 225 },
     ],
+    // The sheet splits Drainage into lay-out work and the install of pipe/basins.
+    tasks: [
+      task(1, "layout", "Lay out, trenching, and back filling"),
+      task(2, "install", "Installing pipe, basins, grates"),
+    ],
     lines: [
-      laborLine(1, "layout", "Lay out, trenching, and back filling", "0.095 * drainageFt"),
-      laborLine(2, "install", "Installing pipe, basins, grates", "0.05273 * drainageFt"),
+      laborLine(1, "layout", "Lay out, trenching, and back filling", "0.095 * drainageFt", { taskKey: "layout" }),
+      laborLine(2, "install", "Installing pipe, basins, grates", "0.05273 * drainageFt", { taskKey: "install" }),
       // All materials are consumed by the "install" task (sheet rows 11–25).
-      materialLine(3, "catchBasinSingle", "Single outlet catch basin", single, id("drainage-catch-basin-single"), { groupKey: "install" }),
-      materialLine(4, "catchBasinDouble", "Double outlet catch basin", double, id("drainage-catch-basin-double"), { groupKey: "install" }),
-      materialLine(5, "elbow390", '3" 90 degree elbows', double, id("drainage-elbow-3-90"), { groupKey: "install" }),
-      materialLine(6, "tee3", '3" drain tees', double, id("drainage-tee-3"), { groupKey: "install" }),
-      materialLine(7, "bend45", '3" 45 degree', double, id("drainage-bend-3-45"), { groupKey: "install" }),
-      materialLine(8, "coupling3", '3" coupling', double, id("drainage-coupling-3"), { groupKey: "install" }),
-      materialLine(9, "grate6Round", '6" round green grate', single, id("drainage-grate-6-round"), { groupKey: "install" }),
-      materialLine(10, "grate6Atrium", '6" green atrium grate', double, id("drainage-grate-6-atrium"), { groupKey: "install" }),
-      materialLine(11, "grate3Round", '3" round green grate', single, id("drainage-grate-3-round"), { groupKey: "install" }),
-      materialLine(12, "grate3Atrium", '3" green atrium grate', single, id("drainage-grate-3-atrium"), { groupKey: "install" }),
-      materialLine(13, "solidPipe3", 'Solid drain pipe 3" x 10\'', "roundUp(drainageFt / 10)", id("drainage-solid-pipe-3"), { groupKey: "install" }),
-      materialLine(14, "solidPipe6", 'Solid drain pipe 6" x 10\'', "round(drainageFt / 150, 1)", id("drainage-solid-pipe-6"), { groupKey: "install" }),
-      materialLine(15, "glue", "Drain pipe glue (pipe 600 adhesive)", "drainageFt / 300", id("drainage-glue"), { groupKey: "install" }),
-      materialLine(16, "pipeWrap", '10 mil pipe wrap (2" x 100\')', "drainageFt / 150", id("drainage-pipe-wrap"), { groupKey: "install" }),
-      materialLine(17, "curbCore", "Curb core", "drainageFt < 175 ? 1 : 2", id("drainage-curb-core"), { groupKey: "install" }),
+      materialLine(3, "catchBasinSingle", "Single outlet catch basin", single, id("drainage-catch-basin-single"), { taskKey: "install" }),
+      materialLine(4, "catchBasinDouble", "Double outlet catch basin", double, id("drainage-catch-basin-double"), { taskKey: "install" }),
+      materialLine(5, "elbow390", '3" 90 degree elbows', double, id("drainage-elbow-3-90"), { taskKey: "install" }),
+      materialLine(6, "tee3", '3" drain tees', double, id("drainage-tee-3"), { taskKey: "install" }),
+      materialLine(7, "bend45", '3" 45 degree', double, id("drainage-bend-3-45"), { taskKey: "install" }),
+      materialLine(8, "coupling3", '3" coupling', double, id("drainage-coupling-3"), { taskKey: "install" }),
+      materialLine(9, "grate6Round", '6" round green grate', single, id("drainage-grate-6-round"), { taskKey: "install" }),
+      materialLine(10, "grate6Atrium", '6" green atrium grate', double, id("drainage-grate-6-atrium"), { taskKey: "install" }),
+      materialLine(11, "grate3Round", '3" round green grate', single, id("drainage-grate-3-round"), { taskKey: "install" }),
+      materialLine(12, "grate3Atrium", '3" green atrium grate', single, id("drainage-grate-3-atrium"), { taskKey: "install" }),
+      materialLine(13, "solidPipe3", 'Solid drain pipe 3" x 10\'', "roundUp(drainageFt / 10)", id("drainage-solid-pipe-3"), { taskKey: "install" }),
+      materialLine(14, "solidPipe6", 'Solid drain pipe 6" x 10\'', "round(drainageFt / 150, 1)", id("drainage-solid-pipe-6"), { taskKey: "install" }),
+      materialLine(15, "glue", "Drain pipe glue (pipe 600 adhesive)", "drainageFt / 300", id("drainage-glue"), { taskKey: "install" }),
+      materialLine(16, "pipeWrap", '10 mil pipe wrap (2" x 100\')', "drainageFt / 150", id("drainage-pipe-wrap"), { taskKey: "install" }),
+      materialLine(17, "curbCore", "Curb core", "drainageFt < 175 ? 1 : 2", id("drainage-curb-core"), { taskKey: "install" }),
     ],
   };
 }

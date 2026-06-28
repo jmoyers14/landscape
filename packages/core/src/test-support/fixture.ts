@@ -35,6 +35,7 @@ export const makeAssembly = (over: Partial<Assembly> = {}): Assembly => ({
   active: true,
   source: "custom",
   drivers: [{ key: "qty", label: "Quantity", unit: "unit(s)", defaultValue: 1 }],
+  tasks: [],
   lines: [],
   createdAt: CREATED_AT,
   ...over,
@@ -87,6 +88,10 @@ export const drainageAssembly = (): Assembly =>
     drivers: [
       { key: "drainageFt", label: "Drainage length", unit: "ft.", defaultValue: 225 },
     ],
+    tasks: [
+      { key: "layout", name: "Lay out, trenching, and back filling", sortOrder: 1 },
+      { key: "install", name: "Installing pipe, basins, grates", sortOrder: 2 },
+    ],
     lines: [
       {
         key: "layout",
@@ -94,6 +99,7 @@ export const drainageAssembly = (): Assembly =>
         description: "Lay out, trenching, and back filling",
         quantityFormula: "0.095 * drainageFt",
         laborRateKey: "general",
+        taskKey: "layout",
         sortOrder: 1,
       },
       {
@@ -102,6 +108,7 @@ export const drainageAssembly = (): Assembly =>
         description: "Installing pipe, basins, grates",
         quantityFormula: "0.05273 * drainageFt",
         laborRateKey: "general",
+        taskKey: "install",
         sortOrder: 2,
       },
       {
@@ -111,7 +118,7 @@ export const drainageAssembly = (): Assembly =>
         quantityFormula: "round(drainageFt / 85)",
         materialId: "catch-basin-single",
         deliveriesFormula: null,
-        groupKey: "install",
+        taskKey: "install",
         sortOrder: 3,
       },
       {
@@ -121,7 +128,7 @@ export const drainageAssembly = (): Assembly =>
         quantityFormula: "round((drainageFt / 85) * 2)",
         materialId: "catch-basin-double",
         deliveriesFormula: null,
-        groupKey: "install",
+        taskKey: "install",
         sortOrder: 4,
       },
       {
@@ -131,7 +138,7 @@ export const drainageAssembly = (): Assembly =>
         quantityFormula: "roundUp(drainageFt / 10)",
         materialId: "solid-pipe-3",
         deliveriesFormula: null,
-        groupKey: "install",
+        taskKey: "install",
         sortOrder: 5,
       },
       {
@@ -141,7 +148,7 @@ export const drainageAssembly = (): Assembly =>
         quantityFormula: "round((drainageFt / 150) * 1, 1)",
         materialId: "solid-pipe-6",
         deliveriesFormula: null,
-        groupKey: "install",
+        taskKey: "install",
         sortOrder: 6,
       },
       {
@@ -151,7 +158,7 @@ export const drainageAssembly = (): Assembly =>
         quantityFormula: "drainageFt < 175 ? 1 : 2",
         materialId: "curb-core",
         deliveriesFormula: null,
-        groupKey: "install",
+        taskKey: "install",
         sortOrder: 7,
       },
     ],

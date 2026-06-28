@@ -8,9 +8,17 @@ const driverInput = z.object({
   defaultValue: z.number(),
 });
 
+// A named grouping of work within the assembly; lines reference it by key.
+const taskInput = z.object({
+  key: z.string().min(1),
+  name: z.string().min(1),
+  sortOrder: z.number().default(0),
+});
+
 // Lines are a discriminated union on `kind`, matching the AssemblyLine domain
 // type: a material line carries materialId/deliveriesFormula, a labor line
-// carries laborRateKey.
+// carries laborRateKey. Both carry an optional taskKey (the group they belong
+// to; null = ungrouped).
 const materialLineInput = z.object({
   key: z.string().min(1),
   kind: z.literal("material"),
@@ -18,8 +26,7 @@ const materialLineInput = z.object({
   quantityFormula: z.string().min(1),
   materialId: z.string().min(1),
   deliveriesFormula: z.string().nullable().default(null),
-  // The labor line key this material is grouped under (its task); null = ungrouped.
-  groupKey: z.string().nullable().default(null),
+  taskKey: z.string().nullable().default(null),
   sortOrder: z.number().default(0),
 });
 
@@ -29,6 +36,7 @@ const laborLineInput = z.object({
   description: z.string().min(1),
   quantityFormula: z.string().min(1),
   laborRateKey: z.string().min(1),
+  taskKey: z.string().nullable().default(null),
   sortOrder: z.number().default(0),
 });
 
@@ -45,6 +53,7 @@ const assemblyInput = z.object({
   sortOrder: z.number().default(0),
   active: z.boolean().default(true),
   drivers: z.array(driverInput),
+  tasks: z.array(taskInput).default([]),
   lines: z.array(lineInput),
 });
 

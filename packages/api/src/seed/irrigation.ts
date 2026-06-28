@@ -5,6 +5,7 @@ import {
   materialIdResolver,
   materialLine,
   seedMaterial,
+  task,
 } from "./types.ts";
 
 /**
@@ -63,34 +64,39 @@ export function buildIrrigationAssembly(
     drivers: [
       { key: "valves", label: "Control valves", unit: "unit(s)", defaultValue: 5 },
     ],
+    tasks: [
+      task(1, "installValves", "Install control valves"),
+      task(2, "lateralLabor", "Lateral lines, heads, and nozzles"),
+    ],
     lines: [
-      laborLine(1, "installValves", "Install control valves", "0.7475 * valves"),
+      laborLine(1, "installValves", "Install control valves", "0.7475 * valves", { taskKey: "installValves" }),
       laborLine(
         2,
         "lateralLabor",
         "Layout, trench, install lateral pipe, flush, inserts, pressure check, adjust",
         `0.8204 * ${zone}`,
+        { taskKey: "lateralLabor" },
       ),
       // Valve-manifold materials (sheet rows 35–39).
-      materialLine(3, "valveUnits", "Valves", "valves", id("irr-valves"), { groupKey: "installValves" }),
-      materialLine(4, "teflonTape", "Teflon tape", "valves / 5", id("irr-teflon-tape"), { groupKey: "installValves" }),
-      materialLine(5, "pvcNipple1x18", "PVC nipple 1 x 18", "round(valves * 2)", id("irr-pvc-nipple-1x18"), { groupKey: "installValves" }),
-      materialLine(6, "pvcSlipTee1", '1" PVC slip tee', "round(valves * 1.6)", id("irr-pvc-slip-tee-1"), { groupKey: "installValves" }),
-      materialLine(7, "pvcSlipElbow1", '1" PVC slip elbow', "round(valves * 0.5)", id("irr-pvc-slip-elbow-1"), { groupKey: "installValves" }),
+      materialLine(3, "valveUnits", "Valves", "valves", id("irr-valves"), { taskKey: "installValves" }),
+      materialLine(4, "teflonTape", "Teflon tape", "valves / 5", id("irr-teflon-tape"), { taskKey: "installValves" }),
+      materialLine(5, "pvcNipple1x18", "PVC nipple 1 x 18", "round(valves * 2)", id("irr-pvc-nipple-1x18"), { taskKey: "installValves" }),
+      materialLine(6, "pvcSlipTee1", '1" PVC slip tee', "round(valves * 1.6)", id("irr-pvc-slip-tee-1"), { taskKey: "installValves" }),
+      materialLine(7, "pvcSlipElbow1", '1" PVC slip elbow', "round(valves * 0.5)", id("irr-pvc-slip-elbow-1"), { taskKey: "installValves" }),
       // Lateral-line / head materials (sheet rows 41–54).
-      materialLine(8, "cl200", '3/4" CL 200 (100\')', "roundUp(valves * 2, 1)", id("irr-cl200-34"), { groupKey: "lateralLabor" }),
-      materialLine(9, "popupBody", "6\" pop-up body", `round(${zone} * (2 / 3))`, id("irr-popup-body-6"), { groupKey: "lateralLabor" }),
-      materialLine(10, "pvcNippleHalf", 'PVC Nipple 1/2" x 15"', `round(${zone} * (1 / 3))`, id("irr-pvc-nipple-half-15"), { groupKey: "lateralLabor" }),
-      materialLine(11, "pvcSlipTee34", '3/4" PVC slip tee', "round(valves * 10)", id("irr-pvc-slip-tee-34"), { groupKey: "lateralLabor" }),
-      materialLine(12, "pvcSlipElbow34", '3/4" PVC slip elbow', "round(valves * 10)", id("irr-pvc-slip-elbow-34"), { groupKey: "lateralLabor" }),
-      materialLine(13, "sstReducingTee", '3/4 x 3/4 x 1/2 PVC SST reducing tee', `round(${zone} * (2 / 3))`, id("irr-sst-reducing-tee"), { groupKey: "lateralLabor" }),
-      materialLine(14, "sch40", '1" SCH 40 (100\')', "roundUp(valves * 0.2, 1)", id("irr-sch40-1"), { groupKey: "lateralLabor" }),
-      materialLine(15, "pvcSlipElbow1Lateral", '1" PVC slip elbow', "round(valves * 5)", id("irr-pvc-slip-elbow-1b"), { groupKey: "lateralLabor" }),
-      materialLine(16, "pvcGlue", "PVC pipe glue (pint)", "valves / 5", id("irr-pvc-glue-pint"), { groupKey: "lateralLabor" }),
-      materialLine(17, "nozzles", "Nozzles", zone, id("irr-nozzles"), { groupKey: "lateralLabor" }),
-      materialLine(18, "shrubBodies", "Shrub Bodies", "popupBody", id("irr-shrub-bodies"), { groupKey: "lateralLabor" }),
-      materialLine(19, "funnyPipe", "Funny Pipe", "1", id("irr-funny-pipe"), { groupKey: "lateralLabor" }),
-      materialLine(20, "funnyElbows", "Funny Elbows", "popupBody * 2", id("irr-funny-elbows"), { groupKey: "lateralLabor" }),
+      materialLine(8, "cl200", '3/4" CL 200 (100\')', "roundUp(valves * 2, 1)", id("irr-cl200-34"), { taskKey: "lateralLabor" }),
+      materialLine(9, "popupBody", "6\" pop-up body", `round(${zone} * (2 / 3))`, id("irr-popup-body-6"), { taskKey: "lateralLabor" }),
+      materialLine(10, "pvcNippleHalf", 'PVC Nipple 1/2" x 15"', `round(${zone} * (1 / 3))`, id("irr-pvc-nipple-half-15"), { taskKey: "lateralLabor" }),
+      materialLine(11, "pvcSlipTee34", '3/4" PVC slip tee', "round(valves * 10)", id("irr-pvc-slip-tee-34"), { taskKey: "lateralLabor" }),
+      materialLine(12, "pvcSlipElbow34", '3/4" PVC slip elbow', "round(valves * 10)", id("irr-pvc-slip-elbow-34"), { taskKey: "lateralLabor" }),
+      materialLine(13, "sstReducingTee", '3/4 x 3/4 x 1/2 PVC SST reducing tee', `round(${zone} * (2 / 3))`, id("irr-sst-reducing-tee"), { taskKey: "lateralLabor" }),
+      materialLine(14, "sch40", '1" SCH 40 (100\')', "roundUp(valves * 0.2, 1)", id("irr-sch40-1"), { taskKey: "lateralLabor" }),
+      materialLine(15, "pvcSlipElbow1Lateral", '1" PVC slip elbow', "round(valves * 5)", id("irr-pvc-slip-elbow-1b"), { taskKey: "lateralLabor" }),
+      materialLine(16, "pvcGlue", "PVC pipe glue (pint)", "valves / 5", id("irr-pvc-glue-pint"), { taskKey: "lateralLabor" }),
+      materialLine(17, "nozzles", "Nozzles", zone, id("irr-nozzles"), { taskKey: "lateralLabor" }),
+      materialLine(18, "shrubBodies", "Shrub Bodies", "popupBody", id("irr-shrub-bodies"), { taskKey: "lateralLabor" }),
+      materialLine(19, "funnyPipe", "Funny Pipe", "1", id("irr-funny-pipe"), { taskKey: "lateralLabor" }),
+      materialLine(20, "funnyElbows", "Funny Elbows", "popupBody * 2", id("irr-funny-elbows"), { taskKey: "lateralLabor" }),
     ],
   };
 }
