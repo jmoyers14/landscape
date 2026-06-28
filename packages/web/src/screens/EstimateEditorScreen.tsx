@@ -217,7 +217,7 @@ function toSelections(selections: Selection[]): EstimateSelection[] {
 
 // The draft editor: pick assemblies + edit driver values, watching each
 // assembly's line items and the running totals recompute live (no round-trip)
-// via the shared engine. "Save & regenerate" persists; the server re-runs the
+// via the shared engine. "Save" persists; the server re-runs the
 // same engine and freezes the snapshot, so the saved estimate matches this view.
 function DraftEditor({
   initial,
