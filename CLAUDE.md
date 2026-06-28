@@ -1,5 +1,18 @@
 # Landscape — Project Instructions
 
+## About
+
+Landscape is a project estimation and management SaaS application for
+landscaping businesses. It is a monorepo with the following stack:
+
+- **Runtime / tooling:** Bun
+- **API:** tRPC, with a layered backend (data-access repositories →
+  integrations adapters → services) wired together with tsyringe DI
+- **Database:** MongoDB
+- **Frontend:** React
+- **Auth / multi-tenancy:** Clerk (an organization maps to a tenant)
+- **Hosting:** Google Cloud Platform (Cloud Run)
+
 Project-specific conventions for this repo. The general coding style in the
 global `~/.claude/CLAUDE.md` still applies; rules here are additions or
 overrides for this project.
