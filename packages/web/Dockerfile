@@ -5,11 +5,13 @@ WORKDIR /app
 COPY package.json bun.lock tsconfig.json ./
 COPY packages/api/package.json packages/api/
 COPY packages/web/package.json packages/web/
+COPY packages/core/package.json packages/core/
 
 RUN bun install --frozen-lockfile
 
 # The API URL and Clerk publishable key are baked into the static bundle at
 # build time (both are public — the publishable key is client-side by design).
+COPY packages/core/ packages/core/
 COPY packages/web/ packages/web/
 ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
