@@ -68,15 +68,17 @@ export function buildPlantingAssembly(
       { key: "mulchYds", label: "Mulch", unit: "yds.", defaultValue: 6 },
     ],
     lines: [
-      // Trees: each is a material line + its own install-labor line.
-      materialLine(1, "tree1gal", "1 - gallon tree", "treeOneGal", id("plant-tree-1gal"), "1"),
-      laborLine(2, "tree1galLabor", "Install 1-gallon trees", "0.2 * treeOneGal"),
-      materialLine(3, "tree5gal", "5 - gallon tree", "treeFiveGal", id("plant-tree-5gal")),
-      laborLine(4, "tree5galLabor", "Install 5-gallon trees", "0.5 * treeFiveGal"),
-      materialLine(5, "tree15gal", "15 - gallon tree", "treeFifteenGal", id("plant-tree-15gal")),
-      laborLine(6, "tree15galLabor", "Install 15-gallon trees", "1.5 * treeFifteenGal"),
-      materialLine(7, "tree24gal", "24 - gallon tree", "treeTwentyFourGal", id("plant-tree-24gal")),
-      laborLine(8, "tree24galLabor", "Install 24-gallon trees", "4.33 * treeTwentyFourGal"),
+      // Each task's labor leads, with the plant it installs grouped beneath it.
+      // (Ordered labor-first so the seed reads the way the estimate renders.)
+      laborLine(1, "tree1galLabor", "Install 1-gallon trees", "0.2 * treeOneGal"),
+      materialLine(2, "tree1gal", "1 - gallon tree", "treeOneGal", id("plant-tree-1gal"), { groupKey: "tree1galLabor", deliveriesFormula: "1" }),
+      laborLine(3, "tree5galLabor", "Install 5-gallon trees", "0.5 * treeFiveGal"),
+      materialLine(4, "tree5gal", "5 - gallon tree", "treeFiveGal", id("plant-tree-5gal"), { groupKey: "tree5galLabor" }),
+      laborLine(5, "tree15galLabor", "Install 15-gallon trees", "1.5 * treeFifteenGal"),
+      materialLine(6, "tree15gal", "15 - gallon tree", "treeFifteenGal", id("plant-tree-15gal"), { groupKey: "tree15galLabor" }),
+      laborLine(7, "tree24galLabor", "Install 24-gallon trees", "4.33 * treeTwentyFourGal"),
+      materialLine(8, "tree24gal", "24 - gallon tree", "treeTwentyFourGal", id("plant-tree-24gal"), { groupKey: "tree24galLabor" }),
+      // Planting consumables span all tree sizes, so they're left ungrouped.
       materialLine(
         9,
         "bestTabs",
@@ -94,12 +96,12 @@ export function buildPlantingAssembly(
       materialLine(11, "treeStakes", "Tree Stakes (10' treated)", "12", id("plant-tree-stakes")),
       materialLine(12, "cinchTies", 'Cinch ties 32"', "treeStakes * 4", id("plant-cinch-ties")),
       laborLine(13, "groundCoverLabor", "Install ground cover and color", "0.55472 * groundCoverFlats"),
-      materialLine(14, "groundCover", "8 flats ground cover/color", "groundCoverFlats", id("plant-ground-cover")),
+      materialLine(14, "groundCover", "8 flats ground cover/color", "groundCoverFlats", id("plant-ground-cover"), { groupKey: "groundCoverLabor" }),
       laborLine(15, "lawnLabor", "Finish grade, fertilize, install lawn, roll, and water", "0.01776 * lawnSqFt"),
-      materialLine(16, "fertilizer", "Fertilizer (50 lb.)", "round((lawnSqFt / 500) * 0.5)", id("plant-fertilizer")),
-      materialLine(17, "sod", "Sod", "sodSqFt", id("plant-sod")),
+      materialLine(16, "fertilizer", "Fertilizer (50 lb.)", "round((lawnSqFt / 500) * 0.5)", id("plant-fertilizer"), { groupKey: "lawnLabor" }),
+      materialLine(17, "sod", "Sod", "sodSqFt", id("plant-sod"), { groupKey: "lawnLabor" }),
       laborLine(18, "mulchLabor", "Install mulch or bark", "1.243 * mulchYds"),
-      materialLine(19, "mulch", "Mulch (forest mulch)", "mulchYds", id("plant-mulch"), "1"),
+      materialLine(19, "mulch", "Mulch (forest mulch)", "mulchYds", id("plant-mulch"), { groupKey: "mulchLabor", deliveriesFormula: "1" }),
     ],
   };
 }

@@ -80,13 +80,20 @@ export function laborLine(
   return { key, kind: "labor", description, quantityFormula, laborRateKey, sortOrder };
 }
 
+interface MaterialLineOptions {
+  // The labor line key this material is grouped under (its task). Omit for an
+  // ungrouped material (rendered on its own, not nested under a task).
+  groupKey?: string | null;
+  deliveriesFormula?: string | null;
+}
+
 export function materialLine(
   sortOrder: number,
   key: string,
   description: string,
   quantityFormula: string,
   materialId: string,
-  deliveriesFormula: string | null = null,
+  options: MaterialLineOptions = {},
 ): MaterialAssemblyLine {
   return {
     key,
@@ -94,7 +101,8 @@ export function materialLine(
     description,
     quantityFormula,
     materialId,
-    deliveriesFormula,
+    deliveriesFormula: options.deliveriesFormula ?? null,
+    groupKey: options.groupKey ?? null,
     sortOrder,
   };
 }

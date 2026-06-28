@@ -3,13 +3,14 @@ import type { ReactNode } from "react";
 export const inputClass =
   "w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold";
 
-type PageWidth = "xl" | "2xl" | "3xl" | "4xl";
+type PageWidth = "xl" | "2xl" | "3xl" | "4xl" | "6xl";
 
 const MAX_WIDTH: Record<PageWidth, string> = {
   xl: "max-w-xl",
   "2xl": "max-w-2xl",
   "3xl": "max-w-3xl",
   "4xl": "max-w-4xl",
+  "6xl": "max-w-6xl",
 };
 
 // Centered page container with mobile-first padding (smaller on phones, roomier

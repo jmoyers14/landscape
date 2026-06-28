@@ -134,6 +134,22 @@ export class AssemblyServiceImpl implements AssemblyService {
       input.lines.map((line) => line.key),
     );
 
+    // A material's groupKey must name a labor line in this assembly — that labor
+    // line is the task it's grouped under.
+    const laborKeys = new Set(
+      input.lines.filter((line) => line.kind === "labor").map((line) => line.key),
+    );
+    for (const line of input.lines) {
+      if (line.kind === "material" && line.groupKey) {
+        if (!laborKeys.has(line.groupKey)) {
+          throw new ServiceError(
+            "BAD_REQUEST",
+            `Material line "${line.key}" is grouped under unknown labor task "${line.groupKey}"`,
+          );
+        }
+      }
+    }
+
     // Structural formula validation; translate FormulaError -> BAD_REQUEST.
     try {
       validateLineFormulas(input.lines, driverKeys);

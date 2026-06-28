@@ -26,6 +26,8 @@ const lineSchema = new Schema(
     quantityFormula: { type: String, required: true, trim: true },
     materialId: { type: String, default: null },
     deliveriesFormula: { type: String, default: null },
+    // The labor line key a material is grouped under (its task); null = ungrouped.
+    groupKey: { type: String, default: null },
     laborRateKey: { type: String, default: null },
     sortOrder: { type: Number, required: true, default: 0 },
   },

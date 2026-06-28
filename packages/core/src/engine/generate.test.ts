@@ -40,4 +40,11 @@ describe("generateAssemblyLines — fidelity to the spreadsheet", () => {
       "round(drainageFt / 85)",
     );
   });
+
+  it("tags each line with its group: a labor line heads its own group, a material joins its task", () => {
+    // The fixture nests the materials under the "install" labor task.
+    expect(byKey("install").groupKey).toBe("install");
+    expect(byKey("layout").groupKey).toBe("layout");
+    expect(byKey("catchBasinSingle").groupKey).toBe("install");
+  });
 });

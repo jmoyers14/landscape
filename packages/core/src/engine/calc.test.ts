@@ -99,6 +99,7 @@ describe("computeEstimate — pricing a stored snapshot", () => {
           quantityFormula: "round(drainageFt / 85)",
           sourceAssemblyId: "drainage",
           sourceLineKey: "catchBasinSingle",
+          groupKey: "layout",
         },
         {
           id: "li_2",
@@ -113,18 +114,22 @@ describe("computeEstimate — pricing a stored snapshot", () => {
           quantityFormula: "0.095 * drainageFt",
           sourceAssemblyId: "drainage",
           sourceLineKey: "layout",
+          groupKey: "layout",
         },
       ],
     });
 
     const view = computeEstimate(estimate);
 
-    // lineTotal is the pre-tax base
+    // lineTotal is the pre-tax base; cost is the direct-cost contribution
     expect(view.lineItems[0].lineTotal).toBeCloseTo(20.559, 5);
-    // both lines roll up under one phase
+    expect(view.lineItems[0].cost).toBeCloseTo(22.1523225, 5); // base + 7.75% tax
+    expect(view.lineItems[1].cost).toBeCloseTo(748.125, 5); // labor, untaxed
+    // both lines roll up under one phase, on a direct-cost basis that ties out
     expect(view.phases).toHaveLength(1);
     expect(view.phases[0].phase).toBe("Drainage");
-    expect(view.phases[0].subtotal).toBeCloseTo(768.684, 5);
+    expect(view.phases[0].subtotal).toBeCloseTo(770.2773225, 5);
+    expect(view.phases[0].subtotal).toBeCloseTo(view.totals.directCost, 5);
     // totals match the faithful buildup (same as priceLines above)
     expect(view.totals.directCost).toBeCloseTo(770.2773225, 5);
     expect(view.totals.total).toBeGreaterThan(view.totals.directCost);

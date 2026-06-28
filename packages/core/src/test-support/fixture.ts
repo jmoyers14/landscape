@@ -111,6 +111,7 @@ export const drainageAssembly = (): Assembly =>
         quantityFormula: "round(drainageFt / 85)",
         materialId: "catch-basin-single",
         deliveriesFormula: null,
+        groupKey: "install",
         sortOrder: 3,
       },
       {
@@ -120,6 +121,7 @@ export const drainageAssembly = (): Assembly =>
         quantityFormula: "round((drainageFt / 85) * 2)",
         materialId: "catch-basin-double",
         deliveriesFormula: null,
+        groupKey: "install",
         sortOrder: 4,
       },
       {
@@ -129,6 +131,7 @@ export const drainageAssembly = (): Assembly =>
         quantityFormula: "roundUp(drainageFt / 10)",
         materialId: "solid-pipe-3",
         deliveriesFormula: null,
+        groupKey: "install",
         sortOrder: 5,
       },
       {
@@ -138,6 +141,7 @@ export const drainageAssembly = (): Assembly =>
         quantityFormula: "round((drainageFt / 150) * 1, 1)",
         materialId: "solid-pipe-6",
         deliveriesFormula: null,
+        groupKey: "install",
         sortOrder: 6,
       },
       {
@@ -147,6 +151,7 @@ export const drainageAssembly = (): Assembly =>
         quantityFormula: "drainageFt < 175 ? 1 : 2",
         materialId: "curb-core",
         deliveriesFormula: null,
+        groupKey: "install",
         sortOrder: 7,
       },
     ],

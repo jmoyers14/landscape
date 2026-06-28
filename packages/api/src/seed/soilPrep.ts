@@ -45,9 +45,9 @@ export function buildSoilPrepAssembly(
         "Install 2\" compost, fertilizer, gypsum, rototill, and rough grade",
         "0.01172 * soilSqFt",
       ),
-      materialLine(2, "compost", "Compost", "(soilSqFt / 1000) * 3", id("soil-compost")),
-      materialLine(3, "fertilizer", "Fertilizer (50 lb.)", "round((soilSqFt / 1000) * 1.5)", id("soil-fertilizer")),
-      materialLine(4, "gypsum", "Gypsum (50 lb.)", "round((soilSqFt / 1000) * 3)", id("soil-gypsum")),
+      materialLine(2, "compost", "Compost", "(soilSqFt / 1000) * 3", id("soil-compost"), { groupKey: "prep" }),
+      materialLine(3, "fertilizer", "Fertilizer (50 lb.)", "round((soilSqFt / 1000) * 1.5)", id("soil-fertilizer"), { groupKey: "prep" }),
+      materialLine(4, "gypsum", "Gypsum (50 lb.)", "round((soilSqFt / 1000) * 3)", id("soil-gypsum"), { groupKey: "prep" }),
     ],
   };
 }

@@ -179,6 +179,48 @@ describe("AssemblyServiceImpl validation", () => {
     ).rejects.toThrow(ServiceError);
   });
 
+  const groupedInput = (groupKey: string): AssemblyServiceInput =>
+    baseInput({
+      lines: [
+        {
+          key: "layout",
+          kind: "labor",
+          description: "Lay out",
+          quantityFormula: "0.095 * drainageFt",
+          laborRateKey: "general",
+          sortOrder: 1,
+        },
+        {
+          key: "catchBasin",
+          kind: "material",
+          description: "Catch basin",
+          quantityFormula: "round(drainageFt / 85)",
+          materialId: "material_1",
+          deliveriesFormula: null,
+          groupKey,
+          sortOrder: 2,
+        },
+      ],
+    });
+
+  it("rejects a material grouped under a labor task that doesn't exist", async () => {
+    const service = makeService();
+    expect(service.create("org_1", groupedInput("nope"))).rejects.toThrow(
+      ServiceError,
+    );
+  });
+
+  it("accepts a material grouped under a real labor line", async () => {
+    const assemblies = makeAssemblyRepoMock({
+      create: mock(async (_o, d) => makeAssembly(d)),
+    });
+    const service = makeService({ assemblies });
+    await service.create("org_1", groupedInput("layout"));
+    const [, created] = (assemblies.create as ReturnType<typeof mock>).mock
+      .calls[0];
+    expect(created.lines[1].groupKey).toBe("layout");
+  });
+
   it("throws NOT_FOUND when updating a missing assembly", async () => {
     const service = makeService({
       assemblies: makeAssemblyRepoMock({ update: mock(async () => null) }),

@@ -33,6 +33,9 @@ export interface MaterialAssemblyLine extends AssemblyLineBase {
   kind: "material";
   materialId: string; // -> Material catalog document
   deliveriesFormula: string | null; // resolves to a delivery count; null => 0
+  // The labor line `key` this material belongs to (the task it's consumed by),
+  // for grouping/indentation. null/undefined = ungrouped (rendered on its own).
+  groupKey?: string | null;
 }
 
 /** A line of labor: hours (from `quantityFormula`) at a named labor rate. */

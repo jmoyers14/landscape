@@ -18,6 +18,8 @@ const materialLineInput = z.object({
   quantityFormula: z.string().min(1),
   materialId: z.string().min(1),
   deliveriesFormula: z.string().nullable().default(null),
+  // The labor line key this material is grouped under (its task); null = ungrouped.
+  groupKey: z.string().nullable().default(null),
   sortOrder: z.number().default(0),
 });
 

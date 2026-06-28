@@ -80,5 +80,6 @@ function toAssemblyLine(l: AssemblyDoc["lines"][number]): AssemblyLine {
     kind: "material",
     materialId: l.materialId ?? "",
     deliveriesFormula: l.deliveriesFormula ?? null,
+    groupKey: l.groupKey ?? null,
   };
 }

@@ -7,7 +7,8 @@ import type {
 } from "../types/estimate.ts";
 
 export interface LineItemView extends LineItem {
-  lineTotal: number;
+  lineTotal: number; // pre-tax base: quantity × unitPrice
+  cost: number; // direct-cost contribution: base + delivery + tax (materials), base (labor)
 }
 
 export interface PhaseSummary {
@@ -101,6 +102,7 @@ export function computeEstimate(estimate: Estimate): EstimateView {
   const lineItems: LineItemView[] = estimate.lineItems.map((item) => ({
     ...item,
     lineTotal: item.quantity * item.unitPrice,
+    cost: directCostOfLine(item, estimate.taxRate),
   }));
 
   return {
@@ -119,8 +121,20 @@ export function computeEstimate(estimate: Estimate): EstimateView {
   };
 }
 
+// A single line's contribution to direct cost: a material carries its delivery
+// and per-line tax (pre-markup); labor is untaxed. Mirrors priceLines so the
+// per-line `cost`s sum exactly to `totals.directCost` — every level ties out.
+function directCostOfLine(item: LineItem, taxRate: number): number {
+  const base = item.quantity * item.unitPrice;
+  if (item.type === "labor") {
+    return base;
+  }
+  const tax = item.taxable ? base * (taxRate / 100) : 0;
+  return base + item.deliveryCost + tax;
+}
+
 // Phase subtotals in first-seen order (the spec's per-phase cost rollup), on the
-// pre-tax base of each line.
+// direct cost of each line so phases sum to the estimate's direct cost.
 function summarizePhases(items: LineItemView[]): PhaseSummary[] {
   const order: (string | null)[] = [];
   const subtotals = new Map<string | null, number>();
@@ -129,7 +143,7 @@ function summarizePhases(items: LineItemView[]): PhaseSummary[] {
       order.push(item.phase);
       subtotals.set(item.phase, 0);
     }
-    subtotals.set(item.phase, (subtotals.get(item.phase) ?? 0) + item.lineTotal);
+    subtotals.set(item.phase, (subtotals.get(item.phase) ?? 0) + item.cost);
   }
   return order.map((phase) => ({ phase, subtotal: subtotals.get(phase) ?? 0 }));
 }

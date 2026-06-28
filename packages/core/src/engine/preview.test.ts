@@ -62,7 +62,7 @@ describe("previewEstimate", () => {
       profitRate: context.pricing.profitRate,
       taxRate: context.pricing.taxRate,
       assemblies: view.assemblies,
-      lineItems: view.lineItems.map(({ lineTotal, ...item }) => item),
+      lineItems: view.lineItems.map(({ lineTotal, cost, ...item }) => item),
     });
     const serverView = computeEstimate(saved);
     expect(serverView.totals.total).toBeCloseTo(view.totals.total, 6);

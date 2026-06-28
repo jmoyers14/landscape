@@ -31,6 +31,10 @@ export interface LineItem {
   quantityFormula: string;
   sourceAssemblyId: string | null;
   sourceLineKey: string | null;
+  // The labor task this line belongs to. For a labor line this is its own key;
+  // for a material it's the labor line's key it's grouped under; null = ungrouped.
+  // A task and its materials therefore share one groupKey.
+  groupKey: string | null;
 }
 
 /**
