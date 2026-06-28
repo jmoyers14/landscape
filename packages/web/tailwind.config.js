@@ -1,21 +1,29 @@
 /** @type {import('tailwindcss').Config} */
+
+// Build a 50–900 scale that resolves to the CSS custom properties defined in
+// src/index.css, so the :root tokens stay the single source of truth.
+const scale = (name) =>
+  Object.fromEntries(
+    [50, 100, 200, 300, 400, 500, 600, 700, 800, 900].map((step) => [
+      step,
+      `hsl(var(--${name}-${step}) / <alpha-value>)`,
+    ]),
+  );
+
 export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        earth: "#14271F",
-        "earth-mid": "#1C3328",
-        concrete: "#213D2E",
-        limestone: "#F7F4ED",
-        "limestone-mid": "#EDE9DF",
-        gold: "#C4A227",
-        "gold-light": "#D4B840",
-        sage: "#8BAF9A",
+        primary: scale("primary"),
+        grey: scale("grey"),
+        green: scale("green"),
+        yellow: scale("yellow"),
+        red: scale("red"),
       },
       fontFamily: {
-        display: ['"DM Serif Display"', "Georgia", "serif"],
-        body: ['"IBM Plex Sans"', "system-ui", "sans-serif"],
+        heading: ["var(--font-heading)"],
+        body: ["var(--font-body)"],
         mono: ['"IBM Plex Mono"', "Consolas", "monospace"],
       },
       keyframes: {

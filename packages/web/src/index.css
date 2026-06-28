@@ -2,8 +2,86 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================
+   APP THEME — HSL Color Tokens
+   Primary: Teal (#4A7A7A base)
+   Neutral: Tinted grey (teal-leaning, neutral at dark end)
+   Accents: Green (success), Yellow (warning), Red (danger)
+   Fonts: Lora (headings/UI) + Source Sans 3 (body)
+   These tokens are the single source of truth; Tailwind utilities
+   (bg-primary-500, text-grey-700, etc.) resolve to the vars below.
+   Colors are stored as bare HSL channels ("H S% L%") so Tailwind's
+   opacity modifiers work — e.g. bg-primary-500/10 → hsl(... / 0.1).
+   ============================================ */
+
+:root {
+  /* ---------- Fonts ---------- */
+  --font-heading: 'Lora', serif;
+  --font-body: 'Source Sans 3', sans-serif;
+
+  /* ---------- Primary (Teal) ---------- */
+  --primary-50:  180 16% 94%;
+  --primary-100: 180 15% 85%;
+  --primary-200: 180 15% 75%;
+  --primary-300: 180 16% 66%;
+  --primary-400: 180 15% 54%;
+  --primary-500: 180 24% 38%; /* base #4A7A7A */
+  --primary-600: 180 25% 33%;
+  --primary-700: 180 24% 27%;
+  --primary-800: 180 24% 21%;
+  --primary-900: 180 24% 15%;
+
+  /* ---------- Grey (tinted, neutral at dark end) ---------- */
+  --grey-50:  180 20% 98%;
+  --grey-100: 180 10% 96%;
+  --grey-200: 180 11% 93%;
+  --grey-300: 180 12% 87%;
+  --grey-400: 180 13% 78%;
+  --grey-500: 180 12% 65%; /* base */
+  --grey-600: 180 4% 49%;
+  --grey-700: 180 4% 39%;
+  --grey-800: 180 3% 28%;
+  --grey-900: 180 4% 20%;
+
+  /* ---------- Green (Success) ---------- */
+  --green-50:  147 35% 94%;
+  --green-100: 144 37% 85%;
+  --green-200: 144 37% 76%;
+  --green-300: 144 37% 67%;
+  --green-400: 144 37% 55%;
+  --green-500: 144 55% 40%; /* base #2E9E5B */
+  --green-600: 143 56% 35%;
+  --green-700: 144 55% 28%;
+  --green-800: 144 55% 22%;
+  --green-900: 144 56% 16%;
+
+  /* ---------- Yellow (Warning) ---------- */
+  --yellow-50:  37 82% 96%;
+  --yellow-100: 39 78% 89%;
+  --yellow-200: 38 79% 83%;
+  --yellow-300: 39 79% 76%;
+  --yellow-400: 38 79% 68%;
+  --yellow-500: 38 79% 57%; /* base #E8A93B */
+  --yellow-600: 38 60% 48%;
+  --yellow-700: 38 60% 40%;
+  --yellow-800: 38 60% 31%;
+  --yellow-900: 38 59% 23%;
+
+  /* ---------- Red (Danger) ---------- */
+  --red-50:  0 65% 95%;
+  --red-100: 0 64% 89%;
+  --red-200: 0 64% 82%;
+  --red-300: 0 63% 75%;
+  --red-400: 0 64% 67%;
+  --red-500: 0 64% 55%; /* base #D64545 */
+  --red-600: 0 51% 47%;
+  --red-700: 0 52% 39%;
+  --red-800: 0 51% 31%;
+  --red-900: 0 51% 22%;
+}
+
 @layer base {
   body {
-    @apply font-body;
+    @apply bg-grey-50 font-body text-grey-800;
   }
 }

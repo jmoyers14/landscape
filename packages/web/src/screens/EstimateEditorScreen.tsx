@@ -279,7 +279,7 @@ function DraftEditor({
           <button
             onClick={() => onSave(toSelections(selections))}
             disabled={busy}
-            className="w-full rounded bg-gold px-3 py-2 text-sm font-medium text-white hover:bg-gold-light disabled:opacity-50"
+            className="w-full rounded bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-500 disabled:opacity-50"
           >
             {busy ? "Saving…" : "Save & regenerate"}
           </button>

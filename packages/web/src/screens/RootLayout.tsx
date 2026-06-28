@@ -12,23 +12,23 @@ import { Page } from "../components/ui.tsx";
 import { LandingScreen } from "./LandingScreen.tsx";
 
 const Header = () => (
-  <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-white/10 bg-earth px-4 py-3 md:px-6">
+  <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-white/10 bg-primary-900 px-4 py-3 md:px-6">
     <div className="flex items-center gap-4 md:gap-6">
-      <span className="font-display text-lg tracking-wide text-[#E8EDE6]">
-        Land<span className="text-gold-light">scape</span>
+      <span className="font-heading text-lg tracking-wide text-grey-50">
+        Land<span className="text-primary-300">scape</span>
       </span>
       <nav className="flex gap-4 text-sm">
         <Link
           to="/"
           activeOptions={{ exact: true }}
-          className="text-[#7A9A88] transition-colors hover:text-[#E8EDE6]"
+          className="text-primary-200 transition-colors hover:text-grey-50"
           activeProps={{ className: "text-white font-medium" }}
         >
           Projects
         </Link>
         <Link
           to="/clients"
-          className="text-[#7A9A88] transition-colors hover:text-[#E8EDE6]"
+          className="text-primary-200 transition-colors hover:text-grey-50"
           activeProps={{ className: "text-white font-medium" }}
         >
           Clients
@@ -41,8 +41,8 @@ const Header = () => (
         appearance={{
           elements: {
             organizationSwitcherTrigger:
-              "text-[#E8EDE6] hover:bg-white/10 rounded-md",
-            organizationPreviewMainIdentifier: "text-[#E8EDE6]",
+              "text-grey-50 hover:bg-white/10 rounded-md",
+            organizationPreviewMainIdentifier: "text-grey-50",
           },
         }}
       />

@@ -121,97 +121,64 @@ export function ProjectDetailScreen() {
         />
       ) : (
         <>
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-800">{data.name}</h1>
+          <div className="flex gap-4 rounded-lg border border-slate-200 p-4 shadow-sm">
+            {data.location && (
+              <div className="w-40 shrink-0 overflow-hidden rounded-md border border-slate-200">
+                {propertyImage.isLoading ? (
+                  <div className="flex aspect-[4/3] items-center justify-center bg-slate-50 text-center text-xs text-slate-400">
+                    Loading…
+                  </div>
+                ) : propertyImage.data ? (
+                  <img
+                    src={propertyImage.data.dataUrl}
+                    alt={`Aerial view of ${data.location}`}
+                    className="aspect-[4/3] w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex aspect-[4/3] items-center justify-center bg-slate-50 px-2 text-center text-xs text-slate-400">
+                    No aerial view
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-2">
+                <h1 className="text-2xl font-bold text-slate-800">
+                  {data.name}
+                </h1>
+                <span className="shrink-0 rounded-full bg-slate-200 px-3 py-1 text-xs font-medium text-slate-700">
+                  {STATUS_LABEL[data.status]}
+                </span>
+              </div>
               <p className="mt-1 text-sm text-slate-500">
+                {data.location || (
+                  <span className="text-slate-400">No address</span>
+                )}
+              </p>
+              <p className="mt-0.5 text-xs text-slate-400">
                 {data.clientName ?? "Unknown client"} · created{" "}
                 {new Date(data.createdAt).toLocaleDateString()}
               </p>
-            </div>
-            <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-medium text-slate-700">
-              {STATUS_LABEL[data.status]}
-            </span>
-          </div>
-
-          {data.location && (
-            <div className="overflow-hidden rounded-lg border border-slate-200 shadow-sm">
-              {propertyImage.isLoading ? (
-                <div className="flex aspect-[16/10] items-center justify-center bg-slate-50 text-sm text-slate-400">
-                  Loading aerial view…
-                </div>
-              ) : propertyImage.data ? (
-                <img
-                  src={propertyImage.data.dataUrl}
-                  alt={`Aerial view of ${data.location}`}
-                  className="aspect-[16/10] w-full object-cover"
-                />
-              ) : (
-                <div className="flex aspect-[16/10] items-center justify-center bg-slate-50 px-4 text-center text-sm text-slate-400">
-                  No aerial view available for this address.
-                </div>
-              )}
-            </div>
-          )}
-
-          <dl className="space-y-3 rounded-lg border border-slate-200 p-4 shadow-sm">
-            <Field label="Location" value={data.location} />
-            <Field label="Description" value={data.description} />
-          </dl>
-
-          <div className="space-y-2">
-            <h2 className="text-sm font-medium text-slate-600">Status</h2>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-slate-500">
-                {STATUS_LABEL[data.status]}
-              </span>
-              {NEXT_STATUSES[data.status].length > 0 ? (
-                NEXT_STATUSES[data.status].map((next) => (
-                  <button
-                    key={next}
-                    disabled={changeStatus.isPending}
-                    onClick={() =>
-                      changeStatus.mutate({ id: projectId, status: next })
-                    }
-                    className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-                  >
-                    → {STATUS_LABEL[next]}
-                  </button>
-                ))
-              ) : (
-                <span className="text-xs text-slate-400">
-                  No further transitions
-                </span>
-              )}
+              <p className="mt-2 text-sm text-slate-600">
+                {data.description || (
+                  <span className="text-slate-400">No description</span>
+                )}
+              </p>
             </div>
           </div>
 
-          <div className="flex gap-2 border-t border-slate-200 pt-4">
-            <button
-              onClick={() => setEditing(true)}
-              className="rounded bg-gold px-4 py-2 text-sm font-medium text-white hover:bg-gold-light"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => remove.mutate({ id: projectId })}
-              disabled={remove.isPending}
-              className="rounded border border-slate-300 px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
-            >
-              Delete
-            </button>
-          </div>
-
-          <section className="space-y-3 border-t border-slate-200 pt-4">
+          <section className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-medium text-slate-600">Estimates</h2>
+              <h2 className="text-lg font-semibold text-slate-800">
+                Estimates
+              </h2>
               <button
                 onClick={() => {
                   track(WEB_EVENTS.NEW_ESTIMATE_CLICKED, { projectId });
                   createEstimate.mutate({ projectId });
                 }}
                 disabled={createEstimate.isPending}
-                className="rounded bg-gold px-3 py-1.5 text-sm font-medium text-white hover:bg-gold-light disabled:opacity-50"
+                className="rounded bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-500 disabled:opacity-50"
               >
                 New estimate
               </button>
@@ -250,22 +217,54 @@ export function ProjectDetailScreen() {
               </p>
             )}
           </section>
+
+          <div className="space-y-4 border-t border-slate-200 pt-4">
+            <div className="space-y-2">
+              <h2 className="text-sm font-medium text-slate-600">Status</h2>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm text-slate-500">
+                  {STATUS_LABEL[data.status]}
+                </span>
+                {NEXT_STATUSES[data.status].length > 0 ? (
+                  NEXT_STATUSES[data.status].map((next) => (
+                    <button
+                      key={next}
+                      disabled={changeStatus.isPending}
+                      onClick={() =>
+                        changeStatus.mutate({ id: projectId, status: next })
+                      }
+                      className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                    >
+                      → {STATUS_LABEL[next]}
+                    </button>
+                  ))
+                ) : (
+                  <span className="text-xs text-slate-400">
+                    No further transitions
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setEditing(true)}
+                className="rounded bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-500"
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => remove.mutate({ id: projectId })}
+                disabled={remove.isPending}
+                className="rounded border border-slate-300 px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
         </>
       )}
     </Page>
-  );
-}
-
-function Field({ label, value }: { label: string; value: string | null }) {
-  return (
-    <div>
-      <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">
-        {label}
-      </dt>
-      <dd className="mt-0.5 text-slate-700">
-        {value || <span className="text-slate-400">—</span>}
-      </dd>
-    </div>
   );
 }
 
@@ -330,7 +329,7 @@ function EditForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded bg-gold px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gold-light disabled:opacity-50"
+          className="rounded bg-primary-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-500 disabled:opacity-50"
         >
           {pending ? "Saving…" : "Save"}
         </button>
