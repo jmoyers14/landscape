@@ -5,11 +5,13 @@ WORKDIR /app
 COPY package.json bun.lock ./
 COPY packages/api/package.json packages/api/
 COPY packages/web/package.json packages/web/
+COPY packages/core/package.json packages/core/
 
 RUN bun install --frozen-lockfile
 
-# Build the API
+# Build the API (bundles @landscape/core from source, so copy it too)
 COPY tsconfig.json ./
+COPY packages/core/ packages/core/
 COPY packages/api/ packages/api/
 RUN bun run build:api
 
