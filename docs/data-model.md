@@ -268,12 +268,15 @@ being replaced, not preserved). Two things to note:
   `Contract Price Breakdown`) — a presentation concern on top of the estimate.
 - **General Conditions** (`=SUM(...)*0.06`) — a whole-estimate rollup line;
   modeled later as a special computed line or an estimate-level surcharge.
-- **Concrete assembly & flat-fee lines** — the Concrete section has line items
-  that are neither hourly labor nor taxable materials (e.g. "Finishers" at a flat
-  `$350 × 8`, the concrete pump's setup fee). `AssemblyLine` is only
-  `material | labor` today, so Concrete is deferred until we add a flat-cost
-  ("equipment"/"other") line kind. The other five Package-sheet assemblies are
-  seeded.
+- **Concrete "Finishers" flat fee** — the Concrete assembly is now seeded, but
+  its "Finishers" line (a flat `$350 × 8` sub-contract fee — neither hourly labor
+  nor a taxable material) is omitted pending confirmation from the business owner
+  of what it represents. It's the one Concrete line that doesn't fit the current
+  `material | labor` model; representing it (likely a flat-cost "equipment"/
+  "other" line kind) is deferred until that's clarified. The other apparent
+  misfit — the concrete pump's flat setup fee — turned out to fit the existing
+  delivery mechanism (a `taxable: false` material carrying the fee as its
+  `deliveryCost`), so no new kind was needed for it.
 
 ## Seeding
 

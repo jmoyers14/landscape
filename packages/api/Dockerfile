@@ -19,6 +19,15 @@ FROM oven/bun:1-slim
 WORKDIR /app
 COPY --from=builder /app/packages/api/dist ./dist
 
+# Build stamp (from deploy.sh) baked in as runtime env so the API can report
+# exactly which build is running via the system.version query.
+ARG APP_VERSION=0.0.0
+ARG GIT_SHA=unknown
+ARG BUILT_AT=unknown
+ENV APP_VERSION=$APP_VERSION
+ENV GIT_SHA=$GIT_SHA
+ENV BUILT_AT=$BUILT_AT
+
 # Cloud Run injects PORT; default to 8080 for local docker runs
 ENV PORT=8080
 EXPOSE 8080

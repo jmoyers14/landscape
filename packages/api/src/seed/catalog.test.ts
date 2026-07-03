@@ -23,6 +23,9 @@ const EXPECTED: Record<string, { materialCost: number; laborHours: number }> = {
   Irrigation: { materialCost: 1142.31378, laborHours: 69.3695 },
   "Soil Preparation": { materialCost: 608.7875, laborHours: 35.16 },
   Planting: { materialCost: 4113.464295, laborHours: 80.0424 },
+  // Concrete's material total (M127) and labor hours (N130) EXCLUDE the omitted
+  // "Finishers" flat fee, which lives only in the sheet's labor-$ total (P127).
+  Concrete: { materialCost: 5159.3210139444445, laborHours: 113.12452901234568 },
   "Seating Wall": { materialCost: 515.9567125, laborHours: 37.18225 },
 };
 

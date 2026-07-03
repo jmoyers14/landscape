@@ -2,6 +2,7 @@ import { injectable } from "tsyringe";
 import { z } from "zod";
 import type {
   AnalyticsConfig,
+  BuildConfig,
   ClerkConfig,
   ConfigService,
   DatabaseConfig,
@@ -27,6 +28,11 @@ const envSchema = z.object({
   // it, analytics capture is a no-op and the server still boots.
   posthogApiKey: z.string().min(1).optional(),
   posthogHost: z.string().url().default(DEFAULT_POSTHOG_HOST),
+  // Build stamp injected by deploy.sh. Defaults keep local/unstamped runs
+  // booting; in a deployed image these are always set.
+  appVersion: z.string().default("0.0.0"),
+  gitSha: z.string().default("unknown"),
+  builtAt: z.string().default("unknown"),
 });
 
 @injectable()
@@ -44,6 +50,9 @@ export class ConfigServiceImpl implements ConfigService {
       googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
       posthogApiKey: process.env.POSTHOG_API_KEY,
       posthogHost: process.env.POSTHOG_HOST,
+      appVersion: process.env.APP_VERSION,
+      gitSha: process.env.GIT_SHA,
+      builtAt: process.env.BUILT_AT,
     });
 
     if (!result.success) {
@@ -87,6 +96,14 @@ export class ConfigServiceImpl implements ConfigService {
     return {
       apiKey: this.config.posthogApiKey ?? null,
       host: this.config.posthogHost,
+    };
+  }
+
+  getBuild(): BuildConfig {
+    return {
+      version: this.config.appVersion,
+      commit: this.config.gitSha,
+      builtAt: this.config.builtAt,
     };
   }
 }

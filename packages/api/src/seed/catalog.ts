@@ -3,6 +3,7 @@ import { DRAINAGE_MATERIALS, buildDrainageAssembly } from "./drainage.ts";
 import { IRRIGATION_MATERIALS, buildIrrigationAssembly } from "./irrigation.ts";
 import { SOIL_PREP_MATERIALS, buildSoilPrepAssembly } from "./soilPrep.ts";
 import { PLANTING_MATERIALS, buildPlantingAssembly } from "./planting.ts";
+import { CONCRETE_MATERIALS, buildConcreteAssembly } from "./concrete.ts";
 import { SEATING_WALL_MATERIALS, buildSeatingWallAssembly } from "./seatingWall.ts";
 
 /**
@@ -16,10 +17,10 @@ export const STARTER_ASSEMBLIES: SeedAssembly[] = [
   { materials: IRRIGATION_MATERIALS, build: buildIrrigationAssembly },
   { materials: SOIL_PREP_MATERIALS, build: buildSoilPrepAssembly },
   { materials: PLANTING_MATERIALS, build: buildPlantingAssembly },
+  { materials: CONCRETE_MATERIALS, build: buildConcreteAssembly },
   { materials: SEATING_WALL_MATERIALS, build: buildSeatingWallAssembly },
-  // TODO: Concrete (Package sheet rows 99–125, sortOrder 5) is deferred. It has
-  // flat-fee line items — "Finishers" ($350 × 8) and the concrete pump's setup
-  // fee — that are neither hourly labor nor taxable materials, so they don't fit
-  // the current material|labor AssemblyLine model. Revisit once we decide how to
-  // represent flat-cost lines (likely an "equipment"/"other" line kind).
+  // NOTE: Concrete's "Finishers" line (a flat $350 × 8 sub-contract fee) is
+  // omitted pending clarification from the business owner — see the TODO in
+  // concrete.ts. The concrete pump's setup fee, once also considered "flat",
+  // fits the delivery mechanism and is seeded.
 ];

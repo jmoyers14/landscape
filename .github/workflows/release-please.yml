@@ -1,0 +1,23 @@
+name: release-please
+
+# Maintains a standing "release" PR that bumps the root package.json version and
+# writes CHANGELOG.md from Conventional Commits. Merging that PR tags the release
+# and publishes GitHub Release notes. Deploy stays manual (deploy.sh) — it reads
+# the bumped version, so the app footer/system.version reflect it after deploy.
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

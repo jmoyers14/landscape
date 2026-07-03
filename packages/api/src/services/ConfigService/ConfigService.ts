@@ -24,6 +24,20 @@ export interface AnalyticsConfig {
   host: string;
 }
 
+/**
+ * Identifies exactly which build is running. Stamped into the image at build
+ * time by deploy.sh, so the number a user reads off the app traces back to a
+ * single commit. Defaults are placeholders for local/unstamped runs.
+ */
+export interface BuildConfig {
+  /** Human-facing app version from the root package.json (e.g. "1.0.0"). */
+  version: string;
+  /** Short git SHA of the built commit ("-dirty" suffixed if the tree wasn't clean). */
+  commit: string;
+  /** ISO-8601 UTC timestamp of when the image was built. */
+  builtAt: string;
+}
+
 export interface ConfigService {
   environment: Environment;
   getServer(): ServerConfig;
@@ -31,4 +45,5 @@ export interface ConfigService {
   getDatabase(): DatabaseConfig;
   getMaps(): MapsConfig;
   getAnalytics(): AnalyticsConfig;
+  getBuild(): BuildConfig;
 }

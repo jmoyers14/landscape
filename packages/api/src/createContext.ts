@@ -1,6 +1,7 @@
 import type { CreateHTTPContextOptions } from "@trpc/server/adapters/standalone";
 import {
   container,
+  CONFIG_SERVICE_TOKEN,
   AUTH_SERVICE_TOKEN,
   CLIENT_SERVICE_TOKEN,
   PROJECT_SERVICE_TOKEN,
@@ -19,6 +20,7 @@ import type { PricingSettingsService } from "./services/PricingSettingsService/P
 import type { MaterialService } from "./services/MaterialService/MaterialService.ts";
 import type { AssemblyService } from "./services/AssemblyService/AssemblyService.ts";
 import type { AuthService } from "./services/AuthService/AuthService.ts";
+import type { ConfigService } from "./services/ConfigService/ConfigService.ts";
 import type { AnalyticsClient } from "./integrations/analytics/AnalyticsClient.ts";
 import type { Context } from "./context.ts";
 
@@ -50,6 +52,7 @@ export async function createContext(
       assemblyService: container.resolve<AssemblyService>(
         ASSEMBLY_SERVICE_TOKEN,
       ),
+      configService: container.resolve<ConfigService>(CONFIG_SERVICE_TOKEN),
     },
   };
 }

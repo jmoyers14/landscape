@@ -7,6 +7,7 @@ import type { AddressService } from "./services/AddressService/AddressService.ts
 import type { PricingSettingsService } from "./services/PricingSettingsService/PricingSettingsService.ts";
 import type { MaterialService } from "./services/MaterialService/MaterialService.ts";
 import type { AssemblyService } from "./services/AssemblyService/AssemblyService.ts";
+import type { ConfigService } from "./services/ConfigService/ConfigService.ts";
 
 /**
  * Authenticated principal for a request — the provider-neutral identity the
@@ -37,5 +38,6 @@ export interface Context {
     pricingSettingsService: PricingSettingsService;
     materialService: MaterialService;
     assemblyService: AssemblyService;
+    configService: ConfigService;
   };
 }

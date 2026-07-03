@@ -41,3 +41,21 @@ overrides for this project.
   enforcing the brace rule above). `bun run lint` checks; `bun run lint:fix`
   auto-fixes (uses `--unsafe`, which is fine while that's the only rule — revisit
   if more rules are added).
+
+## Commits & Versioning
+
+- **Use [Conventional Commits](https://www.conventionalcommits.org).** Commit
+  subjects must start with a type: `feat:`, `fix:`, `perf:`, `refactor:`,
+  `docs:`, `chore:`, `test:`, `build:`, `ci:`, `style:`. A `!` (e.g. `feat!:`)
+  or a `BREAKING CHANGE:` footer marks a major bump. Only `feat`, `fix`, and
+  `perf` show up in release notes; the rest are hidden.
+- **release-please owns the version and changelog.** It reads these commits and
+  keeps a standing "release" PR that bumps the root `package.json` version and
+  writes `CHANGELOG.md` (config: `release-please-config.json`, workflow:
+  `.github/workflows/release-please.yml`). Merging that PR tags the release and
+  publishes GitHub Release notes. **Don't hand-edit the root `version` or
+  `CHANGELOG.md`.**
+- **One app version.** Per-package versions under `packages/*` are frozen and
+  unmanaged — the whole app ships as one deployed unit. `deploy.sh` reads the
+  root version and stamps it (plus git SHA + build time) into both images; the
+  signed-in web footer and the API `system.version` query surface it.

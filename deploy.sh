@@ -49,6 +49,24 @@ gcloud artifacts repositories describe "$REPO" --location "$REGION" >/dev/null 2
     --repository-format docker --location "$REGION" \
     --description "landscape images"
 
+# ── Build stamp ──────────────────────────────────────────────────────────────
+# One version identity for this deploy: human semver from the root package.json,
+# the git short-SHA of the built commit ("-dirty" if the tree has uncommitted
+# changes), and a UTC build timestamp. Injected into both images so the number a
+# user reads off the app traces back to exactly this commit.
+APP_VERSION=$(grep -m1 '"version"' package.json | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+GIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)
+if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
+  GIT_SHA="$GIT_SHA-dirty"
+fi
+BUILT_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+echo "Build stamp: v$APP_VERSION ($GIT_SHA) at $BUILT_AT"
+
+# Tag images by commit as well as :latest, so the running Cloud Run revision, the
+# Artifact Registry image, and the git commit are all the same string.
+API_IMAGE_SHA="$REGISTRY/api:$GIT_SHA"
+WEB_IMAGE_SHA="$REGISTRY/web:$GIT_SHA"
+
 # ── Clerk config (validated up front, before the slow builds) ────────────────
 # Publishable key (pk_) is PUBLIC — baked into the web bundle at build time.
 # Source of truth is packages/web/.env, same as local dev.
@@ -141,10 +159,16 @@ API_WEB_URL="${EXISTING_WEB_URL:-https://placeholder.example.com}"
 echo "API will trust web origin: $API_WEB_URL"
 
 echo "Building API image..."
-docker build --platform linux/amd64 -t "$API_IMAGE" -f packages/api/Dockerfile .
+docker build --platform linux/amd64 \
+  --build-arg APP_VERSION="$APP_VERSION" \
+  --build-arg GIT_SHA="$GIT_SHA" \
+  --build-arg BUILT_AT="$BUILT_AT" \
+  -t "$API_IMAGE" -t "$API_IMAGE_SHA" \
+  -f packages/api/Dockerfile .
 
 echo "Pushing API image..."
 docker push "$API_IMAGE"
+docker push "$API_IMAGE_SHA"
 
 echo "Deploying API to Cloud Run..."
 gcloud run deploy "$API_SERVICE" \
@@ -166,12 +190,16 @@ echo "Building web image (VITE_API_URL=$API_URL)..."
 docker build --platform linux/amd64 \
   --build-arg VITE_API_URL="$API_URL" \
   --build-arg VITE_CLERK_PUBLISHABLE_KEY="$CLERK_PUBLISHABLE_KEY" \
+  --build-arg VITE_APP_VERSION="$APP_VERSION" \
+  --build-arg VITE_GIT_SHA="$GIT_SHA" \
+  --build-arg VITE_BUILT_AT="$BUILT_AT" \
   "${WEB_POSTHOG_ARGS[@]+"${WEB_POSTHOG_ARGS[@]}"}" \
-  -t "$WEB_IMAGE" \
+  -t "$WEB_IMAGE" -t "$WEB_IMAGE_SHA" \
   -f packages/web/Dockerfile .
 
 echo "Pushing web image..."
 docker push "$WEB_IMAGE"
+docker push "$WEB_IMAGE_SHA"
 
 echo "Deploying web to Cloud Run..."
 gcloud run deploy "$WEB_SERVICE" \

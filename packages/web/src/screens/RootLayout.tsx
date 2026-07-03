@@ -9,6 +9,7 @@ import {
 } from "@clerk/react";
 import { queryClient } from "../trpc.ts";
 import { Page } from "../components/ui.tsx";
+import { VersionFooter } from "../components/VersionFooter.tsx";
 import { LandingScreen } from "./LandingScreen.tsx";
 
 const Header = () => (
@@ -89,9 +90,12 @@ export function RootLayout() {
         <LandingScreen />
       </Show>
       <Show when="signed-in">
-        <div className="min-h-screen bg-white">
+        <div className="flex min-h-screen flex-col bg-white">
           <Header />
-          <SignedInArea />
+          <div className="flex-1">
+            <SignedInArea />
+          </div>
+          <VersionFooter />
         </div>
       </Show>
     </>
