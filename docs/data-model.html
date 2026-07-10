@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Landscape — Data Model</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --panel: #f8fafc;
+      --border: #e2e8f0;
+      --ink: #0f172a;
+      --muted: #475569;
+      --accent: #6366f1;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      padding: 32px;
+    }
+    h1 { font-size: 22px; margin: 0 0 4px; }
+    h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 12px; }
+    .sub { color: var(--muted); margin: 0 0 28px; }
+    .legend {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 22px 24px;
+      margin-bottom: 28px;
+      max-width: 920px;
+    }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px 28px; }
+    .row { display: flex; align-items: center; gap: 14px; }
+    .row svg { flex: 0 0 auto; }
+    .row .txt b { display: block; font-weight: 600; }
+    .row .txt span { color: var(--muted); font-size: 13px; }
+    .glyph { stroke: #334155; stroke-width: 1.7; fill: none; }
+    .glyph circle { fill: var(--bg); }
+    .divider { height: 1px; background: var(--border); margin: 20px 0; border: 0; }
+    table { border-collapse: collapse; width: 100%; max-width: 640px; font-size: 14px; }
+    td { padding: 5px 14px 5px 0; vertical-align: top; }
+    td:first-child { font-weight: 600; color: var(--accent); white-space: nowrap; }
+    code { background: #eef2ff; padding: 1px 6px; border-radius: 5px; font-size: 13px; }
+    .diagram { border: 1px solid var(--border); border-radius: 12px; padding: 16px; overflow-x: auto; }
+    .diagram img { display: block; width: 100%; height: auto; min-width: 720px; }
+    .note { color: var(--muted); font-size: 13px; margin: 10px 0 0; }
+  </style>
+</head>
+<body>
+  <h1>Landscape — Data Model</h1>
+  <p class="sub">Entity relationships (crow's-foot notation). All entities are tenant-scoped by <code>orgId</code>.</p>
+
+  <div class="legend">
+    <h2>How to read the connectors</h2>
+    <p style="margin:0 0 18px; color:var(--muted);">
+      Each line end has two marks: the one nearest the entity is the <b>maximum</b> (one or many),
+      the one just inside it is the <b>minimum</b> (zero or one). Read each end, then combine —
+      e.g. <em>“one client has zero-or-many projects.”</em>
+    </p>
+
+    <div class="grid">
+      <div class="row">
+        <svg width="96" height="44" class="glyph">
+          <line x1="6" y1="22" x2="88" y2="22" />
+          <line x1="62" y1="12" x2="62" y2="32" />
+          <line x1="70" y1="12" x2="70" y2="32" />
+        </svg>
+        <div class="txt"><b>Exactly one</b><span>bar + bar &nbsp;(<code>||</code>)</span></div>
+      </div>
+
+      <div class="row">
+        <svg width="96" height="44" class="glyph">
+          <line x1="6" y1="22" x2="88" y2="22" />
+          <circle cx="60" cy="22" r="6" />
+          <line x1="72" y1="12" x2="72" y2="32" />
+        </svg>
+        <div class="txt"><b>Zero or one</b><span>circle + bar &nbsp;(<code>o|</code>) — optional</span></div>
+      </div>
+
+      <div class="row">
+        <svg width="96" height="44" class="glyph">
+          <line x1="6" y1="22" x2="64" y2="22" />
+          <line x1="56" y1="12" x2="56" y2="32" />
+          <line x1="64" y1="22" x2="88" y2="10" />
+          <line x1="64" y1="22" x2="88" y2="22" />
+          <line x1="64" y1="22" x2="88" y2="34" />
+        </svg>
+        <div class="txt"><b>One or many</b><span>bar + crow's foot &nbsp;(<code>|{</code>)</span></div>
+      </div>
+
+      <div class="row">
+        <svg width="96" height="44" class="glyph">
+          <line x1="6" y1="22" x2="64" y2="22" />
+          <circle cx="52" cy="22" r="6" />
+          <line x1="64" y1="22" x2="88" y2="10" />
+          <line x1="64" y1="22" x2="88" y2="22" />
+          <line x1="64" y1="22" x2="88" y2="34" />
+        </svg>
+        <div class="txt"><b>Zero or many</b><span>circle + crow's foot &nbsp;(<code>o{</code>) — optional</span></div>
+      </div>
+    </div>
+
+    <hr class="divider" />
+    <h2>Line style</h2>
+    <div class="grid">
+      <div class="row">
+        <svg width="96" height="24" class="glyph"><line x1="6" y1="12" x2="90" y2="12" /></svg>
+        <div class="txt"><b>Solid = owns / embeds</b><span>real ownership (Project → Estimate; Estimate embeds LineItems)</span></div>
+      </div>
+      <div class="row">
+        <svg width="96" height="24" class="glyph"><line x1="6" y1="12" x2="90" y2="12" stroke-dasharray="5 4" /></svg>
+        <div class="txt"><b>Dashed = references</b><span>a soft link by id/key — org scoping &amp; frozen-snapshot provenance, not a live join</span></div>
+      </div>
+    </div>
+
+    <hr class="divider" />
+    <h2>Relationship words</h2>
+    <table>
+      <tr><td>scopes</td><td>tenant boundary — the child row carries an <code>orgId</code> and is only ever visible within that Clerk org.</td></tr>
+      <tr><td>has</td><td>ownership by foreign key — the child stores the parent's id (e.g. <code>clientId</code>, <code>projectId</code>).</td></tr>
+      <tr><td>embeds</td><td>the child is a sub-document stored inside the parent (loaded &amp; saved together, never queried alone).</td></tr>
+      <tr><td>references</td><td>points at another entity by id/key without owning it (e.g. an assembly line → a material).</td></tr>
+      <tr><td>provenance</td><td>an id copied into a frozen estimate snapshot so a line can trace back to its source — deliberately <em>not</em> a live join.</td></tr>
+    </table>
+    <p class="note">Note: <b>ORGANIZATION</b> isn't a MongoDB collection — orgs live in Clerk. It's drawn as the conceptual root; in the DB it exists only as the <code>orgId</code> string on every document.</p>
+  </div>
+
+  <div class="diagram">
+    <img src="data-model.svg" alt="Landscape data model entity-relationship diagram" />
+  </div>
+  <p class="note">Diagram source: <code>docs/data-model.mmd</code> · vector: <code>docs/data-model.svg</code></p>
+</body>
+</html>

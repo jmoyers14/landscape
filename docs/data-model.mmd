@@ -1,0 +1,125 @@
+erDiagram
+    ORGANIZATION ||..o{ CLIENT : "scopes (orgId)"
+    ORGANIZATION ||..o{ PROJECT : "scopes (orgId)"
+    ORGANIZATION ||..o{ ESTIMATE : "scopes (orgId)"
+    ORGANIZATION ||..o{ ASSEMBLY : "scopes (orgId)"
+    ORGANIZATION ||..o{ MATERIAL : "scopes (orgId)"
+    ORGANIZATION ||..|| PRICINGSETTINGS : "scopes (orgId, one per org)"
+
+    CLIENT ||--o{ PROJECT : "has (clientId)"
+    PROJECT ||--o{ ESTIMATE : "has (projectId)"
+
+    ESTIMATE ||--o{ ESTIMATE_ASSEMBLY : "embeds (inputs)"
+    ESTIMATE ||--o{ LINE_ITEM : "embeds (snapshot)"
+
+    ASSEMBLY ||--o{ ASSEMBLY_DRIVER : embeds
+    ASSEMBLY ||--o{ ASSEMBLY_TASK : embeds
+    ASSEMBLY ||--o{ ASSEMBLY_LINE : embeds
+    ASSEMBLY_LINE }o--o| MATERIAL : "references (materialId)"
+    ASSEMBLY_LINE }o--o| ASSEMBLY_TASK : "grouped by (taskKey)"
+
+    PRICINGSETTINGS ||--o{ LABOR_RATE : embeds
+    ASSEMBLY_LINE }o--o| LABOR_RATE : "references (laborRateKey)"
+
+    ESTIMATE_ASSEMBLY }o..o| ASSEMBLY : "provenance (assemblyId, soft)"
+    LINE_ITEM }o..o| ASSEMBLY : "provenance (sourceAssemblyId, soft)"
+    LINE_ITEM }o..o| ASSEMBLY_TASK : "provenance (taskKey, soft)"
+
+    ORGANIZATION {
+        string orgId PK "Clerk org = tenant"
+    }
+    CLIENT {
+        string orgId FK
+        string name
+        string email
+        string phone
+        string address
+    }
+    PROJECT {
+        string orgId FK
+        string clientId FK
+        string name
+        string location
+        string description
+        enum status "lead|estimating|won|lost|in_progress|completed"
+    }
+    ESTIMATE {
+        string orgId FK
+        string projectId FK
+        string title
+        enum status "draft|sent|accepted"
+        number overheadRate "snapshot %"
+        number profitRate "snapshot %"
+        number taxRate "snapshot %"
+    }
+    ESTIMATE_ASSEMBLY {
+        string assemblyId "soft ref"
+        string name "denormalized"
+        mixed driverValues "key -> number"
+    }
+    LINE_ITEM {
+        objectId _id
+        enum type "material|labor|equipment|other"
+        string description
+        number quantity
+        string unit
+        number unitPrice "frozen"
+        boolean taxable
+        number deliveryCost
+        string quantityFormula "frozen, show-your-work"
+        string sourceAssemblyId "provenance"
+        string sourceLineKey "provenance"
+        string taskKey
+        string taskName "denormalized"
+    }
+    ASSEMBLY {
+        string orgId FK
+        string name
+        string category
+        number sortOrder
+        boolean active
+        enum source "starter|custom"
+    }
+    ASSEMBLY_DRIVER {
+        string key "used in formulas"
+        string label
+        string unit
+        number defaultValue
+    }
+    ASSEMBLY_TASK {
+        string key
+        string name
+        number sortOrder
+    }
+    ASSEMBLY_LINE {
+        string key
+        enum kind "material|labor"
+        string description
+        string quantityFormula "expr-eval text"
+        string materialId "FK, material lines"
+        string deliveriesFormula
+        string laborRateKey "labor lines"
+        string taskKey
+        number sortOrder
+    }
+    MATERIAL {
+        string orgId FK
+        string name
+        string category
+        string unit
+        number unitPrice
+        number deliveryCost
+        boolean taxable
+        boolean active
+    }
+    PRICINGSETTINGS {
+        string orgId FK "unique"
+        number taxRate
+        number overheadRate "margin-basis"
+        number profitRate
+    }
+    LABOR_RATE {
+        string key "general|skilled"
+        string label
+        number rate "$/hr"
+    }
