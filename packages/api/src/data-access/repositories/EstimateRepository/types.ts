@@ -1,7 +1,7 @@
-import type { Estimate, EstimateAssembly, LineItem } from "@landscape/core";
+import type { Estimate, EstimateAssembly, LineItem } from "@landscape/domain";
 
 // The Estimate entity (and its assembly/line-item shapes) is a shared domain
-// type the engine prices, so it lives in @landscape/core. The persistence-shaped
+// type the engine prices, so it lives in @landscape/domain. The persistence-shaped
 // derivations — what's accepted to create, change, or snapshot — stay here.
 export type {
   Estimate,
@@ -9,7 +9,7 @@ export type {
   EstimateStatus,
   LineItem,
   LineItemType,
-} from "@landscape/core";
+} from "@landscape/domain";
 
 /** A generated line to persist — LineItem without its server-assigned id. */
 export type LineItemInput = Omit<LineItem, "id">;

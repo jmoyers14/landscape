@@ -12,7 +12,7 @@
     "build": "bun run build:api && bun run build:web",
     "build:api": "bun run --cwd packages/api build",
     "build:web": "bun run --cwd packages/web build",
-    "typecheck": "bun run --cwd packages/core typecheck && bun run --cwd packages/api typecheck && bun run --cwd packages/web typecheck",
+    "typecheck": "bun run --cwd packages/domain typecheck && bun run --cwd packages/api typecheck && bun run --cwd packages/web typecheck",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write --unsafe ."
   },

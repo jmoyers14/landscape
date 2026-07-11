@@ -20,7 +20,7 @@
       "version": "1.0.0",
       "dependencies": {
         "@clerk/backend": "^3.6.1",
-        "@landscape/core": "workspace:*",
+        "@landscape/domain": "workspace:*",
         "@trpc/server": "^11.8.1",
         "cors": "^2.8.5",
         "mongoose": "^9.7.0",
@@ -35,8 +35,8 @@
         "typescript": "^5.3.3",
       },
     },
-    "packages/core": {
-      "name": "@landscape/core",
+    "packages/domain": {
+      "name": "@landscape/domain",
       "version": "1.0.0",
       "dependencies": {
         "expr-eval": "^2.0.2",
@@ -51,7 +51,7 @@
       "version": "1.0.0",
       "dependencies": {
         "@clerk/react": "^6.9.0",
-        "@landscape/core": "workspace:*",
+        "@landscape/domain": "workspace:*",
         "@tanstack/react-query": "^5.90.16",
         "@tanstack/react-router": "^1.170.15",
         "@trpc/client": "^11.8.1",
@@ -196,7 +196,7 @@
 
     "@landscape/api": ["@landscape/api@workspace:packages/api"],
 
-    "@landscape/core": ["@landscape/core@workspace:packages/core"],
+    "@landscape/domain": ["@landscape/domain@workspace:packages/domain"],
 
     "@landscape/web": ["@landscape/web@workspace:packages/web"],
 

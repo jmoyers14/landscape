@@ -22,7 +22,7 @@ import {
   generateAssemblyLines,
   resolveDriverValues,
   type EstimateView,
-} from "@landscape/core";
+} from "@landscape/domain";
 import type {
   EstimateContext,
   EstimateService,

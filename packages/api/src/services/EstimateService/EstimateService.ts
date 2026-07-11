@@ -4,7 +4,7 @@ export type {
   EstimateTotals,
   LineItemView,
   PhaseSummary,
-} from "@landscape/core";
+} from "@landscape/domain";
 export type {
   EstimateStatus,
   EstimateAssembly,
@@ -16,7 +16,7 @@ import type {
   EstimateView,
   Material,
   PricingSettings,
-} from "@landscape/core";
+} from "@landscape/domain";
 
 /**
  * The catalog snapshot the editor needs to recompute an estimate locally: the

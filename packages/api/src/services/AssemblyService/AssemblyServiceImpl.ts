@@ -15,7 +15,7 @@ import {
   validateLineFormulas,
   generateAssemblyLines,
   priceLines,
-} from "@landscape/core";
+} from "@landscape/domain";
 import { ServiceError } from "../errors.ts";
 import type { PricingSettingsService } from "../PricingSettingsService/PricingSettingsService.ts";
 import type {

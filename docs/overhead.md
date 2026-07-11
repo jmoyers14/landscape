@@ -51,7 +51,7 @@ always a percentage of **price**.
 ## Where it lives in the code
 
 The calculation is in `priceLines()` in
-[`packages/core/src/engine/calc.ts`](../packages/core/src/engine/calc.ts):
+[`packages/domain/src/engine/calc.ts`](../packages/domain/src/engine/calc.ts):
 
 ```ts
 const directCost = materialCost + laborCost;

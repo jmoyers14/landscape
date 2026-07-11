@@ -8,7 +8,7 @@ import {
   type CatalogContext,
   type EstimateSelection,
   type EstimateView,
-} from "@landscape/core";
+} from "@landscape/domain";
 import { queryClient, trpc } from "../trpc.ts";
 import { ErrorNote, Page } from "../components/ui.tsx";
 import { formatCurrency, formatQuantity } from "../lib/format.ts";
