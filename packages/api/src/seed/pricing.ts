@@ -1,4 +1,4 @@
-import type { PricingSettings } from "../data-access/repositories/PricingSettingsRepository/PricingSettingsRepository.ts";
+import type { PricingSettings } from "@landscape/platform";
 
 /**
  * The starter pricing settings seeded for a new org, transcribed from the

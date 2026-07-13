@@ -1,11 +1,11 @@
 import { inject, injectable } from "tsyringe";
-import { MAPS_CLIENT_TOKEN } from "../../integrations/tokens.ts";
-import type { MapsClient } from "../../integrations/maps/MapsClient.ts";
+import { MAPS_CLIENT_TOKEN } from "@landscape/platform";
+import type { MapsClient } from "@landscape/platform";
 import type { AddressService } from "./AddressService.ts";
 import type {
   AddressSuggestion,
   ResolvedAddress,
-} from "../../integrations/maps/MapsClient.ts";
+} from "@landscape/platform";
 
 // Below this many characters a query is too vague to be worth a provider call
 // (and a wasted billing event), so we short-circuit to no suggestions.

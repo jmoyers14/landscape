@@ -1,7 +1,7 @@
 import type {
   Material,
   MaterialInput,
-} from "../../data-access/repositories/MaterialRepository/MaterialRepository.ts";
+} from "@landscape/platform";
 
 export type { Material, MaterialInput };
 

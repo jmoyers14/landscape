@@ -1,6 +1,6 @@
-import type { MaterialRepository } from "../data-access/repositories/MaterialRepository/MaterialRepository.ts";
-import type { AssemblyRepository } from "../data-access/repositories/AssemblyRepository/AssemblyRepository.ts";
-import type { PricingSettingsRepository } from "../data-access/repositories/PricingSettingsRepository/PricingSettingsRepository.ts";
+import type { MaterialRepository } from "@landscape/platform";
+import type { AssemblyRepository } from "@landscape/platform";
+import type { PricingSettingsRepository } from "@landscape/platform";
 import { STARTER_PRICING } from "./pricing.ts";
 import { STARTER_ASSEMBLIES } from "./catalog.ts";
 

@@ -1,4 +1,4 @@
-import type { AuthIdentity } from "../../integrations/auth/AuthClient.ts";
+import type { AuthIdentity } from "@landscape/platform";
 
 /**
  * Authenticates an incoming request from its Authorization header. Provider-

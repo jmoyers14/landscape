@@ -1,7 +1,7 @@
 import { verifyToken } from "@clerk/backend";
 import { inject, injectable } from "tsyringe";
-import { CONFIG_SERVICE_TOKEN } from "../../services/tokens.ts";
-import type { ConfigService } from "../../services/ConfigService/ConfigService.ts";
+import { CONFIG_SERVICE_TOKEN } from "../../config/tokens.ts";
+import type { ConfigService } from "../../config/ConfigService.ts";
 import type { AuthClient, AuthIdentity } from "./AuthClient.ts";
 
 /**

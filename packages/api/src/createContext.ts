@@ -11,7 +11,7 @@ import {
   MATERIAL_SERVICE_TOKEN,
   ASSEMBLY_SERVICE_TOKEN,
 } from "./services/index.ts";
-import { ANALYTICS_CLIENT_TOKEN } from "./integrations/index.ts";
+import { ANALYTICS_CLIENT_TOKEN } from "@landscape/platform";
 import type { ClientService } from "./services/ClientService/ClientService.ts";
 import type { ProjectService } from "./services/ProjectService/ProjectService.ts";
 import type { EstimateService } from "./services/EstimateService/EstimateService.ts";
@@ -20,8 +20,8 @@ import type { PricingSettingsService } from "./services/PricingSettingsService/P
 import type { MaterialService } from "./services/MaterialService/MaterialService.ts";
 import type { AssemblyService } from "./services/AssemblyService/AssemblyService.ts";
 import type { AuthService } from "./services/AuthService/AuthService.ts";
-import type { ConfigService } from "./services/ConfigService/ConfigService.ts";
-import type { AnalyticsClient } from "./integrations/analytics/AnalyticsClient.ts";
+import type { ConfigService } from "@landscape/platform";
+import type { AnalyticsClient } from "@landscape/platform";
 import type { Context } from "./context.ts";
 
 /**

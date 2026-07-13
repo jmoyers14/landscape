@@ -1,7 +1,7 @@
 import type {
   AddressSuggestion,
   ResolvedAddress,
-} from "../../integrations/maps/MapsClient.ts";
+} from "@landscape/platform";
 
 export type { AddressSuggestion, ResolvedAddress };
 

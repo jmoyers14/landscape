@@ -2,13 +2,13 @@ import { inject, injectable } from "tsyringe";
 import {
   CLIENT_REPOSITORY_TOKEN,
   PROJECT_REPOSITORY_TOKEN,
-} from "../../data-access/tokens.ts";
+} from "@landscape/platform";
 import type {
   Client,
   ClientInput,
   ClientRepository,
-} from "../../data-access/repositories/ClientRepository/ClientRepository.ts";
-import type { ProjectRepository } from "../../data-access/repositories/ProjectRepository/ProjectRepository.ts";
+} from "@landscape/platform";
+import type { ProjectRepository } from "@landscape/platform";
 import { ServiceError } from "../errors.ts";
 import type { ClientService } from "./ClientService.ts";
 

@@ -1,9 +1,9 @@
 import { inject, injectable } from "tsyringe";
-import { AUTH_CLIENT_TOKEN } from "../../integrations/tokens.ts";
+import { AUTH_CLIENT_TOKEN } from "@landscape/platform";
 import type {
   AuthClient,
   AuthIdentity,
-} from "../../integrations/auth/AuthClient.ts";
+} from "@landscape/platform";
 import type { AuthService } from "./AuthService.ts";
 
 /**

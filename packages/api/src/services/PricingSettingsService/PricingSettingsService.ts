@@ -1,7 +1,7 @@
 import type {
   LaborRate,
   PricingSettings,
-} from "../../data-access/repositories/PricingSettingsRepository/PricingSettingsRepository.ts";
+} from "@landscape/platform";
 
 export type { LaborRate, PricingSettings };
 

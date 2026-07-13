@@ -4,17 +4,17 @@ import {
   ESTIMATE_REPOSITORY_TOKEN,
   MATERIAL_REPOSITORY_TOKEN,
   PROJECT_REPOSITORY_TOKEN,
-} from "../../data-access/tokens.ts";
+} from "@landscape/platform";
 import { PRICING_SETTINGS_SERVICE_TOKEN } from "../tokens.ts";
 import type {
   Estimate,
   EstimateAssembly,
   EstimateRepository,
   LineItemInput,
-} from "../../data-access/repositories/EstimateRepository/EstimateRepository.ts";
-import type { ProjectRepository } from "../../data-access/repositories/ProjectRepository/ProjectRepository.ts";
-import type { AssemblyRepository } from "../../data-access/repositories/AssemblyRepository/AssemblyRepository.ts";
-import type { MaterialRepository } from "../../data-access/repositories/MaterialRepository/MaterialRepository.ts";
+} from "@landscape/platform";
+import type { ProjectRepository } from "@landscape/platform";
+import type { AssemblyRepository } from "@landscape/platform";
+import type { MaterialRepository } from "@landscape/platform";
 import type { PricingSettingsService } from "../PricingSettingsService/PricingSettingsService.ts";
 import { ServiceError } from "../errors.ts";
 import {

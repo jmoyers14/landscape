@@ -1,7 +1,7 @@
 import type {
   Assembly,
   AssemblyInput,
-} from "../../data-access/repositories/AssemblyRepository/AssemblyRepository.ts";
+} from "@landscape/platform";
 import type { GeneratedLineItem, EstimateTotals } from "@landscape/domain";
 
 export type { Assembly };

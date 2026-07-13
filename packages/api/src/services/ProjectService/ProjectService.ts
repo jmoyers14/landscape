@@ -1,7 +1,7 @@
 import type {
   Project,
   ProjectStatus,
-} from "../../data-access/repositories/ProjectRepository/ProjectRepository.ts";
+} from "@landscape/platform";
 
 export type { Project, ProjectStatus };
 

@@ -1,4 +1,4 @@
-import type { AssemblyInput } from "../data-access/repositories/AssemblyRepository/AssemblyRepository.ts";
+import type { AssemblyInput } from "@landscape/platform";
 import {
   type SeedMaterial,
   laborLine,

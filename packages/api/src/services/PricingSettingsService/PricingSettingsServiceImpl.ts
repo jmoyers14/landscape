@@ -1,9 +1,9 @@
 import { inject, injectable } from "tsyringe";
-import { PRICING_SETTINGS_REPOSITORY_TOKEN } from "../../data-access/tokens.ts";
+import { PRICING_SETTINGS_REPOSITORY_TOKEN } from "@landscape/platform";
 import type {
   PricingSettings,
   PricingSettingsRepository,
-} from "../../data-access/repositories/PricingSettingsRepository/PricingSettingsRepository.ts";
+} from "@landscape/platform";
 import { ServiceError } from "../errors.ts";
 import type { PricingSettingsService } from "./PricingSettingsService.ts";
 

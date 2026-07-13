@@ -1,17 +1,17 @@
 import "reflect-metadata";
 import mongoose from "mongoose";
 import { container } from "../services/index.ts";
-import { CONFIG_SERVICE_TOKEN } from "../services/tokens.ts";
+import { CONFIG_SERVICE_TOKEN } from "@landscape/platform";
 import {
   ASSEMBLY_REPOSITORY_TOKEN,
   MATERIAL_REPOSITORY_TOKEN,
   PRICING_SETTINGS_REPOSITORY_TOKEN,
-} from "../data-access/tokens.ts";
-import { connectDatabase } from "../data-access/index.ts";
-import type { ConfigService } from "../services/ConfigService/ConfigService.ts";
-import type { MaterialRepository } from "../data-access/repositories/MaterialRepository/MaterialRepository.ts";
-import type { AssemblyRepository } from "../data-access/repositories/AssemblyRepository/AssemblyRepository.ts";
-import type { PricingSettingsRepository } from "../data-access/repositories/PricingSettingsRepository/PricingSettingsRepository.ts";
+} from "@landscape/platform";
+import { connectDatabase } from "@landscape/platform/server";
+import type { ConfigService } from "@landscape/platform";
+import type { MaterialRepository } from "@landscape/platform";
+import type { AssemblyRepository } from "@landscape/platform";
+import type { PricingSettingsRepository } from "@landscape/platform";
 import { seedOrg } from "./seedOrg.ts";
 
 /**

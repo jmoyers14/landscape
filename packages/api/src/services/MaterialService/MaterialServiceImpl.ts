@@ -2,13 +2,13 @@ import { inject, injectable } from "tsyringe";
 import {
   ASSEMBLY_REPOSITORY_TOKEN,
   MATERIAL_REPOSITORY_TOKEN,
-} from "../../data-access/tokens.ts";
+} from "@landscape/platform";
 import type {
   Material,
   MaterialInput,
   MaterialRepository,
-} from "../../data-access/repositories/MaterialRepository/MaterialRepository.ts";
-import type { AssemblyRepository } from "../../data-access/repositories/AssemblyRepository/AssemblyRepository.ts";
+} from "@landscape/platform";
+import type { AssemblyRepository } from "@landscape/platform";
 import { ServiceError } from "../errors.ts";
 import type { MaterialService } from "./MaterialService.ts";
 

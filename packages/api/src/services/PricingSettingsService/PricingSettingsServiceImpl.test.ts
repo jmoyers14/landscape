@@ -3,8 +3,8 @@ import {
   DEFAULT_PRICING_SETTINGS,
   PricingSettingsServiceImpl,
 } from "./PricingSettingsServiceImpl.ts";
-import { makePricingSettingsRepoMock } from "../../test-support/repoMocks.ts";
-import { makePricingSettings } from "../../test-support/factories.ts";
+import { makePricingSettingsRepoMock } from "@landscape/platform/test-support";
+import { makePricingSettings } from "@landscape/platform/test-support";
 import { ServiceError } from "../errors.ts";
 
 describe("PricingSettingsServiceImpl", () => {

@@ -1,5 +1,5 @@
-import type { AuthIdentity } from "./integrations/auth/AuthClient.ts";
-import type { AnalyticsClient } from "./integrations/analytics/AnalyticsClient.ts";
+import type { AuthIdentity } from "@landscape/platform";
+import type { AnalyticsClient } from "@landscape/platform";
 import type { ClientService } from "./services/ClientService/ClientService.ts";
 import type { ProjectService } from "./services/ProjectService/ProjectService.ts";
 import type { EstimateService } from "./services/EstimateService/EstimateService.ts";
@@ -7,7 +7,7 @@ import type { AddressService } from "./services/AddressService/AddressService.ts
 import type { PricingSettingsService } from "./services/PricingSettingsService/PricingSettingsService.ts";
 import type { MaterialService } from "./services/MaterialService/MaterialService.ts";
 import type { AssemblyService } from "./services/AssemblyService/AssemblyService.ts";
-import type { ConfigService } from "./services/ConfigService/ConfigService.ts";
+import type { ConfigService } from "@landscape/platform";
 
 /**
  * Authenticated principal for a request — the provider-neutral identity the

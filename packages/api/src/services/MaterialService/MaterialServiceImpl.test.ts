@@ -3,8 +3,8 @@ import { MaterialServiceImpl } from "./MaterialServiceImpl.ts";
 import {
   makeAssemblyRepoMock,
   makeMaterialRepoMock,
-} from "../../test-support/repoMocks.ts";
-import { makeAssembly, makeMaterial } from "../../test-support/factories.ts";
+} from "@landscape/platform/test-support";
+import { makeAssembly, makeMaterial } from "@landscape/platform/test-support";
 import { ServiceError } from "../errors.ts";
 
 const materialLine = (materialId: string) => ({

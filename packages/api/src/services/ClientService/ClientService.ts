@@ -1,7 +1,7 @@
 import type {
   Client,
   ClientInput,
-} from "../../data-access/repositories/ClientRepository/ClientRepository.ts";
+} from "@landscape/platform";
 
 export type { Client, ClientInput };
 

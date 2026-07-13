@@ -1,4 +1,4 @@
-import type { EstimateStatus } from "../../data-access/repositories/EstimateRepository/EstimateRepository.ts";
+import type { EstimateStatus } from "@landscape/platform";
 export type {
   EstimateView,
   EstimateTotals,
@@ -9,7 +9,7 @@ export type {
   EstimateStatus,
   EstimateAssembly,
   LineItemType,
-} from "../../data-access/repositories/EstimateRepository/EstimateRepository.ts";
+} from "@landscape/platform";
 
 import type {
   Assembly,

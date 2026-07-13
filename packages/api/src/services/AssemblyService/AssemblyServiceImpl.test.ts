@@ -5,17 +5,17 @@ import type { PricingSettingsService } from "../PricingSettingsService/PricingSe
 import {
   makeAssemblyRepoMock,
   makeMaterialRepoMock,
-} from "../../test-support/repoMocks.ts";
+} from "@landscape/platform/test-support";
 import {
   makeAssembly,
   makeMaterial,
   makePricingSettings,
-} from "../../test-support/factories.ts";
+} from "@landscape/platform/test-support";
 import {
   drainageAssembly,
   drainageMaterials,
   drainagePricing,
-} from "../../test-support/drainageFixture.ts";
+} from "@landscape/platform/test-support";
 import { ServiceError } from "../errors.ts";
 
 // A valid Drainage-style input: one labor line (rate "general") and one

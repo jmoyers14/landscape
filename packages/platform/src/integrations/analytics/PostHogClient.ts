@@ -1,7 +1,7 @@
 import { inject, injectable } from "tsyringe";
 import { PostHog } from "posthog-node";
-import { CONFIG_SERVICE_TOKEN } from "../../services/tokens.ts";
-import type { ConfigService } from "../../services/ConfigService/ConfigService.ts";
+import { CONFIG_SERVICE_TOKEN } from "../../config/tokens.ts";
+import type { ConfigService } from "../../config/ConfigService.ts";
 import type { AnalyticsClient, AnalyticsEvent } from "./AnalyticsClient.ts";
 
 /**

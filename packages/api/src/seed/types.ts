@@ -1,10 +1,10 @@
-import type { MaterialInput } from "../data-access/repositories/MaterialRepository/MaterialRepository.ts";
+import type { MaterialInput } from "@landscape/platform";
 import type {
   AssemblyInput,
   AssemblyTask,
   LaborAssemblyLine,
   MaterialAssemblyLine,
-} from "../data-access/repositories/AssemblyRepository/AssemblyRepository.ts";
+} from "@landscape/platform";
 
 /**
  * A seed material paired with a stable `slug`. Slugs let an assembly reference

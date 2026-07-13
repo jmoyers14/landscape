@@ -3,10 +3,10 @@ import { createHTTPServer } from "@trpc/server/adapters/standalone";
 import { appRouter } from "./router.ts";
 import { createContext } from "./createContext.ts";
 import { container, CONFIG_SERVICE_TOKEN } from "./services/index.ts";
-import { ANALYTICS_CLIENT_TOKEN } from "./integrations/index.ts";
-import { connectDatabase } from "./data-access/index.ts";
-import type { ConfigService } from "./services/ConfigService/ConfigService.ts";
-import type { AnalyticsClient } from "./integrations/analytics/AnalyticsClient.ts";
+import { ANALYTICS_CLIENT_TOKEN } from "@landscape/platform";
+import { connectDatabase } from "@landscape/platform/server";
+import type { ConfigService } from "@landscape/platform";
+import type { AnalyticsClient } from "@landscape/platform";
 
 const main = async (): Promise<void> => {
   const configService = container.resolve<ConfigService>(CONFIG_SERVICE_TOKEN);
