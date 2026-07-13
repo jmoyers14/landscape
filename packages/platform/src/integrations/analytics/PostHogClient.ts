@@ -1,7 +1,6 @@
 import { inject, injectable } from "tsyringe";
 import { PostHog } from "posthog-node";
-import { CONFIG_SERVICE_TOKEN } from "../../config/tokens.ts";
-import type { ConfigService } from "../../config/ConfigService.ts";
+import { ANALYTICS_CONFIG_TOKEN, type AnalyticsConfig } from "./analyticsConfig.ts";
 import type { AnalyticsClient, AnalyticsEvent } from "./AnalyticsClient.ts";
 
 /**
@@ -14,10 +13,10 @@ export class PostHogClient implements AnalyticsClient {
   private readonly client: PostHog | null;
 
   constructor(
-    @inject(CONFIG_SERVICE_TOKEN)
-    config: ConfigService,
+    @inject(ANALYTICS_CONFIG_TOKEN)
+    config: AnalyticsConfig,
   ) {
-    const { apiKey, host } = config.getAnalytics();
+    const { apiKey, host } = config;
     // flushAt/flushInterval keep latency low on a long-lived server while still
     // batching: send after 20 events or 10s, whichever comes first.
     this.client = apiKey

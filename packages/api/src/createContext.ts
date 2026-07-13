@@ -1,7 +1,6 @@
 import type { CreateHTTPContextOptions } from "@trpc/server/adapters/standalone";
 import {
   container,
-  CONFIG_SERVICE_TOKEN,
   AUTH_SERVICE_TOKEN,
   CLIENT_SERVICE_TOKEN,
   PROJECT_SERVICE_TOKEN,
@@ -11,7 +10,7 @@ import {
   MATERIAL_SERVICE_TOKEN,
   ASSEMBLY_SERVICE_TOKEN,
 } from "./services/index.ts";
-import { ANALYTICS_CLIENT_TOKEN } from "@landscape/platform";
+import { ANALYTICS_CLIENT_TOKEN, APP_CONFIG_TOKEN } from "@landscape/platform";
 import type { ClientService } from "./services/ClientService/ClientService.ts";
 import type { ProjectService } from "./services/ProjectService/ProjectService.ts";
 import type { EstimateService } from "./services/EstimateService/EstimateService.ts";
@@ -20,8 +19,7 @@ import type { PricingSettingsService } from "./services/PricingSettingsService/P
 import type { MaterialService } from "./services/MaterialService/MaterialService.ts";
 import type { AssemblyService } from "./services/AssemblyService/AssemblyService.ts";
 import type { AuthService } from "./services/AuthService/AuthService.ts";
-import type { ConfigService } from "@landscape/platform";
-import type { AnalyticsClient } from "@landscape/platform";
+import type { AppConfig, AnalyticsClient } from "@landscape/platform";
 import type { Context } from "./context.ts";
 
 /**
@@ -38,6 +36,7 @@ export async function createContext(
   return {
     auth,
     analytics: container.resolve<AnalyticsClient>(ANALYTICS_CLIENT_TOKEN),
+    appConfig: container.resolve<AppConfig>(APP_CONFIG_TOKEN),
     services: {
       clientService: container.resolve<ClientService>(CLIENT_SERVICE_TOKEN),
       projectService: container.resolve<ProjectService>(PROJECT_SERVICE_TOKEN),
@@ -52,7 +51,6 @@ export async function createContext(
       assemblyService: container.resolve<AssemblyService>(
         ASSEMBLY_SERVICE_TOKEN,
       ),
-      configService: container.resolve<ConfigService>(CONFIG_SERVICE_TOKEN),
     },
   };
 }

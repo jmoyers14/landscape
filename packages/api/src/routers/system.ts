@@ -7,12 +7,7 @@ export const systemRouter = router({
    * mismatch against the web bundle's own stamp reveals a half-landed deploy.
    */
   version: publicProcedure.query(({ ctx }) => {
-    const build = ctx.services.configService.getBuild();
-    return {
-      version: build.version,
-      commit: build.commit,
-      builtAt: build.builtAt,
-      environment: ctx.services.configService.environment,
-    };
+    const { version, commit, builtAt, environment } = ctx.appConfig;
+    return { version, commit, builtAt, environment };
   }),
 });

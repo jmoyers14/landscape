@@ -2,17 +2,21 @@ import cors from "cors";
 import { createHTTPServer } from "@trpc/server/adapters/standalone";
 import { appRouter } from "./router.ts";
 import { createContext } from "./createContext.ts";
-import { container, CONFIG_SERVICE_TOKEN } from "./services/index.ts";
+import { container } from "./services/index.ts";
+import { SERVER_CONFIG_TOKEN, type ServerConfig } from "./config/serverConfig.ts";
 import { ANALYTICS_CLIENT_TOKEN } from "@landscape/platform";
-import { connectDatabase } from "@landscape/platform/server";
-import type { ConfigService } from "@landscape/platform";
+import {
+  connectDatabase,
+  DATABASE_CONFIG_TOKEN,
+  type DatabaseConfig,
+} from "@landscape/platform/server";
 import type { AnalyticsClient } from "@landscape/platform";
 
 const main = async (): Promise<void> => {
-  const configService = container.resolve<ConfigService>(CONFIG_SERVICE_TOKEN);
-  const { port, webUrl } = configService.getServer();
+  const { port, webUrl } = container.resolve<ServerConfig>(SERVER_CONFIG_TOKEN);
+  const { uri } = container.resolve<DatabaseConfig>(DATABASE_CONFIG_TOKEN);
 
-  await connectDatabase(configService.getDatabase().uri);
+  await connectDatabase(uri);
   console.log("Connected to MongoDB");
 
   const server = createHTTPServer({

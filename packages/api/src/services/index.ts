@@ -1,6 +1,7 @@
 import "reflect-metadata"; // MUST be imported before any decorated class is used
-import { container } from "tsyringe";
+import { container, instanceCachingFactory } from "tsyringe";
 import { registerServerCore } from "@landscape/platform/server";
+import { SERVER_CONFIG_TOKEN, loadServerConfig } from "../config/serverConfig.ts";
 import {
   AUTH_SERVICE_TOKEN,
   CLIENT_SERVICE_TOKEN,
@@ -25,6 +26,13 @@ import { AssemblyServiceImpl } from "./AssemblyService/AssemblyServiceImpl.ts";
 // registerSingleton: one shared instance for the process.
 registerServerCore(container);
 
+// Server config is this entrypoint's own concern (port + web origin); the worker
+// has no HTTP-server config of this shape, so it's registered here, not in the
+// shared core. Lazy so it's validated only when the server boots resolves it.
+container.register(SERVER_CONFIG_TOKEN, {
+  useFactory: instanceCachingFactory(() => loadServerConfig()),
+});
+
 container.registerSingleton(AUTH_SERVICE_TOKEN, AuthServiceImpl);
 container.registerSingleton(CLIENT_SERVICE_TOKEN, ClientServiceImpl);
 container.registerSingleton(PROJECT_SERVICE_TOKEN, ProjectServiceImpl);
@@ -38,7 +46,4 @@ container.registerSingleton(MATERIAL_SERVICE_TOKEN, MaterialServiceImpl);
 container.registerSingleton(ASSEMBLY_SERVICE_TOKEN, AssemblyServiceImpl);
 
 export { container };
-// Re-exported so request-scoped code can resolve config from this composition
-// root without importing the platform package directly.
-export { CONFIG_SERVICE_TOKEN } from "@landscape/platform";
 export * from "./tokens.ts";

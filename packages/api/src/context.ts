@@ -7,7 +7,7 @@ import type { AddressService } from "./services/AddressService/AddressService.ts
 import type { PricingSettingsService } from "./services/PricingSettingsService/PricingSettingsService.ts";
 import type { MaterialService } from "./services/MaterialService/MaterialService.ts";
 import type { AssemblyService } from "./services/AssemblyService/AssemblyService.ts";
-import type { ConfigService } from "@landscape/platform";
+import type { AppConfig } from "@landscape/platform";
 
 /**
  * Authenticated principal for a request — the provider-neutral identity the
@@ -30,6 +30,8 @@ export interface Context {
    * layer, not domain logic.
    */
   analytics: AnalyticsClient;
+  /** Process-wide app identity (environment + build stamp). Read by the system router. */
+  appConfig: AppConfig;
   services: {
     clientService: ClientService;
     projectService: ProjectService;
@@ -38,6 +40,5 @@ export interface Context {
     pricingSettingsService: PricingSettingsService;
     materialService: MaterialService;
     assemblyService: AssemblyService;
-    configService: ConfigService;
   };
 }

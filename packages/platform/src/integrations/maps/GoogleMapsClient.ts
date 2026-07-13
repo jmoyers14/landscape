@@ -1,6 +1,5 @@
 import { inject, injectable } from "tsyringe";
-import { CONFIG_SERVICE_TOKEN } from "../../config/tokens.ts";
-import type { ConfigService } from "../../config/ConfigService.ts";
+import { MAPS_CONFIG_TOKEN, type MapsConfig } from "./mapsConfig.ts";
 import type {
   AddressSuggestion,
   MapImage,
@@ -41,15 +40,15 @@ interface PlaceDetailsResponse {
 @injectable()
 export class GoogleMapsClient implements MapsClient {
   constructor(
-    @inject(CONFIG_SERVICE_TOKEN)
-    private readonly config: ConfigService,
+    @inject(MAPS_CONFIG_TOKEN)
+    private readonly config: MapsConfig,
   ) {}
 
   async satelliteImage(
     address: string,
     options: SatelliteImageOptions = {},
   ): Promise<MapImage | null> {
-    const apiKey = this.config.getMaps().apiKey;
+    const apiKey = this.config.apiKey;
     if (!apiKey) {
       throw new Error("Google Maps API key is not configured");
     }
@@ -171,7 +170,7 @@ export class GoogleMapsClient implements MapsClient {
   }
 
   private requireKey(): string {
-    const apiKey = this.config.getMaps().apiKey;
+    const apiKey = this.config.apiKey;
     if (!apiKey) {
       throw new Error("Google Maps API key is not configured");
     }

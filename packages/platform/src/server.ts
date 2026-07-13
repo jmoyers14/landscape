@@ -6,3 +6,10 @@
  */
 export { registerServerCore } from "./registerServerCore.ts";
 export { connectDatabase } from "./data-access/connection.ts";
+// Shared env-parse helper — server-only (it calls process.exit on bad config).
+export { parseConfig } from "./config/parseConfig.ts";
+// The database connection URI slice — resolved by server entrypoints to open the
+// Mongoose connection. Server-only (its loader reads env), so it lives here
+// rather than on the contract barrel.
+export { DATABASE_CONFIG_TOKEN } from "./data-access/databaseConfig.ts";
+export type { DatabaseConfig } from "./data-access/databaseConfig.ts";

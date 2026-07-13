@@ -1,7 +1,6 @@
 import { verifyToken } from "@clerk/backend";
 import { inject, injectable } from "tsyringe";
-import { CONFIG_SERVICE_TOKEN } from "../../config/tokens.ts";
-import type { ConfigService } from "../../config/ConfigService.ts";
+import { CLERK_CONFIG_TOKEN, type ClerkConfig } from "./clerkConfig.ts";
 import type { AuthClient, AuthIdentity } from "./AuthClient.ts";
 
 /**
@@ -13,14 +12,14 @@ import type { AuthClient, AuthIdentity } from "./AuthClient.ts";
 @injectable()
 export class ClerkClient implements AuthClient {
   constructor(
-    @inject(CONFIG_SERVICE_TOKEN)
-    private readonly config: ConfigService,
+    @inject(CLERK_CONFIG_TOKEN)
+    private readonly config: ClerkConfig,
   ) {}
 
   async verifySessionToken(token: string): Promise<AuthIdentity | null> {
     try {
       const claims = await verifyToken(token, {
-        secretKey: this.config.getClerk().secretKey,
+        secretKey: this.config.secretKey,
       });
       // Clerk v2 session tokens nest org data under `o` (id/rol/slg); v1 used
       // top-level org_* claims. Read both so either token version works.

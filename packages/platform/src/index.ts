@@ -5,9 +5,12 @@
  * values (registerServerCore, connectDatabase) live in ./server.ts.
  */
 
-// Config
-export { CONFIG_SERVICE_TOKEN } from "./config/tokens.ts";
-export * from "./config/ConfigService.ts";
+// Config: the app-identity slice (environment + build stamp). AppConfig rides on
+// the tRPC Context, so only its zod-free type module is exposed here. The other
+// slices (database, clerk, maps, analytics) and the parse helper are server-only
+// — they read env / call process.exit — so they stay off the contract barrel and
+// never reach the web client.
+export * from "./config/appConfig.ts";
 
 // Data-access: tokens and repository ports (each re-exports its own entity/input
 // types).

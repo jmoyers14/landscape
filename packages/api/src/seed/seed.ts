@@ -1,14 +1,16 @@
 import "reflect-metadata";
 import mongoose from "mongoose";
 import { container } from "../services/index.ts";
-import { CONFIG_SERVICE_TOKEN } from "@landscape/platform";
 import {
   ASSEMBLY_REPOSITORY_TOKEN,
   MATERIAL_REPOSITORY_TOKEN,
   PRICING_SETTINGS_REPOSITORY_TOKEN,
 } from "@landscape/platform";
-import { connectDatabase } from "@landscape/platform/server";
-import type { ConfigService } from "@landscape/platform";
+import {
+  connectDatabase,
+  DATABASE_CONFIG_TOKEN,
+  type DatabaseConfig,
+} from "@landscape/platform/server";
 import type { MaterialRepository } from "@landscape/platform";
 import type { AssemblyRepository } from "@landscape/platform";
 import type { PricingSettingsRepository } from "@landscape/platform";
@@ -26,8 +28,8 @@ if (!orgId) {
   process.exit(1);
 }
 
-const config = container.resolve<ConfigService>(CONFIG_SERVICE_TOKEN);
-await connectDatabase(config.getDatabase().uri);
+const { uri } = container.resolve<DatabaseConfig>(DATABASE_CONFIG_TOKEN);
+await connectDatabase(uri);
 console.log("Connected to MongoDB");
 
 await seedOrg(orgId, {
