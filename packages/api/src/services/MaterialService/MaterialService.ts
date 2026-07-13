@@ -1,7 +1,4 @@
-import type {
-  Material,
-  MaterialInput,
-} from "@landscape/platform";
+import type { Material, MaterialInput } from "@landscape/domain";
 
 export type { Material, MaterialInput };
 

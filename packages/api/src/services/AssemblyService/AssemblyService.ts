@@ -1,7 +1,4 @@
-import type {
-  Assembly,
-  AssemblyInput,
-} from "@landscape/platform";
+import type { Assembly, AssemblyInput } from "@landscape/domain";
 import type { GeneratedLineItem, EstimateTotals } from "@landscape/domain";
 
 export type { Assembly };

@@ -1,4 +1,4 @@
-import type { AuthIdentity } from "@landscape/platform";
+import type { AuthIdentity } from "@landscape/domain";
 
 /**
  * Authenticates an incoming request from its Authorization header. Provider-

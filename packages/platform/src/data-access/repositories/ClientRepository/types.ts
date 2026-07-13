@@ -1,19 +1,4 @@
-/**
- * Client entity — plain data, free of Mongoose types. The repository maps
- * documents to this shape so nothing driver-related leaks past the boundary.
- */
-export interface Client {
-  id: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  address: string | null;
-  createdAt: string;
-}
-
-/**
- * Fields accepted when creating or replacing a client — the persisted fields
- * minus the server-managed id/createdAt. Derived from Client so the two can't
- * drift.
- */
-export type ClientInput = Omit<Client, "id" | "createdAt">;
+// The Client entity and its input shape are part of the app's domain model
+// (they cross the API boundary), so they live in @landscape/domain. Re-exported
+// here so the repository layer can keep importing them locally.
+export type { Client, ClientInput } from "@landscape/domain";

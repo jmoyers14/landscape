@@ -1,7 +1,7 @@
 import type {
   AddressSuggestion,
   ResolvedAddress,
-} from "@landscape/platform";
+} from "@landscape/domain";
 
 export type { AddressSuggestion, ResolvedAddress };
 

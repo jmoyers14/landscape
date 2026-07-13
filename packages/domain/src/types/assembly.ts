@@ -82,3 +82,9 @@ export interface Assembly {
   lines: AssemblyLine[];
   createdAt: string;
 }
+
+/** Persisted fields for a new assembly — everything but server-managed id/createdAt. */
+export type AssemblyInput = Omit<Assembly, "id" | "createdAt">;
+
+/** Partial set of persisted fields for an update. */
+export type AssemblyChanges = Partial<AssemblyInput>;

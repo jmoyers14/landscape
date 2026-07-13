@@ -1,4 +1,4 @@
-import type { AssemblyInput } from "@landscape/platform";
+import type { AssemblyInput } from "@landscape/domain";
 import {
   type SeedMaterial,
   laborLine,

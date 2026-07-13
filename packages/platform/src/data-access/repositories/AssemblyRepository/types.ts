@@ -1,8 +1,6 @@
-import type { Assembly } from "@landscape/domain";
-
-// The Assembly entity (and its driver/line shapes) is a shared domain type the
-// engine generates from, so it lives in @landscape/domain. The persistence-shaped
-// derivations stay here at the data-access boundary.
+// The Assembly entity (and its driver/line shapes) plus its persistence-input
+// shapes are part of the app's domain model, so they live in @landscape/domain.
+// Re-exported here so the repository layer keeps importing them locally.
 export type {
   Assembly,
   AssemblyDriver,
@@ -12,10 +10,6 @@ export type {
   AssemblyTask,
   LaborAssemblyLine,
   MaterialAssemblyLine,
+  AssemblyInput,
+  AssemblyChanges,
 } from "@landscape/domain";
-
-/** Persisted fields for a new assembly — everything but server-managed id/createdAt. */
-export type AssemblyInput = Omit<Assembly, "id" | "createdAt">;
-
-/** Partial set of persisted fields for an update. */
-export type AssemblyChanges = Partial<AssemblyInput>;

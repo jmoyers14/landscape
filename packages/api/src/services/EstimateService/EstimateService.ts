@@ -1,4 +1,4 @@
-import type { EstimateStatus } from "@landscape/platform";
+import type { EstimateStatus } from "@landscape/domain";
 export type {
   EstimateView,
   EstimateTotals,
@@ -9,7 +9,7 @@ export type {
   EstimateStatus,
   EstimateAssembly,
   LineItemType,
-} from "@landscape/platform";
+} from "@landscape/domain";
 
 import type {
   Assembly,

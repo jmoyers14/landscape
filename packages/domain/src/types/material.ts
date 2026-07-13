@@ -14,3 +14,9 @@ export interface Material {
   active: boolean;
   createdAt: string;
 }
+
+/** Persisted fields for a new material — everything but server-managed id/createdAt. */
+export type MaterialInput = Omit<Material, "id" | "createdAt">;
+
+/** Partial set of persisted fields for an update. */
+export type MaterialChanges = Partial<MaterialInput>;

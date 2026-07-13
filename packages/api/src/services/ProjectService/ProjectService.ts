@@ -1,7 +1,7 @@
 import type {
   Project,
   ProjectStatus,
-} from "@landscape/platform";
+} from "@landscape/domain";
 
 export type { Project, ProjectStatus };
 

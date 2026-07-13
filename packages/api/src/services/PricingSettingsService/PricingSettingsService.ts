@@ -1,7 +1,7 @@
 import type {
   LaborRate,
   PricingSettings,
-} from "@landscape/platform";
+} from "@landscape/domain";
 
 export type { LaborRate, PricingSettings };
 
