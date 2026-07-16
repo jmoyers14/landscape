@@ -1,5 +1,4 @@
-import type { AuthIdentity } from "@landscape/domain";
-import type { AnalyticsClient } from "@landscape/platform";
+import type { AnalyticsClient, AuthIdentity } from "@landscape/platform";
 import type { ClientService } from "./services/ClientService/ClientService.ts";
 import type { ProjectService } from "./services/ProjectService/ProjectService.ts";
 import type { EstimateService } from "./services/EstimateService/EstimateService.ts";

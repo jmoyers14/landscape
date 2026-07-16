@@ -1,7 +1,4 @@
-import type {
-  Client,
-  ClientInput,
-} from "@landscape/domain";
+import type { Client, ClientInput } from "@landscape/platform";
 
 export type { Client, ClientInput };
 

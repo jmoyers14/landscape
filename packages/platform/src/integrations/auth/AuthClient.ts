@@ -1,8 +1,15 @@
-// AuthIdentity crosses the API boundary (it's the request's authenticated
-// principal on the tRPC context), so it lives in the domain model. Re-exported
-// here so the port and its Clerk adapter keep importing it locally.
-export type { AuthIdentity } from "@landscape/domain";
-import type { AuthIdentity } from "@landscape/domain";
+/**
+ * Vendor-neutral identity returned by an auth provider after verifying a
+ * session token. Free of any SDK types — this is the shape the rest of the app
+ * speaks, regardless of which provider (Clerk today) sits behind the port. It's
+ * also the request's authenticated principal on the tRPC context.
+ */
+export interface AuthIdentity {
+  userId: string;
+  orgId: string | null;
+  orgRole: string | null;
+  orgSlug: string | null;
+}
 
 /**
  * Port for the auth provider. Named by capability (what the app needs), not by

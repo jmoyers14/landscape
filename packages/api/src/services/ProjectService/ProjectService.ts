@@ -1,7 +1,4 @@
-import type {
-  Project,
-  ProjectStatus,
-} from "@landscape/domain";
+import type { Project, ProjectStatus } from "@landscape/platform";
 
 export type { Project, ProjectStatus };
 

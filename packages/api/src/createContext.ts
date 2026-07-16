@@ -40,7 +40,9 @@ export async function createContext(
     services: {
       clientService: container.resolve<ClientService>(CLIENT_SERVICE_TOKEN),
       projectService: container.resolve<ProjectService>(PROJECT_SERVICE_TOKEN),
-      estimateService: container.resolve<EstimateService>(ESTIMATE_SERVICE_TOKEN),
+      estimateService: container.resolve<EstimateService>(
+        ESTIMATE_SERVICE_TOKEN,
+      ),
       addressService: container.resolve<AddressService>(ADDRESS_SERVICE_TOKEN),
       pricingSettingsService: container.resolve<PricingSettingsService>(
         PRICING_SETTINGS_SERVICE_TOKEN,
