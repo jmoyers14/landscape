@@ -11,20 +11,20 @@ COPY packages/platform/package.json packages/platform/
 
 RUN bun install --frozen-lockfile
 
-# Build the API (bundles @landscape/domain and @landscape/platform from source,
-# so copy them too)
+# Build the worker (bundles @landscape/domain and @landscape/platform from
+# source, so copy them too)
 COPY tsconfig.json ./
 COPY packages/domain/ packages/domain/
 COPY packages/platform/ packages/platform/
-COPY packages/api/ packages/api/
-RUN bun run build:api
+COPY packages/worker/ packages/worker/
+RUN bun run build:worker
 
 FROM oven/bun:1-slim
 WORKDIR /app
-COPY --from=builder /app/packages/api/dist ./dist
+COPY --from=builder /app/packages/worker/dist ./dist
 
-# Build stamp (from deploy.sh) baked in as runtime env so the API can report
-# exactly which build is running via the system.version query.
+# Build stamp (from deploy.sh) baked in as runtime env so logs and job records
+# trace back to exactly which build processed them.
 ARG APP_VERSION=0.0.0
 ARG GIT_SHA=unknown
 ARG BUILT_AT=unknown

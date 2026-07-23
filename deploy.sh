@@ -14,8 +14,10 @@ REPO="landscape"            # Artifact Registry repository name
 REGISTRY="$REGION-docker.pkg.dev/$PROJECT/$REPO"
 API_SERVICE="landscape-api"
 WEB_SERVICE="landscape-web"
+WORKER_SERVICE="landscape-worker"
 API_IMAGE="$REGISTRY/api:latest"
 WEB_IMAGE="$REGISTRY/web:latest"
+WORKER_IMAGE="$REGISTRY/worker:latest"
 CLERK_SECRET_NAME="clerk-secret-key"  # Secret Manager secret holding the Clerk sk_ key
 MONGO_SECRET_NAME="mongodb-uri"       # Secret Manager secret holding the Atlas connection string
 MAPS_SECRET_NAME="google-maps-api-key" # Secret Manager secret holding the Google Maps key (optional)
@@ -66,6 +68,7 @@ echo "Build stamp: v$APP_VERSION ($GIT_SHA) at $BUILT_AT"
 # Artifact Registry image, and the git commit are all the same string.
 API_IMAGE_SHA="$REGISTRY/api:$GIT_SHA"
 WEB_IMAGE_SHA="$REGISTRY/web:$GIT_SHA"
+WORKER_IMAGE_SHA="$REGISTRY/worker:$GIT_SHA"
 
 # ── Clerk config (validated up front, before the slow builds) ────────────────
 # Publishable key (pk_) is PUBLIC — baked into the web bundle at build time.
@@ -185,6 +188,41 @@ API_URL=$(gcloud run services describe "$API_SERVICE" \
   --project "$PROJECT" --region "$REGION" --format "value(status.url)")
 echo "API deployed at: $API_URL"
 
+# ── Worker ───────────────────────────────────────────────────────────────────
+# Second backend service, same shared platform layer as the API but a different
+# entrypoint: it receives Clerk webhooks on /ingest/clerk and runs queued jobs
+# on /tasks/*. It talks to Mongo but has no browser caller, so it needs neither
+# the web origin nor CORS.
+echo "Building worker image..."
+docker build --platform linux/amd64 \
+  --build-arg APP_VERSION="$APP_VERSION" \
+  --build-arg GIT_SHA="$GIT_SHA" \
+  --build-arg BUILT_AT="$BUILT_AT" \
+  -t "$WORKER_IMAGE" -t "$WORKER_IMAGE_SHA" \
+  -f packages/worker/Dockerfile .
+
+echo "Pushing worker image..."
+docker push "$WORKER_IMAGE"
+docker push "$WORKER_IMAGE_SHA"
+
+# --allow-unauthenticated is required: Clerk's webhook sender posts to
+# /ingest/clerk with no Google credentials. IAM is not the auth gate here — the
+# svix signature check inside that route is. When /tasks/* lands it gets its own
+# guard (Cloud Tasks OIDC tokens), since that surface must NOT be callable by
+# the public internet.
+echo "Deploying worker to Cloud Run..."
+gcloud run deploy "$WORKER_SERVICE" \
+  --image "$WORKER_IMAGE" \
+  --project "$PROJECT" \
+  --region "$REGION" \
+  --allow-unauthenticated \
+  --set-env-vars ENVIRONMENT=production \
+  --set-secrets "MONGODB_URI=$MONGO_SECRET_NAME:latest"
+
+WORKER_URL=$(gcloud run services describe "$WORKER_SERVICE" \
+  --project "$PROJECT" --region "$REGION" --format "value(status.url)")
+echo "Worker deployed at: $WORKER_URL"
+
 # ── Web ──────────────────────────────────────────────────────────────────────
 echo "Building web image (VITE_API_URL=$API_URL)..."
 docker build --platform linux/amd64 \
@@ -227,5 +265,6 @@ fi
 
 echo ""
 echo "Deploy complete!"
-echo "  API: $API_URL"
-echo "  Web: $WEB_URL"
+echo "  API:    $API_URL"
+echo "  Worker: $WORKER_URL"
+echo "  Web:    $WEB_URL"

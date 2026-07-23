@@ -90,6 +90,22 @@
         "vite": "^5.0.11",
       },
     },
+    "packages/worker": {
+      "name": "@landscape/worker",
+      "version": "1.0.0",
+      "dependencies": {
+        "@landscape/domain": "workspace:*",
+        "@landscape/platform": "workspace:*",
+        "mongoose": "^9.7.0",
+        "reflect-metadata": "^0.2.1",
+        "tsyringe": "^4.8.0",
+        "zod": "^3.22.4",
+      },
+      "devDependencies": {
+        "bun-types": "^1.0.0",
+        "typescript": "^5.3.3",
+      },
+    },
   },
   "packages": {
     "@alloc/quick-lru": ["@alloc/quick-lru@5.2.0", "", {}, "sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw=="],
@@ -219,6 +235,8 @@
     "@landscape/platform": ["@landscape/platform@workspace:packages/platform"],
 
     "@landscape/web": ["@landscape/web@workspace:packages/web"],
+
+    "@landscape/worker": ["@landscape/worker@workspace:packages/worker"],
 
     "@mongodb-js/saslprep": ["@mongodb-js/saslprep@1.4.11", "", { "dependencies": { "sparse-bitfield": "^3.0.3" } }, "sha512-o9rAHc0IpIjuPSxRutWpE1F62x7n+4mVS4rCNHkzhIUMQcc18bb6xEq5wd2NdN0WjepIyXIppRshYI2kQDOZVA=="],
 
