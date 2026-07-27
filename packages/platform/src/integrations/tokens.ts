@@ -6,3 +6,7 @@
 export const AUTH_CLIENT_TOKEN = "AuthClient";
 export const MAPS_CLIENT_TOKEN = "MapsClient";
 export const ANALYTICS_CLIENT_TOKEN = "AnalyticsClient";
+export const TASK_QUEUE_TOKEN = "TaskQueue";
+// One verifier per webhook source, so the token is per-source too — a second
+// source gets its own token and adapter rather than overloading this one.
+export const CLERK_WEBHOOK_VERIFIER_TOKEN = "ClerkWebhookVerifier";

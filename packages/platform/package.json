@@ -8,10 +8,12 @@
     "./test-support": "./src/test-support/index.ts"
   },
   "scripts": {
+    "test": "bun test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@clerk/backend": "^3.6.1",
+    "@google-cloud/tasks": "^6.2.3",
     "@landscape/domain": "workspace:*",
     "mongoose": "^9.7.0",
     "posthog-node": "^5.38.0",
@@ -21,6 +23,7 @@
   },
   "devDependencies": {
     "bun-types": "^1.0.0",
+    "standardwebhooks": "1.0.0",
     "typescript": "^5.3.3"
   }
 }

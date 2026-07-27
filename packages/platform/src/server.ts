@@ -13,3 +13,7 @@ export { parseConfig } from "./config/parseConfig.ts";
 // rather than on the contract barrel.
 export { DATABASE_CONFIG_TOKEN } from "./data-access/databaseConfig.ts";
 export type { DatabaseConfig } from "./data-access/databaseConfig.ts";
+// Webhook/queue registration is worker-only, so it's a separate opt-in from
+// registerServerCore: the API process should never resolve a queue client or a
+// webhook signing secret, and keeping this apart is what guarantees it can't.
+export { registerWebhookCore } from "./registerWebhookCore.ts";

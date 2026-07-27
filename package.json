@@ -14,7 +14,7 @@
     "build:api": "bun run --cwd packages/api build",
     "build:worker": "bun run --cwd packages/worker build",
     "build:web": "bun run --cwd packages/web build",
-    "test": "bun run --cwd packages/domain test && bun run --cwd packages/api test && bun run --cwd packages/worker test",
+    "test": "bun run --cwd packages/domain test && bun run --cwd packages/platform test && bun run --cwd packages/api test && bun run --cwd packages/worker test",
     "typecheck": "bun run --cwd packages/domain typecheck && bun run --cwd packages/platform typecheck && bun run --cwd packages/api typecheck && bun run --cwd packages/worker typecheck && bun run --cwd packages/web typecheck",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write --unsafe ."

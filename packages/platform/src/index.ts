@@ -21,9 +21,14 @@ export * from "./data-access/repositories/EstimateRepository/EstimateRepository.
 export * from "./data-access/repositories/MaterialRepository/MaterialRepository.ts";
 export * from "./data-access/repositories/AssemblyRepository/AssemblyRepository.ts";
 export * from "./data-access/repositories/PricingSettingsRepository/PricingSettingsRepository.ts";
+export * from "./data-access/repositories/WebhookEventRepository/WebhookEventRepository.ts";
+export * from "./data-access/repositories/WebhookJobRepository/WebhookJobRepository.ts";
+export * from "./data-access/repositories/UserRepository/UserRepository.ts";
 
 // Integrations: tokens and vendor-neutral ports.
 export * from "./integrations/tokens.ts";
 export * from "./integrations/auth/AuthClient.ts";
 export * from "./integrations/maps/MapsClient.ts";
 export * from "./integrations/analytics/AnalyticsClient.ts";
+export * from "./integrations/webhooks/WebhookVerifier.ts";
+export * from "./integrations/tasks/TaskQueue.ts";
