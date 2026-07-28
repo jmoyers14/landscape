@@ -21,6 +21,13 @@ WORKER_IMAGE="$REGISTRY/worker:latest"
 CLERK_SECRET_NAME="clerk-secret-key"  # Secret Manager secret holding the Clerk sk_ key
 MONGO_SECRET_NAME="mongodb-uri"       # Secret Manager secret holding the Atlas connection string
 MAPS_SECRET_NAME="google-maps-api-key" # Secret Manager secret holding the Google Maps key (optional)
+CLERK_WEBHOOK_SECRET_NAME="clerk-webhook-signing-secret" # Secret Manager secret holding the whsec_ signing key
+
+# Cloud Tasks: one queue per job kind (names MUST match packages/worker/src/jobs/jobTypes.ts)
+# and the identity Cloud Tasks stamps its OIDC callbacks with.
+ORG_SEED_QUEUE="org-seed-queue"
+USER_SYNC_QUEUE="user-sync-queue"
+TASKS_INVOKER_SA="cloud-tasks-invoker@${PROJECT}.iam.gserviceaccount.com"
 
 # ── Safety guard ─────────────────────────────────────────────────────────────
 # Activate the personal configuration and refuse to proceed unless the active
@@ -116,12 +123,14 @@ PROJECT_NUMBER=$(gcloud projects describe "$PROJECT" --format "value(projectNumb
 RUNTIME_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
 
 ensure_secret() {
-  local secret_name="$1" env_var="$2"
+  # Third arg is the .env file to source the value from on first creation,
+  # defaulting to the API's (worker-owned secrets pass packages/worker/.env).
+  local secret_name="$1" env_var="$2" env_file="${3:-packages/api/.env}"
   if ! gcloud secrets describe "$secret_name" --project "$PROJECT" >/dev/null 2>&1; then
     echo "Creating Secret Manager secret: $secret_name"
-    local value="${!env_var:-$(grep -E "^$env_var=" packages/api/.env 2>/dev/null | head -1 | cut -d= -f2- || true)}"
+    local value="${!env_var:-$(grep -E "^$env_var=" "$env_file" 2>/dev/null | head -1 | cut -d= -f2- || true)}"
     if [ -z "$value" ]; then
-      echo "ERROR: secret '$secret_name' missing and $env_var not in packages/api/.env." >&2
+      echo "ERROR: secret '$secret_name' missing and $env_var not in env or $env_file." >&2
       exit 1
     fi
     printf '%s' "$value" | gcloud secrets create "$secret_name" \
@@ -193,6 +202,72 @@ echo "API deployed at: $API_URL"
 # entrypoint: it receives Clerk webhooks on /ingest/clerk and runs queued jobs
 # on /tasks/*. It talks to Mongo but has no browser caller, so it needs neither
 # the web origin nor CORS.
+
+# ── Cloud Tasks infrastructure ───────────────────────────────────────────────
+# The worker enqueues jobs to Cloud Tasks, which delivers them back to /tasks/*.
+# Set up the queues and the identity those callbacks are authenticated as.
+echo "Ensuring Cloud Tasks API + queues..."
+gcloud services enable cloudtasks.googleapis.com iamcredentials.googleapis.com \
+  --project "$PROJECT" --quiet >/dev/null
+
+for QUEUE in "$ORG_SEED_QUEUE" "$USER_SYNC_QUEUE"; do
+  if ! gcloud tasks queues describe "$QUEUE" \
+      --location "$REGION" --project "$PROJECT" >/dev/null 2>&1; then
+    echo "Creating Cloud Tasks queue: $QUEUE"
+    gcloud tasks queues create "$QUEUE" \
+      --location "$REGION" --project "$PROJECT" >/dev/null
+  fi
+done
+
+# The service account Cloud Tasks mints OIDC tokens as when it calls /tasks/*
+# back. The worker verifies each callback was issued as exactly this identity —
+# the only thing gating those endpoints on an otherwise-public service. (Idempotent.)
+if ! gcloud iam service-accounts describe "$TASKS_INVOKER_SA" \
+    --project "$PROJECT" >/dev/null 2>&1; then
+  echo "Creating Cloud Tasks invoker service account..."
+  gcloud iam service-accounts create cloud-tasks-invoker \
+    --project "$PROJECT" \
+    --display-name "Cloud Tasks OIDC invoker for the worker" >/dev/null
+fi
+
+# Three grants make OIDC-authenticated callbacks work:
+#  1. the worker's runtime SA may enqueue tasks;
+#  2. it may act AS the invoker SA (to stamp that identity onto a task's token);
+#  3. the Cloud Tasks service agent may mint tokens as the invoker SA at delivery.
+echo "Granting Cloud Tasks IAM..."
+gcloud projects add-iam-policy-binding "$PROJECT" \
+  --member "serviceAccount:$RUNTIME_SA" \
+  --role roles/cloudtasks.enqueuer --quiet >/dev/null
+
+gcloud iam service-accounts add-iam-policy-binding "$TASKS_INVOKER_SA" \
+  --project "$PROJECT" \
+  --member "serviceAccount:$RUNTIME_SA" \
+  --role roles/iam.serviceAccountUser --quiet >/dev/null
+
+# The Cloud Tasks service agent is created when the API is enabled, but can take
+# a moment to propagate — retry the token-creator grant rather than aborting the
+# whole deploy on a transient "does not exist".
+CLOUDTASKS_AGENT="service-${PROJECT_NUMBER}@gcp-sa-cloudtasks.iam.gserviceaccount.com"
+for attempt in 1 2 3 4 5; do
+  if gcloud iam service-accounts add-iam-policy-binding "$TASKS_INVOKER_SA" \
+      --project "$PROJECT" \
+      --member "serviceAccount:$CLOUDTASKS_AGENT" \
+      --role roles/iam.serviceAccountTokenCreator --quiet >/dev/null 2>&1; then
+    break
+  fi
+  if [ "$attempt" = "5" ]; then
+    echo "ERROR: could not grant token-creator to the Cloud Tasks service agent." >&2
+    echo "The agent may still be propagating after enabling the API — re-run deploy.sh shortly." >&2
+    exit 1
+  fi
+  echo "  Cloud Tasks service agent not ready; retrying ($attempt/5)..."
+  sleep 5
+done
+
+# Clerk webhook signing secret (whsec_) — verifies inbound webhook signatures.
+# Sourced from packages/worker/.env on first creation, like the other secrets.
+ensure_secret "$CLERK_WEBHOOK_SECRET_NAME" CLERK_WEBHOOK_SIGNING_SECRET packages/worker/.env
+
 echo "Building worker image..."
 docker build --platform linux/amd64 \
   --build-arg APP_VERSION="$APP_VERSION" \
@@ -205,11 +280,19 @@ echo "Pushing worker image..."
 docker push "$WORKER_IMAGE"
 docker push "$WORKER_IMAGE_SHA"
 
+# The worker needs its own URL as WORKER_URL: it's the OIDC audience the queue
+# signs callback tokens for AND the base the queue posts them to. Stable across
+# deploys, so look it up and hand it in from the first revision; a placeholder is
+# used only on the true first deploy, then corrected right after.
+EXISTING_WORKER_URL=$(gcloud run services describe "$WORKER_SERVICE" \
+  --project "$PROJECT" --region "$REGION" --format "value(status.url)" 2>/dev/null || true)
+WORKER_SELF_URL="${EXISTING_WORKER_URL:-https://placeholder.example.com}"
+
 # --allow-unauthenticated is required: Clerk's webhook sender posts to
-# /ingest/clerk with no Google credentials. IAM is not the auth gate here — the
-# svix signature check inside that route is. When /tasks/* lands it gets its own
-# guard (Cloud Tasks OIDC tokens), since that surface must NOT be callable by
-# the public internet.
+# /ingest/clerk with no Google credentials, so Cloud Run IAM can't gate the
+# service. The guards live in-app: the svix signature on /ingest/clerk, and the
+# Cloud Tasks OIDC token (verified against WORKER_URL + the invoker SA) on
+# /tasks/*.
 echo "Deploying worker to Cloud Run..."
 gcloud run deploy "$WORKER_SERVICE" \
   --image "$WORKER_IMAGE" \
@@ -217,11 +300,26 @@ gcloud run deploy "$WORKER_SERVICE" \
   --region "$REGION" \
   --allow-unauthenticated \
   --set-env-vars ENVIRONMENT=production \
-  --set-secrets "MONGODB_URI=$MONGO_SECRET_NAME:latest"
+  --set-env-vars GCP_PROJECT_ID="$PROJECT" \
+  --set-env-vars GCP_LOCATION="$REGION" \
+  --set-env-vars WORKER_URL="$WORKER_SELF_URL" \
+  --set-env-vars TASKS_INVOKER_SERVICE_ACCOUNT="$TASKS_INVOKER_SA" \
+  --set-secrets "MONGODB_URI=$MONGO_SECRET_NAME:latest,CLERK_WEBHOOK_SIGNING_SECRET=$CLERK_WEBHOOK_SECRET_NAME:latest"
 
 WORKER_URL=$(gcloud run services describe "$WORKER_SERVICE" \
   --project "$PROJECT" --region "$REGION" --format "value(status.url)")
 echo "Worker deployed at: $WORKER_URL"
+
+# First-ever deploy: the URL wasn't known at deploy time, so WORKER_URL held a
+# placeholder. Correct it now so the OIDC audience the queue signs matches what
+# the worker verifies. --update-env-vars touches only this var, leaving the
+# others and the secrets intact.
+if [ "$WORKER_URL" != "$WORKER_SELF_URL" ]; then
+  echo "Worker URL now known; setting WORKER_URL=$WORKER_URL..."
+  gcloud run services update "$WORKER_SERVICE" \
+    --project "$PROJECT" --region "$REGION" \
+    --update-env-vars WORKER_URL="$WORKER_URL"
+fi
 
 # ── Web ──────────────────────────────────────────────────────────────────────
 echo "Building web image (VITE_API_URL=$API_URL)..."
@@ -268,3 +366,8 @@ echo "Deploy complete!"
 echo "  API:    $API_URL"
 echo "  Worker: $WORKER_URL"
 echo "  Web:    $WEB_URL"
+echo ""
+echo "Clerk webhook endpoint (configure in the Clerk dashboard → Webhooks):"
+echo "  $WORKER_URL/ingest/clerk"
+echo "Then put the whsec_ signing secret Clerk shows into packages/worker/.env"
+echo "(CLERK_WEBHOOK_SIGNING_SECRET=...), update the secret, and redeploy."
