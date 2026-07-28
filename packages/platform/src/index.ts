@@ -32,3 +32,10 @@ export * from "./integrations/maps/MapsClient.ts";
 export * from "./integrations/analytics/AnalyticsClient.ts";
 export * from "./integrations/webhooks/WebhookVerifier.ts";
 export * from "./integrations/tasks/TaskQueue.ts";
+// Port + pure helpers only; the SDK-backed adapters stay off the contract barrel
+// (registered via registerWebhookCore).
+export {
+  type TaskAuthenticator,
+  extractBearerToken,
+  isTrustedTaskCaller,
+} from "./integrations/tasks/TaskAuthenticator.ts";

@@ -9,9 +9,12 @@ import { ClerkWebhookVerifier } from "./integrations/webhooks/ClerkWebhookVerifi
 import { TASKS_CONFIG_TOKEN, loadTasksConfig } from "./integrations/tasks/tasksConfig.ts";
 import { CloudTasksQueue } from "./integrations/tasks/CloudTasksQueue.ts";
 import { InlineTaskQueue } from "./integrations/tasks/InlineTaskQueue.ts";
+import { AllowAllTaskAuthenticator } from "./integrations/tasks/AllowAllTaskAuthenticator.ts";
+import { GoogleOidcTaskAuthenticator } from "./integrations/tasks/GoogleOidcTaskAuthenticator.ts";
 import {
   CLERK_WEBHOOK_VERIFIER_TOKEN,
   TASK_QUEUE_TOKEN,
+  TASK_AUTHENTICATOR_TOKEN,
 } from "./integrations/tokens.ts";
 
 /**
@@ -46,6 +49,20 @@ export function registerWebhookCore(container: DependencyContainer): void {
       return environment === "local"
         ? dependencyContainer.resolve(InlineTaskQueue)
         : dependencyContainer.resolve(CloudTasksQueue);
+    }),
+  });
+
+  // The /tasks/* guard, chosen the same way and in lockstep with the queue:
+  // local's loopback InlineTaskQueue pairs with allow-all (no token exists to
+  // check), and every real environment pairs the CloudTasksQueue with OIDC
+  // verification. Lazy, so local never has to supply the GCP tasks config the
+  // OIDC verifier reads.
+  container.register(TASK_AUTHENTICATOR_TOKEN, {
+    useFactory: instanceCachingFactory((dependencyContainer) => {
+      const { environment } = dependencyContainer.resolve<AppConfig>(APP_CONFIG_TOKEN);
+      return environment === "local"
+        ? dependencyContainer.resolve(AllowAllTaskAuthenticator)
+        : dependencyContainer.resolve(GoogleOidcTaskAuthenticator);
     }),
   });
 }

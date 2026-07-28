@@ -5,7 +5,7 @@ import { JobRunner } from "./jobs/runJob.ts";
 import {
   TASK_AUTHENTICATOR_TOKEN,
   type TaskAuthenticator,
-} from "./tasks/TaskAuthenticator.ts";
+} from "@landscape/platform";
 import { WORKER_CONFIG_TOKEN, type WorkerConfig } from "./config/workerConfig.ts";
 import {
   connectDatabase,

@@ -15,6 +15,7 @@
     "@clerk/backend": "^3.6.1",
     "@google-cloud/tasks": "^6.2.3",
     "@landscape/domain": "workspace:*",
+    "google-auth-library": "^10.9.1",
     "mongoose": "^9.7.0",
     "posthog-node": "^5.38.0",
     "reflect-metadata": "^0.2.1",

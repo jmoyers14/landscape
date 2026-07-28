@@ -6,9 +6,9 @@ import type { TaskAuthenticator } from "./TaskAuthenticator.ts";
  *
  * Safe only because it's registered ONLY when environment is local, where the
  * queue is InlineTaskQueue looping back to localhost with no token to check.
- * The composition root must never wire this outside local — see the worker
- * container, which fails closed (refuses to boot) rather than fall back to this
- * when the real OIDC verifier isn't available.
+ * The composition root (registerWebhookCore) picks this by environment, exactly
+ * as it picks InlineTaskQueue vs CloudTasksQueue — the two always agree, so an
+ * unauthenticated local caller can only reach a loopback queue.
  */
 @injectable()
 export class AllowAllTaskAuthenticator implements TaskAuthenticator {

@@ -1,6 +1,6 @@
+import type { TaskAuthenticator } from "@landscape/platform";
 import type { IngestService } from "./ingest/handler.ts";
 import type { JobRunner } from "./jobs/runJob.ts";
-import type { TaskAuthenticator } from "./tasks/TaskAuthenticator.ts";
 
 /**
  * The collaborators the router delegates to. Injected rather than resolved

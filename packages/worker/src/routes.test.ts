@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import { createRequestHandler, type RouterDeps } from "./routes.ts";
+import type { TaskAuthenticator } from "@landscape/platform";
 import type { IngestService } from "./ingest/handler.ts";
 import type { JobRunner } from "./jobs/runJob.ts";
-import type { TaskAuthenticator } from "./tasks/TaskAuthenticator.ts";
 
 /**
  * Routing is tested in isolation with fake collaborators — these assert the
