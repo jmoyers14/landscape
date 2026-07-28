@@ -1,6 +1,10 @@
 import "reflect-metadata"; // MUST be imported before any decorated class is used
 import { container as rootContainer, instanceCachingFactory } from "tsyringe";
-import { registerServerCore, registerWebhookCore } from "@landscape/platform/server";
+import { registerServerCore } from "@landscape/platform/server";
+// Imported from its own entry — NOT the /server barrel — because it statically
+// pulls the Cloud Tasks + google-auth SDKs. Keeping it off /server is what stops
+// the API (which imports /server) from bundling those and crashing at boot.
+import { registerWebhookCore } from "@landscape/platform/webhook";
 import { WORKER_CONFIG_TOKEN, loadWorkerConfig } from "./config/workerConfig.ts";
 
 /**

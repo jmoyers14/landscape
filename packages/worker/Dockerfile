@@ -1,4 +1,10 @@
-FROM oven/bun:1 AS builder
+# The worker runs from TypeScript SOURCE, not a bundle — unlike the api/web
+# images. @google-cloud/tasks is a gapic client that loads JSON config
+# (*_client_config.json) via runtime require; `bun build` doesn't emit those
+# assets, so a bundled worker crashes at boot with "Cannot find module
+# cloud_tasks_client_config.json". Running from source with node_modules present
+# sidesteps bundling entirely — this is exactly how the worker runs in local dev.
+FROM oven/bun:1
 WORKDIR /app
 
 # Copy workspace manifests first for cached installs
@@ -11,17 +17,13 @@ COPY packages/platform/package.json packages/platform/
 
 RUN bun install --frozen-lockfile
 
-# Build the worker (bundles @landscape/domain and @landscape/platform from
-# source, so copy them too)
+# Source for the worker and the two packages it imports. node_modules (from the
+# install above) stays in place, so @google-cloud/tasks resolves its JSON config
+# the normal way.
 COPY tsconfig.json ./
 COPY packages/domain/ packages/domain/
 COPY packages/platform/ packages/platform/
 COPY packages/worker/ packages/worker/
-RUN bun run build:worker
-
-FROM oven/bun:1-slim
-WORKDIR /app
-COPY --from=builder /app/packages/worker/dist ./dist
 
 # Build stamp (from deploy.sh) baked in as runtime env so logs and job records
 # trace back to exactly which build processed them.
@@ -35,4 +37,4 @@ ENV BUILT_AT=$BUILT_AT
 # Cloud Run injects PORT; default to 8080 for local docker runs
 ENV PORT=8080
 EXPOSE 8080
-CMD ["bun", "run", "dist/index.js"]
+CMD ["bun", "run", "packages/worker/src/index.ts"]
