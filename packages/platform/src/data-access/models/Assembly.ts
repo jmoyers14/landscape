@@ -58,6 +58,12 @@ const assemblySchema = new Schema(
     sortOrder: { type: Number, required: true, default: 0 },
     active: { type: Boolean, required: true, default: true },
     source: { type: String, required: true, enum: ASSEMBLY_SOURCES, default: "custom" },
+    // Stable identity of the starter assembly this row was seeded from, or null
+    // for custom assemblies. `source` records the coarse provenance; `seedKey`
+    // pins WHICH starter it is (source "starter" is shared by all of them), which
+    // is what the seed upsert converges on. Persistence-only — never mapped onto
+    // the Assembly entity, so it stays out of the tRPC contract.
+    seedKey: { type: String, default: null },
     drivers: { type: [driverSchema], default: [] },
     tasks: { type: [taskSchema], default: [] },
     lines: { type: [lineSchema], default: [] },
@@ -66,6 +72,13 @@ const assemblySchema = new Schema(
 );
 
 assemblySchema.index({ orgId: 1, sortOrder: 1 });
+// Unique per org for seeded rows only (partial index on the string values), so
+// custom assemblies (seedKey null) are exempt and concurrent re-seeds can't
+// duplicate a starter.
+assemblySchema.index(
+  { orgId: 1, seedKey: 1 },
+  { unique: true, partialFilterExpression: { seedKey: { $type: "string" } } },
+);
 
 // Inferred document shape — the single source of truth for the repository's
 // mapper. Embedded driver/line subdocs are inferred from their schemas too.
