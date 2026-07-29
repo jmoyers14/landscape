@@ -32,6 +32,10 @@ export * from "./integrations/maps/MapsClient.ts";
 export * from "./integrations/analytics/AnalyticsClient.ts";
 export * from "./integrations/webhooks/WebhookVerifier.ts";
 export * from "./integrations/tasks/TaskQueue.ts";
+
+// Seed: the port + token only (the impl and starter content are server-only,
+// registered via registerServerCore).
+export { type SeedService, SEED_SERVICE_TOKEN } from "./seed/SeedService.ts";
 // Port + pure helpers only; the SDK-backed adapters stay off the contract barrel
 // (registered via registerWebhookCore).
 export {

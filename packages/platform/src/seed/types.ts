@@ -20,6 +20,13 @@ export interface SeedMaterial {
 
 /** One assembly in the starter catalog: its materials + how to build it. */
 export interface SeedAssembly {
+  /**
+   * Stable identity of this starter assembly, unique across the catalog. It's
+   * the convergence key SeedService upserts on — re-seeding an org matches the
+   * existing row by (orgId, seedKey) rather than duplicating it. Distinct from
+   * the assembly's display `name`, which can change without breaking the match.
+   */
+  seedKey: string;
   materials: SeedMaterial[];
   build: (materialIdBySlug: Record<string, string>) => AssemblyInput;
 }

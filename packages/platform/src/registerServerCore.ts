@@ -38,6 +38,8 @@ import {
 import { ClerkClient } from "./integrations/auth/ClerkClient.ts";
 import { GoogleMapsClient } from "./integrations/maps/GoogleMapsClient.ts";
 import { PostHogClient } from "./integrations/analytics/PostHogClient.ts";
+import { SEED_SERVICE_TOKEN } from "./seed/SeedService.ts";
+import { SeedServiceImpl } from "./seed/SeedServiceImpl.ts";
 
 /**
  * Wires the shared backend (config, repositories, integration adapters) into a
@@ -89,4 +91,9 @@ export function registerServerCore(container: DependencyContainer): void {
   container.registerSingleton(AUTH_CLIENT_TOKEN, ClerkClient);
   container.registerSingleton(MAPS_CLIENT_TOKEN, GoogleMapsClient);
   container.registerSingleton(ANALYTICS_CLIENT_TOKEN, PostHogClient);
+
+  // SeedService is a shared platform capability (real logic over the catalog
+  // repos), resolved by both the worker's org.created handler and the dev seed
+  // CLI — hence in the shared core rather than an entrypoint.
+  container.registerSingleton(SEED_SERVICE_TOKEN, SeedServiceImpl);
 }

@@ -13,12 +13,12 @@ import { SEATING_WALL_MATERIALS, buildSeatingWallAssembly } from "./seatingWall.
  * assemblies against the resulting slug→id map.
  */
 export const STARTER_ASSEMBLIES: SeedAssembly[] = [
-  { materials: DRAINAGE_MATERIALS, build: buildDrainageAssembly },
-  { materials: IRRIGATION_MATERIALS, build: buildIrrigationAssembly },
-  { materials: SOIL_PREP_MATERIALS, build: buildSoilPrepAssembly },
-  { materials: PLANTING_MATERIALS, build: buildPlantingAssembly },
-  { materials: CONCRETE_MATERIALS, build: buildConcreteAssembly },
-  { materials: SEATING_WALL_MATERIALS, build: buildSeatingWallAssembly },
+  { seedKey: "drainage", materials: DRAINAGE_MATERIALS, build: buildDrainageAssembly },
+  { seedKey: "irrigation", materials: IRRIGATION_MATERIALS, build: buildIrrigationAssembly },
+  { seedKey: "soil-prep", materials: SOIL_PREP_MATERIALS, build: buildSoilPrepAssembly },
+  { seedKey: "planting", materials: PLANTING_MATERIALS, build: buildPlantingAssembly },
+  { seedKey: "concrete", materials: CONCRETE_MATERIALS, build: buildConcreteAssembly },
+  { seedKey: "seating-wall", materials: SEATING_WALL_MATERIALS, build: buildSeatingWallAssembly },
   // NOTE: Concrete's "Finishers" line (a flat $350 × 8 sub-contract fee) is
   // omitted pending clarification from the business owner — see the TODO in
   // concrete.ts. The concrete pump's setup fee, once also considered "flat",
