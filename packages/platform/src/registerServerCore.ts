@@ -17,6 +17,9 @@ import {
   MATERIAL_REPOSITORY_TOKEN,
   ASSEMBLY_REPOSITORY_TOKEN,
   PRICING_SETTINGS_REPOSITORY_TOKEN,
+  WEBHOOK_EVENT_REPOSITORY_TOKEN,
+  WEBHOOK_JOB_REPOSITORY_TOKEN,
+  USER_REPOSITORY_TOKEN,
 } from "./data-access/tokens.ts";
 import { ClientRepositoryImpl } from "./data-access/repositories/ClientRepository/ClientRepositoryImpl.ts";
 import { ProjectRepositoryImpl } from "./data-access/repositories/ProjectRepository/ProjectRepositoryImpl.ts";
@@ -24,6 +27,9 @@ import { EstimateRepositoryImpl } from "./data-access/repositories/EstimateRepos
 import { MaterialRepositoryImpl } from "./data-access/repositories/MaterialRepository/MaterialRepositoryImpl.ts";
 import { AssemblyRepositoryImpl } from "./data-access/repositories/AssemblyRepository/AssemblyRepositoryImpl.ts";
 import { PricingSettingsRepositoryImpl } from "./data-access/repositories/PricingSettingsRepository/PricingSettingsRepositoryImpl.ts";
+import { WebhookEventRepositoryImpl } from "./data-access/repositories/WebhookEventRepository/WebhookEventRepositoryImpl.ts";
+import { WebhookJobRepositoryImpl } from "./data-access/repositories/WebhookJobRepository/WebhookJobRepositoryImpl.ts";
+import { UserRepositoryImpl } from "./data-access/repositories/UserRepository/UserRepositoryImpl.ts";
 import {
   AUTH_CLIENT_TOKEN,
   MAPS_CLIENT_TOKEN,
@@ -32,6 +38,8 @@ import {
 import { ClerkClient } from "./integrations/auth/ClerkClient.ts";
 import { GoogleMapsClient } from "./integrations/maps/GoogleMapsClient.ts";
 import { PostHogClient } from "./integrations/analytics/PostHogClient.ts";
+import { SEED_SERVICE_TOKEN } from "./seed/SeedService.ts";
+import { SeedServiceImpl } from "./seed/SeedServiceImpl.ts";
 
 /**
  * Wires the shared backend (config, repositories, integration adapters) into a
@@ -70,8 +78,22 @@ export function registerServerCore(container: DependencyContainer): void {
     PRICING_SETTINGS_REPOSITORY_TOKEN,
     PricingSettingsRepositoryImpl,
   );
+  container.registerSingleton(
+    WEBHOOK_EVENT_REPOSITORY_TOKEN,
+    WebhookEventRepositoryImpl,
+  );
+  container.registerSingleton(
+    WEBHOOK_JOB_REPOSITORY_TOKEN,
+    WebhookJobRepositoryImpl,
+  );
+  container.registerSingleton(USER_REPOSITORY_TOKEN, UserRepositoryImpl);
 
   container.registerSingleton(AUTH_CLIENT_TOKEN, ClerkClient);
   container.registerSingleton(MAPS_CLIENT_TOKEN, GoogleMapsClient);
   container.registerSingleton(ANALYTICS_CLIENT_TOKEN, PostHogClient);
+
+  // SeedService is a shared platform capability (real logic over the catalog
+  // repos), resolved by both the worker's org.created handler and the dev seed
+  // CLI — hence in the shared core rather than an entrypoint.
+  container.registerSingleton(SEED_SERVICE_TOKEN, SeedServiceImpl);
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import type { Material } from "@landscape/platform";
+import type { Material } from "@landscape/domain";
 import { generateAssemblyLines, priceLines } from "@landscape/domain";
 import { STARTER_ASSEMBLIES } from "./catalog.ts";
 import { STARTER_PRICING } from "./pricing.ts";

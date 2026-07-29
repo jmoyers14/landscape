@@ -23,6 +23,9 @@ export const makeMaterialRepoMock = (
   }),
   update: mock(async () => null),
   deleteById: mock(async () => {}),
+  upsertBySeedKey: mock(async () => {
+    throw new Error("not stubbed: MaterialRepository.upsertBySeedKey");
+  }),
   ...over,
 });
 
@@ -36,6 +39,9 @@ export const makeAssemblyRepoMock = (
   }),
   update: mock(async () => null),
   deleteById: mock(async () => {}),
+  upsertBySeedKey: mock(async () => {
+    throw new Error("not stubbed: AssemblyRepository.upsertBySeedKey");
+  }),
   ...over,
 });
 

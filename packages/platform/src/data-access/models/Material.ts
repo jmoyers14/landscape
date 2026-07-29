@@ -15,11 +15,24 @@ const materialSchema = new Schema(
     deliveryCost: { type: Number, required: true, min: 0, default: 0 },
     taxable: { type: Boolean, required: true, default: true },
     active: { type: Boolean, required: true, default: true },
+    // Stable identity of the starter-catalog item this row was seeded from, or
+    // null for org-authored ("custom") materials. Persistence-only: never mapped
+    // onto the Material entity, so it stays out of the tRPC contract. It's the
+    // convergence key — SeedService upserts by (orgId, seedKey) so re-seeding an
+    // org updates its starter rows in place instead of duplicating them.
+    seedKey: { type: String, default: null },
   },
   { timestamps: true },
 );
 
 materialSchema.index({ orgId: 1, category: 1, name: 1 });
+// Unique per org for seeded rows only — a partial index on the string values, so
+// the many custom materials (seedKey null) are exempt. This is what makes the
+// seed upsert race-safe: two concurrent re-seeds can't create duplicate starters.
+materialSchema.index(
+  { orgId: 1, seedKey: 1 },
+  { unique: true, partialFilterExpression: { seedKey: { $type: "string" } } },
+);
 
 // The document shape, inferred from the schema — the single source of truth the
 // repository maps from. We add the keys Mongoose manages itself (`_id` and the

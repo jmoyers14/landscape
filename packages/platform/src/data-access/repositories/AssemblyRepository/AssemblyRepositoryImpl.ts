@@ -40,6 +40,21 @@ export class AssemblyRepositoryImpl implements AssemblyRepository {
   async deleteById(orgId: string, id: string): Promise<void> {
     await AssemblyModel.deleteOne({ _id: id, orgId });
   }
+
+  async upsertBySeedKey(
+    orgId: string,
+    seedKey: string,
+    data: AssemblyInput,
+  ): Promise<Assembly> {
+    const doc = await AssemblyModel.findOneAndUpdate(
+      { orgId, seedKey },
+      // $set converges an existing seeded row to the current starter definition;
+      // $setOnInsert stamps the immutable identity on first creation.
+      { $set: data, $setOnInsert: { orgId, seedKey } },
+      { upsert: true, returnDocument: "after" },
+    ).lean();
+    return toAssembly(doc);
+  }
 }
 
 function toAssembly(doc: AssemblyDoc): Assembly {

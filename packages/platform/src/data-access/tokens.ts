@@ -9,3 +9,6 @@ export const ESTIMATE_REPOSITORY_TOKEN = "EstimateRepository";
 export const MATERIAL_REPOSITORY_TOKEN = "MaterialRepository";
 export const ASSEMBLY_REPOSITORY_TOKEN = "AssemblyRepository";
 export const PRICING_SETTINGS_REPOSITORY_TOKEN = "PricingSettingsRepository";
+export const WEBHOOK_EVENT_REPOSITORY_TOKEN = "WebhookEventRepository";
+export const WEBHOOK_JOB_REPOSITORY_TOKEN = "WebhookJobRepository";
+export const USER_REPOSITORY_TOKEN = "UserRepository";

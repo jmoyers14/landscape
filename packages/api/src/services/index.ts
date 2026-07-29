@@ -1,5 +1,5 @@
 import "reflect-metadata"; // MUST be imported before any decorated class is used
-import { container, instanceCachingFactory } from "tsyringe";
+import { container as rootContainer, instanceCachingFactory } from "tsyringe";
 import { registerServerCore } from "@landscape/platform/server";
 import { SERVER_CONFIG_TOKEN, loadServerConfig } from "../config/serverConfig.ts";
 import {
@@ -20,6 +20,12 @@ import { AddressServiceImpl } from "./AddressService/AddressServiceImpl.ts";
 import { PricingSettingsServiceImpl } from "./PricingSettingsService/PricingSettingsServiceImpl.ts";
 import { MaterialServiceImpl } from "./MaterialService/MaterialServiceImpl.ts";
 import { AssemblyServiceImpl } from "./AssemblyService/AssemblyServiceImpl.ts";
+
+// This entrypoint's composition root. Registrations go on a *child* container
+// rather than tsyringe's global one so two entrypoints in the same process (or
+// test run) can't see each other's bindings — the API's request-scoped services
+// and the worker's job handlers stay disjoint.
+const container = rootContainer.createChildContainer();
 
 // Wire the shared backend (config, repositories, integration adapters) into the
 // container, then register this entrypoint's request-scoped services on top.

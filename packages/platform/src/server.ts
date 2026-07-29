@@ -13,3 +13,9 @@ export { parseConfig } from "./config/parseConfig.ts";
 // rather than on the contract barrel.
 export { DATABASE_CONFIG_TOKEN } from "./data-access/databaseConfig.ts";
 export type { DatabaseConfig } from "./data-access/databaseConfig.ts";
+// registerWebhookCore is deliberately NOT re-exported here. It statically pulls
+// the Cloud Tasks + google-auth SDK adapters, and those must never enter a
+// consumer that only wants registerServerCore — the API bundles this barrel, and
+// a re-export here dragged the whole gapic client (and its runtime-only JSON
+// config, which bun can't bundle) into the API image, crashing it at boot. The
+// worker imports registerWebhookCore from "@landscape/platform/webhook" instead.

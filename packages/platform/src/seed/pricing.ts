@@ -1,4 +1,4 @@
-import type { PricingSettings } from "@landscape/platform";
+import type { PricingSettings } from "@landscape/domain";
 
 /**
  * The starter pricing settings seeded for a new org, transcribed from the

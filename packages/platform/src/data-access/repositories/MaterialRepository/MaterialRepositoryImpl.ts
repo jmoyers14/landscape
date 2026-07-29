@@ -53,6 +53,21 @@ export class MaterialRepositoryImpl implements MaterialRepository {
   async deleteById(orgId: string, id: string): Promise<void> {
     await MaterialModel.deleteOne({ _id: id, orgId });
   }
+
+  async upsertBySeedKey(
+    orgId: string,
+    seedKey: string,
+    data: MaterialInput,
+  ): Promise<Material> {
+    const doc = await MaterialModel.findOneAndUpdate(
+      { orgId, seedKey },
+      // $set the seed data every time so a re-seed converges an existing row to
+      // the current starter values; $setOnInsert stamps the immutable identity.
+      { $set: data, $setOnInsert: { orgId, seedKey } },
+      { upsert: true, returnDocument: "after" },
+    ).lean();
+    return toMaterial(doc);
+  }
 }
 
 function toMaterial(doc: MaterialDoc): Material {
