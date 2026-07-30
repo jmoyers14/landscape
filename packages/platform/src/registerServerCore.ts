@@ -40,6 +40,8 @@ import { GoogleMapsClient } from "./integrations/maps/GoogleMapsClient.ts";
 import { PostHogClient } from "./integrations/analytics/PostHogClient.ts";
 import { SEED_SERVICE_TOKEN } from "./seed/SeedService.ts";
 import { SeedServiceImpl } from "./seed/SeedServiceImpl.ts";
+import { LOGGER_TOKEN } from "./logging/Logger.ts";
+import { rootLogger } from "./logging/pinoLogger.ts";
 
 /**
  * Wires the shared backend (config, repositories, integration adapters) into a
@@ -53,6 +55,11 @@ import { SeedServiceImpl } from "./seed/SeedServiceImpl.ts";
  * maps env — each process only pays for the config it actually uses.
  */
 export function registerServerCore(container: DependencyContainer): void {
+  // The root logger is a ready-made value (no env to validate), so registered
+  // as-is rather than via a factory. Services/adapters inject LOGGER_TOKEN;
+  // entrypoints and request/job scopes derive children from it.
+  container.register(LOGGER_TOKEN, { useValue: rootLogger });
+
   container.register(APP_CONFIG_TOKEN, {
     useFactory: instanceCachingFactory(() => loadAppConfig()),
   });

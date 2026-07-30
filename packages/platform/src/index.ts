@@ -36,6 +36,11 @@ export * from "./integrations/tasks/TaskQueue.ts";
 // Seed: the port + token only (the impl and starter content are server-only,
 // registered via registerServerCore).
 export { type SeedService, SEED_SERVICE_TOKEN } from "./seed/SeedService.ts";
+
+// Logging: the port + token only. The pino-backed root logger is server-only
+// (exported from ./server.ts) so pino never reaches the web client's type graph;
+// the Logger interface is what rides on the tRPC Context.
+export { type Logger, type LogFn, LOGGER_TOKEN } from "./logging/Logger.ts";
 // Port + pure helpers only; the SDK-backed adapters stay off the contract barrel
 // (registered via registerWebhookCore).
 export {
