@@ -1,4 +1,4 @@
-import type { AnalyticsClient, AuthIdentity } from "@landscape/platform";
+import type { AnalyticsClient, AuthIdentity, Logger } from "@landscape/platform";
 import type { ClientService } from "./services/ClientService/ClientService.ts";
 import type { ProjectService } from "./services/ProjectService/ProjectService.ts";
 import type { EstimateService } from "./services/EstimateService/EstimateService.ts";
@@ -31,6 +31,13 @@ export interface Context {
   analytics: AnalyticsClient;
   /** Process-wide app identity (environment + build stamp). Read by the system router. */
   appConfig: AppConfig;
+  /**
+   * Request-scoped logger — the root logger with requestId/orgId/userId already
+   * bound, so every line it writes correlates to this request. Typed as the
+   * vendor-neutral Logger port, so the web client (which resolves this Context
+   * via AppRouter) never sees pino.
+   */
+  log: Logger;
   services: {
     clientService: ClientService;
     projectService: ProjectService;

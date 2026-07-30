@@ -16,6 +16,10 @@ export const pinoOptions: pino.LoggerOptions = {
   formatters: {
     level: (label) => ({ severity: label.toUpperCase() }),
   },
+  // Serialize an `err` binding into { type, message, stack } so a logged error
+  // carries its stack trace — what Cloud Logging shows and Error Reporting groups
+  // on. Usage: log.error({ err }, "message").
+  serializers: { err: pino.stdSerializers.err },
   // Drop pid/hostname — Cloud Run attaches its own resource labels, so these are
   // just noise per line.
   base: undefined,

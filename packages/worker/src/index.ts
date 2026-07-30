@@ -10,6 +10,7 @@ import { WORKER_CONFIG_TOKEN, type WorkerConfig } from "./config/workerConfig.ts
 import {
   connectDatabase,
   DATABASE_CONFIG_TOKEN,
+  rootLogger,
   type DatabaseConfig,
 } from "@landscape/platform/server";
 
@@ -26,12 +27,16 @@ import {
  * `jobs/handlers/` and, if they need an inbound trigger, new routes — no new
  * package. See README.md.
  */
+// A crash anywhere leaves a structured line before the process dies, so Cloud
+// Run / Error Reporting has something to show. Registered before boot.
+installGlobalErrorHandlers();
+
 const main = async (): Promise<void> => {
   const { port } = container.resolve<WorkerConfig>(WORKER_CONFIG_TOKEN);
   const { uri } = container.resolve<DatabaseConfig>(DATABASE_CONFIG_TOKEN);
 
   await connectDatabase(uri);
-  console.log("Connected to MongoDB");
+  rootLogger.info("connected to MongoDB");
 
   // Resolve the route collaborators once at boot. Resolving the authenticator
   // here is also what makes a misconfigured non-local deploy fail fast: the
@@ -47,14 +52,14 @@ const main = async (): Promise<void> => {
     fetch: handleRequest,
   });
 
-  console.log(`Worker listening on http://localhost:${server.port}`);
+  rootLogger.info({ port: server.port }, "worker listening");
 
   // Cloud Run sends SIGTERM before stopping the instance. Stop accepting new
   // requests but let in-flight jobs finish — a job killed mid-write would be
   // redelivered by Cloud Tasks and re-run, which only the idempotent handlers
   // can absorb safely.
   const shutdown = async (signal: string): Promise<void> => {
-    console.log(`Received ${signal}, draining…`);
+    rootLogger.info({ signal }, "draining");
     await server.stop(false);
     process.exit(0);
   };
@@ -62,7 +67,18 @@ const main = async (): Promise<void> => {
   process.on("SIGINT", () => void shutdown("SIGINT"));
 };
 
+function installGlobalErrorHandlers(): void {
+  process.on("uncaughtException", (err) => {
+    rootLogger.fatal({ err }, "uncaught exception");
+    process.exit(1);
+  });
+  process.on("unhandledRejection", (reason) => {
+    rootLogger.fatal({ err: reason }, "unhandled rejection");
+    process.exit(1);
+  });
+}
+
 main().catch((error) => {
-  console.error("Failed to start worker:", error);
+  rootLogger.fatal({ err: error }, "failed to start worker");
   process.exit(1);
 });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import type {
+  Logger,
   WebhookEvent,
   WebhookEventRepository,
   WebhookJob,
@@ -9,6 +10,16 @@ import type {
 import { JobRunner } from "./runJob.ts";
 import type { WebhookHandlerRegistry } from "./registry.ts";
 import type { WebhookHandler } from "./WebhookHandler.ts";
+
+// The runner logs; these tests assert behaviour, not log output, so swallow it.
+const noopLogger: Logger = {
+  debug: () => {},
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+  fatal: () => {},
+  child: () => noopLogger,
+};
 
 const JOB_TYPE = "syncUser";
 
@@ -98,7 +109,7 @@ const validKey = { source: "clerk", sourceEventId: "msg_1" };
 describe("JobRunner", () => {
   it("runs the handler and marks the job succeeded (200)", async () => {
     const jobs = new FakeJobRepository(makeJob());
-    const runner = new JobRunner(eventRepo(), jobs, registryWith(okHandler));
+    const runner = new JobRunner(eventRepo(), jobs, registryWith(okHandler), noopLogger);
 
     const result = await runner.run(JOB_TYPE, taskRequest(validKey));
 
@@ -108,7 +119,7 @@ describe("JobRunner", () => {
 
   it("marks failed and returns 500 (retry) when the handler throws", async () => {
     const jobs = new FakeJobRepository(makeJob());
-    const runner = new JobRunner(eventRepo(), jobs, registryWith(throwingHandler));
+    const runner = new JobRunner(eventRepo(), jobs, registryWith(throwingHandler), noopLogger);
 
     const result = await runner.run(JOB_TYPE, taskRequest(validKey));
 
@@ -118,7 +129,7 @@ describe("JobRunner", () => {
 
   it("acks an already-succeeded job without re-running it (200)", async () => {
     const jobs = new FakeJobRepository(makeJob({ status: "succeeded", attempts: 1 }));
-    const runner = new JobRunner(eventRepo(), jobs, registryWith(okHandler));
+    const runner = new JobRunner(eventRepo(), jobs, registryWith(okHandler), noopLogger);
 
     const result = await runner.run(JOB_TYPE, taskRequest(validKey));
 
@@ -129,7 +140,7 @@ describe("JobRunner", () => {
 
   it("acks a malformed task payload as poison (200), touching no job", async () => {
     const jobs = new FakeJobRepository(makeJob());
-    const runner = new JobRunner(eventRepo(), jobs, registryWith(okHandler));
+    const runner = new JobRunner(eventRepo(), jobs, registryWith(okHandler), noopLogger);
 
     const result = await runner.run(JOB_TYPE, taskRequest({ nonsense: true }));
 
@@ -139,7 +150,7 @@ describe("JobRunner", () => {
 
   it("acks poison (200) and records failure when no handler is registered", async () => {
     const jobs = new FakeJobRepository(makeJob());
-    const runner = new JobRunner(eventRepo(), jobs, registryWith(null));
+    const runner = new JobRunner(eventRepo(), jobs, registryWith(null), noopLogger);
 
     const result = await runner.run(JOB_TYPE, taskRequest(validKey));
 
@@ -149,7 +160,7 @@ describe("JobRunner", () => {
 
   it("acks (200) when the job row can't be found", async () => {
     const jobs = new FakeJobRepository(null);
-    const runner = new JobRunner(eventRepo(), jobs, registryWith(okHandler));
+    const runner = new JobRunner(eventRepo(), jobs, registryWith(okHandler), noopLogger);
 
     const result = await runner.run(JOB_TYPE, taskRequest(validKey));
 
@@ -159,7 +170,7 @@ describe("JobRunner", () => {
 
   it("marks failed and acks (200) when the raw event is missing", async () => {
     const jobs = new FakeJobRepository(makeJob());
-    const runner = new JobRunner(eventRepo(null), jobs, registryWith(okHandler));
+    const runner = new JobRunner(eventRepo(null), jobs, registryWith(okHandler), noopLogger);
 
     const result = await runner.run(JOB_TYPE, taskRequest(validKey));
 

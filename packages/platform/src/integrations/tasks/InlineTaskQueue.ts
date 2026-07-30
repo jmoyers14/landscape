@@ -1,5 +1,7 @@
 import { inject, injectable } from "tsyringe";
 import { APP_CONFIG_TOKEN, type AppConfig } from "../../config/appConfig.ts";
+import { LOGGER_TOKEN } from "../../logging/Logger.ts";
+import type { Logger } from "../../logging/Logger.ts";
 import type { TaskQueue, TaskRequest } from "./TaskQueue.ts";
 
 /**
@@ -27,6 +29,8 @@ export class InlineTaskQueue implements TaskQueue {
   constructor(
     @inject(APP_CONFIG_TOKEN)
     private readonly appConfig: AppConfig,
+    @inject(LOGGER_TOKEN)
+    private readonly logger: Logger,
   ) {}
 
   async enqueue(request: TaskRequest): Promise<void> {
@@ -48,7 +52,10 @@ export class InlineTaskQueue implements TaskQueue {
       headers: { "content-type": "application/json" },
       body: JSON.stringify(request.payload),
     }).catch((error) => {
-      console.error(`[InlineTaskQueue] failed to deliver ${request.jobType}:`, error);
+      this.logger.error(
+        { err: error, jobType: request.jobType },
+        "InlineTaskQueue failed to deliver",
+      );
     });
   }
 }

@@ -5,6 +5,7 @@ import { SEED_SERVICE_TOKEN, type SeedService } from "@landscape/platform";
 import {
   connectDatabase,
   DATABASE_CONFIG_TOKEN,
+  rootLogger,
   type DatabaseConfig,
 } from "@landscape/platform/server";
 
@@ -28,10 +29,9 @@ if (!orgId) {
 
 const { uri } = container.resolve<DatabaseConfig>(DATABASE_CONFIG_TOKEN);
 await connectDatabase(uri);
-console.log("Connected to MongoDB");
 
 const seedService = container.resolve<SeedService>(SEED_SERVICE_TOKEN);
 await seedService.resetOrgCatalog(orgId);
 
-console.log(`Reset + seeded starter catalog for org ${orgId}`);
+rootLogger.info({ orgId }, "reset + seeded starter catalog");
 await mongoose.disconnect();

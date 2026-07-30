@@ -10,7 +10,12 @@ import {
   MATERIAL_SERVICE_TOKEN,
   ASSEMBLY_SERVICE_TOKEN,
 } from "./services/index.ts";
-import { ANALYTICS_CLIENT_TOKEN, APP_CONFIG_TOKEN } from "@landscape/platform";
+import {
+  ANALYTICS_CLIENT_TOKEN,
+  APP_CONFIG_TOKEN,
+  LOGGER_TOKEN,
+} from "@landscape/platform";
+import type { Logger } from "@landscape/platform";
 import type { ClientService } from "./services/ClientService/ClientService.ts";
 import type { ProjectService } from "./services/ProjectService/ProjectService.ts";
 import type { EstimateService } from "./services/EstimateService/EstimateService.ts";
@@ -33,8 +38,19 @@ export async function createContext(
   const authService = container.resolve<AuthService>(AUTH_SERVICE_TOKEN);
   const auth = await authService.authenticate(opts.req.headers.authorization);
 
+  // One correlating id per request, plus the caller's org/user once known, plus
+  // the GCP trace id (the part before "/" in X-Cloud-Trace-Context) so a
+  // request's log lines group together in Cloud Logging.
+  const log = container.resolve<Logger>(LOGGER_TOKEN).child({
+    requestId: crypto.randomUUID(),
+    orgId: auth?.orgId ?? null,
+    userId: auth?.userId ?? null,
+    trace: traceIdFrom(opts.req.headers["x-cloud-trace-context"]),
+  });
+
   return {
     auth,
+    log,
     analytics: container.resolve<AnalyticsClient>(ANALYTICS_CLIENT_TOKEN),
     appConfig: container.resolve<AppConfig>(APP_CONFIG_TOKEN),
     services: {
@@ -55,4 +71,15 @@ export async function createContext(
       ),
     },
   };
+}
+
+/**
+ * The trace id from an `X-Cloud-Trace-Context` header (`TRACE_ID/SPAN_ID;o=1`),
+ * or null. Attached as a plain field for now; full Cloud Trace correlation would
+ * emit `logging.googleapis.com/trace: projects/<id>/traces/<traceId>`, which
+ * needs the project id — a later refinement.
+ */
+function traceIdFrom(header: string | string[] | undefined): string | null {
+  const value = Array.isArray(header) ? header[0] : header;
+  return value ? (value.split("/")[0] ?? null) : null;
 }

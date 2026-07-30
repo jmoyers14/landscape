@@ -1,7 +1,9 @@
 import { inject, injectable } from "tsyringe";
 import {
+  LOGGER_TOKEN,
   WEBHOOK_EVENT_REPOSITORY_TOKEN,
   WEBHOOK_JOB_REPOSITORY_TOKEN,
+  type Logger,
   type WebhookEventRepository,
   type WebhookJobRepository,
 } from "@landscape/platform";
@@ -40,55 +42,66 @@ export class JobRunner {
     @inject(WEBHOOK_JOB_REPOSITORY_TOKEN)
     private readonly jobs: WebhookJobRepository,
     private readonly registry: WebhookHandlerRegistry,
+    @inject(LOGGER_TOKEN)
+    private readonly logger: Logger,
   ) {}
 
   async run(jobType: string, request: Request): Promise<JobResult> {
     const parsed = taskKeySchema.safeParse(await readJson(request));
     if (!parsed.success) {
       // Nothing addressable — can't even find the job. Poison: ack and drop.
+      this.logger.warn({ jobType }, "task with malformed payload; acking");
       return { status: 200, body: { error: "malformed task payload" } };
     }
     const { source, sourceEventId } = parsed.data;
+
+    // Job-scoped logger: every line for this job carries its identity so a job's
+    // whole lifecycle correlates in Cloud Logging.
+    const log = this.logger.child({ jobType, source, sourceEventId });
 
     const job = await this.jobs.findByJobKey(source, sourceEventId, jobType);
     if (!job) {
       // The pending row is written before the task is enqueued, so this
       // shouldn't happen. Ack rather than retry forever against a row that isn't
       // coming; the absence is logged for investigation.
-      console.error(
-        `[runJob] no job row for ${source}/${sourceEventId}/${jobType}; acking`,
-      );
+      log.error("no job row for task; acking");
       return { status: 200, body: { error: "job not found" } };
     }
 
     if (job.status === "succeeded") {
+      log.info("job already succeeded; acking redelivery");
       return { status: 200, body: { status: "already-succeeded" } };
     }
 
     const handler = this.registry.get(jobType);
     if (!handler) {
+      log.error("no handler registered for job type; marking failed");
       await this.jobs.markFailed(job.id, `no handler registered for ${jobType}`);
       return { status: 200, body: { error: `unknown job type ${jobType}` } };
     }
 
     const event = await this.events.findBySourceEventId(source, sourceEventId);
     if (!event) {
+      log.error("raw event missing; marking failed");
       await this.jobs.markFailed(job.id, "raw event missing");
       return { status: 200, body: { error: "raw event missing" } };
     }
 
     // Count the run before doing the work, so `attempts` reflects reality even
     // if the handler hangs or the instance dies mid-run.
-    await this.jobs.markRunning(job.id);
+    const running = await this.jobs.markRunning(job.id);
+    const attempt = running?.attempts ?? job.attempts + 1;
 
     try {
       await handler.handle(event);
       await this.jobs.markSucceeded(job.id);
+      log.info({ attempt }, "job succeeded");
       return { status: 200, body: { status: "succeeded", jobType } };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       await this.jobs.markFailed(job.id, message);
       // 500 → Cloud Tasks retries per the queue's policy.
+      log.error({ err: error, attempt }, "job failed; will retry");
       return { status: 500, body: { error: message } };
     }
   }
