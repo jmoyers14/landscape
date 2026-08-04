@@ -147,11 +147,26 @@ cost (noted in `docs/overhead.md`). A materials-only base makes it worse. Use
   overhead.
 - Per-assembly totals sum to the job totals exactly (the linearity property).
 - Profit is unchanged by the refactor at the job level.
-- Golden test against the sheet's Irrigation block: cost $3,371.98, overhead
-  $629.37, profit $600.20, total $4,601.56. **Verify early** whether the seeded
-  Irrigation assembly actually reproduces those inputs — if the seed has drifted
-  from the sheet, this needs a fixture in `test-support/` instead. (Per project
-  convention, test data comes from `test-support/`, never from `seed/`.)
+- Golden test on Irrigation. **Do not use the sheet's own phase total** — the
+  seed deliberately diverges from it. `seed/catalog.test.ts` already anchors
+  Irrigation's `materialCost` at **1142.31378** (the sheet's buggy
+  `SUM(M35:M51)` drops three rows; the seed includes them) and `laborHours` at
+  **69.3695**. At the starter rates (7.75% tax, 40% overhead, 15% profit,
+  $35/hr general) the expected per-assembly figures under the new formula are:
+
+  | | Amount |
+  |---|---|
+  | materialCost | 1,142.31378 |
+  | laborCost | 2,427.9325 |
+  | directCost | 3,570.24628 |
+  | overhead | 761.54252 |
+  | profit | 649.76832 |
+  | **total** | **4,981.55712** |
+
+  The existing `catalog.test.ts` is the model to follow: it imports the
+  production seed *as the system under test*, with the spreadsheet's values as
+  fixed anchors. That's the documented exception to the "fixtures come from
+  `test-support/`" rule, not a violation of it.
 - Null-`sourceAssemblyId` lines get their own block and still tie out.
 
 ## Blast radius
@@ -183,9 +198,10 @@ toggle applies per assembly on a materials base. Amended there.
 - **The Contract Price Breakdown tab's labor model** — that tab prices labor at
   $19.20/hr *with* overhead, contradicting the Package tab. Tracked as
   [open question #2](../../open-questions.md); the Package tab wins here.
-- **Replicating the sheet's two anomalies** — Irrigation's three excluded
-  material lines and Concrete's off-by-one labor subtotal. Open questions
-  [#3 and #4](../../open-questions.md).
+- **Anything about the sheet's two suspect SUM ranges** — both investigated and
+  closed on 2026-08-04 (see [Resolved](../../open-questions.md)). Irrigation's
+  is a genuine sheet bug the seed already corrects; Concrete's is not a bug at
+  all (row 99 is a rollup, not a dropped line). Neither affects this work.
 - **Per-phase hours** — the merged "cost breakdown" ticket mentions hours;
   that belongs with "Labor time estimate," which owns the hours model.
 - **Freezing totals on sent estimates** — open question #1.

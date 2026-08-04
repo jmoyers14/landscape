@@ -87,54 +87,42 @@ faithfully reproducing the wrong one. Worth asking the sheet's author directly:
 
 ---
 
-## 3. Irrigation: are three material lines excluded on purpose?
-
-**Status:** open. Needs the sheet author.
-
-`M56 = SUM(M35:M51)` — the Irrigation material subtotal stops at row 51, leaving
-out rows 52-54:
-
-| Row | Item | Amount |
-|---|---|---|
-| 52 | Shrub Bodies | $142.77 |
-| 53 | Funny Pipe | $26.94 |
-| 54 | Funny Elbows | $28.55 |
-| | **Excluded total** | **$198.26** |
-
-These are the red-formatted rows, which suggests the exclusion is deliberate —
-optional items, or a drip-conversion variant priced separately. But red
-formatting is not a specification.
-
-**Why it matters.** Our catalog has no notion of a line that appears on an
-estimate but is excluded from its subtotal. If the exclusion is intentional we
-need to model it (an `includedInSubtotal` flag, or a separate optional-items
-concept). If it's an oversight, we simply don't reproduce it.
-
-**Blocks:** "Quality-check the formulas," and any attempt to tie the seeded
-Irrigation assembly to the sheet to the cent.
-
----
-
-## 4. Concrete: labor subtotal skips a line — bug?
-
-**Status:** open, but almost certainly a spreadsheet bug.
-
-`P127 = SUM(P100:P125)`, but the labor line "Lay out and install forms" sits at
-row **99** — outside the range. $2,219.74 of labor is dropped from the Concrete
-phase subtotal.
-
-Unlike the Irrigation case, nothing visually marks this line as excluded; it
-looks exactly like the labor lines above and below it. This reads as an
-off-by-one in the SUM range.
-
-**Recommendation:** do not reproduce it. Flag it to the sheet's author as a
-likely error in their live bidding tool, since it would be underbilling every
-concrete job by that amount.
-
-**Blocks:** "Quality-check the formulas," "Add the Concrete phase."
-
----
-
 ## Resolved
 
-_(none yet)_
+### Irrigation: are three material lines excluded on purpose?
+
+**Resolved 2026-08-04 — no, it's a sheet bug, and the seed already fixes it.**
+
+`M56 = SUM(M35:M51)` stops at row 51, dropping Shrub Bodies ($142.77), Funny
+Pipe ($26.94) and Funny Elbows ($28.55) — $198.26 of material — from the
+Irrigation subtotal.
+
+This was already investigated during the Phase D transcription and decided
+against. `packages/platform/src/seed/irrigation.ts` says so outright: *"the
+sheet's section total SUM(M35:M51) is itself buggy — it drops the last three
+material rows; our total correctly includes them."* `catalog.test.ts` anchors
+Irrigation's expected `materialCost` at **1142.31378** — the corrected sum, not
+the sheet's 944.05.
+
+No modelling needed: the catalog has no concept of an excluded line, and doesn't
+need one.
+
+### Concrete: does the labor subtotal skip a line?
+
+**Resolved 2026-08-04 — no. This was my misreading; the sheet is correct.**
+
+Initial reading: `P127 = SUM(P100:P125)` appeared to drop "Lay out and install
+forms" at row 99 ($2,219.74), looking like an off-by-one.
+
+It isn't. Row 99 is a **task header whose P cell is a rollup** —
+`P99 = P100+P101+P102` — summing the three labor lines beneath it. `P127`
+correctly sums the leaf rows and skips the rollup. Including row 99 would
+double-count $2,219.74.
+
+Worth noting the structural inconsistency for anyone reading the sheet later:
+in Irrigation the task header row *is* a labor line (`P34 = N34*O34`), while in
+Concrete the task header is a subtotal of sub-lines. Same visual position,
+different meaning.
+
+**Lesson:** an unexpected SUM range in this workbook is more likely a rollup row
+than a bug. Check what the skipped cell actually contains before concluding.
