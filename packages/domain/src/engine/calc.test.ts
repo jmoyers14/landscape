@@ -26,7 +26,7 @@ describe("priceLines — cost buildup", () => {
     expect(withTax).toBeCloseTo(22.1523225, 5);
   });
 
-  it("applies margin-basis overhead and profit on cost+overhead", () => {
+  it("applies overhead to materials only, never to labor", () => {
     const totals = priceLines(
       [
         {
@@ -47,17 +47,35 @@ describe("priceLines — cost buildup", () => {
       settings,
     );
     // labor untaxed: 748.125; material taxed: 22.1523225
+    expect(totals.materialCost).toBeCloseTo(22.1523225, 5);
     expect(totals.laborCost).toBeCloseTo(748.125, 5);
     expect(totals.directCost).toBeCloseTo(770.2773225, 5);
-    // overhead = cost/0.6 - cost
-    expect(totals.directCost + totals.overhead).toBeCloseTo(
-      totals.directCost / 0.6,
+    // the sheet grosses up MATERIALS only: 22.1523225 / 0.6 - 22.1523225
+    expect(totals.overhead).toBeCloseTo(14.768215, 5);
+    expect(totals.materialCost + totals.overhead).toBeCloseTo(
+      totals.materialCost / 0.6,
       5,
     );
-    expect(totals.profit).toBeCloseTo(
-      (totals.directCost + totals.overhead) * 0.15,
-      5,
+    // profit is unchanged: it still applies to cost + overhead
+    expect(totals.profit).toBeCloseTo(117.7568306, 5);
+    expect(totals.total).toBeCloseTo(902.8023681, 5);
+  });
+
+  it("charges no overhead at all on a labor-only buildup", () => {
+    const totals = priceLines(
+      [
+        {
+          type: "labor",
+          quantity: 10,
+          unitPrice: 50,
+          taxable: false,
+          deliveryCost: 0,
+        },
+      ],
+      { taxRate: 7.75, overheadRate: 40, profitRate: 15 },
     );
+    expect(totals.overhead).toBe(0);
+    expect(totals.profit).toBeCloseTo(75, 5); // 500 × 0.15
   });
 
   it("never taxes labor and reports zero tax for a labor-only buildup", () => {

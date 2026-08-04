@@ -61,8 +61,9 @@ export interface PricedLine {
  * The cost buildup — the single source of truth for how an estimate's money is
  * computed, faithful to the spreadsheet. Material lines carry their sales tax
  * (per line, pre-markup) and delivery inside direct cost; labor is untaxed.
- * Overhead is margin-basis (`cost / 0.6 − cost` when overheadRate is 40); profit
- * is a markup on cost + overhead. Rates are percentages. Nothing here is
+ * Overhead is margin-basis on MATERIALS ONLY (`materialCost / 0.6 − materialCost`
+ * when overheadRate is 40) — the sheet charges no overhead on labor in any of its
+ * six phases. Profit is a markup on cost + overhead. Rates are percentages. Nothing here is
  * persisted, so changing the formula is a one-function edit.
  */
 export function priceLines(
@@ -85,7 +86,7 @@ export function priceLines(
   }
 
   const directCost = materialCost + laborCost;
-  const overhead = directCost * (1 / (1 - rates.overheadRate / 100) - 1);
+  const overhead = materialCost * (1 / (1 - rates.overheadRate / 100) - 1);
   const profit = (directCost + overhead) * (rates.profitRate / 100);
   const total = directCost + overhead + profit;
 
