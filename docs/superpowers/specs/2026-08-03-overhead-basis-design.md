@@ -3,6 +3,19 @@
 **Status:** designed, not scheduled. Deferred as low priority on 2026-08-03.
 **One open question** blocks implementation — see [Open Questions](#open-questions).
 
+> **Amended 2026-08-04 — partially superseded.** This doc assumes overhead
+> applies to **direct cost** (materials + labor) and is computed once for the
+> whole estimate. Reading the source spreadsheet's cell formulas showed both
+> assumptions are wrong: overhead applies to **materials only**, and it's
+> computed **per assembly**. See
+> [`2026-08-04-per-assembly-overhead-profit-design.md`](./2026-08-04-per-assembly-overhead-profit-design.md).
+>
+> The basis decision itself still stands — margin vs. markup is orthogonal to
+> which base it's applied to. But if this is ever built, the toggle applies
+> **per assembly, on a materials base**, and the formula in
+> [Calc engine](#calc-engine) below should be read with `materialCost` in place
+> of `directCost`.
+
 ## Problem
 
 Overhead is hard-coded to **margin basis** (`cost / (1 − rate) − cost`). Some
