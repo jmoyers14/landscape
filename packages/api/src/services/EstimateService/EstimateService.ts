@@ -3,7 +3,7 @@ export type {
   EstimateView,
   EstimateTotals,
   LineItemView,
-  PhaseSummary,
+  AssemblyTotals,
 } from "@landscape/domain";
 export type {
   EstimateStatus,

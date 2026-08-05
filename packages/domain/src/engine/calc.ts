@@ -11,11 +11,6 @@ export interface LineItemView extends LineItem {
   cost: number; // direct-cost contribution: base + delivery + tax (materials), base (labor)
 }
 
-export interface PhaseSummary {
-  phase: string | null;
-  subtotal: number;
-}
-
 export interface EstimateTotals {
   materialCost: number; // material base + delivery + tax
   laborCost: number; // labor base, untaxed
@@ -24,6 +19,12 @@ export interface EstimateTotals {
   overhead: number;
   profit: number;
   total: number;
+}
+
+/** One assembly's own cost buildup, carrying the same shape as the job totals. */
+export interface AssemblyTotals extends EstimateTotals {
+  assemblyId: string | null; // null = lines with no source assembly
+  name: string;
 }
 
 export interface EstimateView {
@@ -37,7 +38,7 @@ export interface EstimateView {
   createdAt: string;
   assemblies: EstimateAssembly[];
   lineItems: LineItemView[];
-  phases: PhaseSummary[];
+  assemblyTotals: AssemblyTotals[];
   totals: EstimateTotals;
 }
 
@@ -117,7 +118,7 @@ export function computeEstimate(estimate: Estimate): EstimateView {
     createdAt: estimate.createdAt,
     assemblies: estimate.assemblies,
     lineItems,
-    phases: summarizePhases(lineItems),
+    assemblyTotals: summarizeAssemblies(estimate),
     totals: priceLines(estimate.lineItems, estimate),
   };
 }
@@ -134,17 +135,34 @@ function directCostOfLine(item: LineItem, taxRate: number): number {
   return base + item.deliveryCost + tax;
 }
 
-// Phase subtotals in first-seen order (the spec's per-phase cost rollup), on the
-// direct cost of each line so phases sum to the estimate's direct cost.
-function summarizePhases(items: LineItemView[]): PhaseSummary[] {
+// Each assembly's own cost buildup. The sheet computes overhead and profit per
+// phase (our assembly), not once for the whole bid. Both are linear in their
+// bases, so these sum exactly to the estimate's totals — no reconciling line.
+// Order is first-seen, which is generation order, which follows `assemblies`.
+function summarizeAssemblies(estimate: Estimate): AssemblyTotals[] {
+  const nameById = new Map(
+    estimate.assemblies.map((a) => [a.assemblyId, a.name]),
+  );
   const order: (string | null)[] = [];
-  const subtotals = new Map<string | null, number>();
-  for (const item of items) {
-    if (!subtotals.has(item.phase)) {
-      order.push(item.phase);
-      subtotals.set(item.phase, 0);
+  const grouped = new Map<string | null, LineItem[]>();
+
+  for (const item of estimate.lineItems) {
+    const key = item.sourceAssemblyId;
+    let bucket = grouped.get(key);
+    if (!bucket) {
+      bucket = [];
+      grouped.set(key, bucket);
+      order.push(key);
     }
-    subtotals.set(item.phase, (subtotals.get(item.phase) ?? 0) + item.cost);
+    bucket.push(item);
   }
-  return order.map((phase) => ({ phase, subtotal: subtotals.get(phase) ?? 0 }));
+
+  return order.map((assemblyId) => ({
+    assemblyId,
+    name:
+      assemblyId === null
+        ? "Other"
+        : (nameById.get(assemblyId) ?? "Unknown assembly"),
+    ...priceLines(grouped.get(assemblyId) ?? [], estimate),
+  }));
 }

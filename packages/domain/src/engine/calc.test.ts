@@ -7,6 +7,7 @@ import {
   drainagePricing,
   makeEstimate,
 } from "../test-support/fixture.ts";
+import type { LineItem } from "../types/estimate.ts";
 
 const settings = drainagePricing();
 const materials = new Map(drainageMaterials().map((m) => [m.id, m]));
@@ -103,6 +104,13 @@ describe("computeEstimate — pricing a stored snapshot", () => {
       overheadRate: 40,
       profitRate: 15,
       taxRate: 7.75,
+      assemblies: [
+        {
+          assemblyId: "drainage",
+          name: "Drainage",
+          driverValues: { drainageFt: 225 },
+        },
+      ],
       lineItems: [
         {
           id: "li_1",
@@ -145,13 +153,115 @@ describe("computeEstimate — pricing a stored snapshot", () => {
     expect(view.lineItems[0].lineTotal).toBeCloseTo(20.559, 5);
     expect(view.lineItems[0].cost).toBeCloseTo(22.1523225, 5); // base + 7.75% tax
     expect(view.lineItems[1].cost).toBeCloseTo(748.125, 5); // labor, untaxed
-    // both lines roll up under one phase, on a direct-cost basis that ties out
-    expect(view.phases).toHaveLength(1);
-    expect(view.phases[0].phase).toBe("Drainage");
-    expect(view.phases[0].subtotal).toBeCloseTo(770.2773225, 5);
-    expect(view.phases[0].subtotal).toBeCloseTo(view.totals.directCost, 5);
     // totals match the faithful buildup (same as priceLines above)
     expect(view.totals.directCost).toBeCloseTo(770.2773225, 5);
     expect(view.totals.total).toBeGreaterThan(view.totals.directCost);
+    // one assembly, carrying its own full buildup
+    expect(view.assemblyTotals).toHaveLength(1);
+    expect(view.assemblyTotals[0].assemblyId).toBe("drainage");
+    expect(view.assemblyTotals[0].name).toBe("Drainage");
+    expect(view.assemblyTotals[0].directCost).toBeCloseTo(770.2773225, 5);
+    expect(view.assemblyTotals[0].total).toBeCloseTo(view.totals.total, 5);
+  });
+
+  it("per-assembly totals sum exactly to the estimate totals", () => {
+    const line = (
+      id: string,
+      assemblyId: string,
+      over: Partial<LineItem> = {},
+    ): LineItem => ({
+      id,
+      phase: assemblyId,
+      type: "material",
+      description: "Line",
+      quantity: 3,
+      unit: "unit(s)",
+      unitPrice: 6.853,
+      taxable: true,
+      deliveryCost: 0,
+      quantityFormula: "1",
+      sourceAssemblyId: assemblyId,
+      sourceLineKey: id,
+      taskKey: null,
+      taskName: null,
+      ...over,
+    });
+
+    const view = computeEstimate(
+      makeEstimate({
+        overheadRate: 40,
+        profitRate: 15,
+        taxRate: 7.75,
+        assemblies: [
+          { assemblyId: "a1", name: "Drainage", driverValues: {} },
+          { assemblyId: "a2", name: "Irrigation", driverValues: {} },
+        ],
+        lineItems: [
+          line("li_1", "a1"),
+          line("li_2", "a1", {
+            type: "labor",
+            quantity: 21.375,
+            unitPrice: 35,
+            taxable: false,
+          }),
+          line("li_3", "a2", { quantity: 7, unitPrice: 12.5 }),
+          line("li_4", "a2", {
+            type: "labor",
+            quantity: 4,
+            unitPrice: 55,
+            taxable: false,
+          }),
+        ],
+      }),
+    );
+
+    expect(view.assemblyTotals).toHaveLength(2);
+    expect(view.assemblyTotals.map((a) => a.name)).toEqual([
+      "Drainage",
+      "Irrigation",
+    ]);
+
+    // Both overhead and profit are linear in their bases, so the parts sum to
+    // the whole with no rounding reconciliation. This is the property that lets
+    // the UI show per-assembly money without a fudge line.
+    const sum = (pick: (a: (typeof view.assemblyTotals)[number]) => number) =>
+      view.assemblyTotals.reduce((acc, a) => acc + pick(a), 0);
+    expect(sum((a) => a.materialCost)).toBeCloseTo(view.totals.materialCost, 8);
+    expect(sum((a) => a.laborCost)).toBeCloseTo(view.totals.laborCost, 8);
+    expect(sum((a) => a.overhead)).toBeCloseTo(view.totals.overhead, 8);
+    expect(sum((a) => a.profit)).toBeCloseTo(view.totals.profit, 8);
+    expect(sum((a) => a.total)).toBeCloseTo(view.totals.total, 8);
+  });
+
+  it("groups lines with no source assembly under their own block", () => {
+    const view = computeEstimate(
+      makeEstimate({
+        taxRate: 0,
+        assemblies: [],
+        lineItems: [
+          {
+            id: "li_loose",
+            phase: null,
+            type: "material",
+            description: "Hand-added line",
+            quantity: 2,
+            unit: "unit(s)",
+            unitPrice: 10,
+            taxable: false,
+            deliveryCost: 0,
+            quantityFormula: "2",
+            sourceAssemblyId: null,
+            sourceLineKey: null,
+            taskKey: null,
+            taskName: null,
+          },
+        ],
+      }),
+    );
+
+    expect(view.assemblyTotals).toHaveLength(1);
+    expect(view.assemblyTotals[0].assemblyId).toBeNull();
+    expect(view.assemblyTotals[0].name).toBe("Other");
+    expect(view.assemblyTotals[0].total).toBeCloseTo(view.totals.total, 8);
   });
 });
