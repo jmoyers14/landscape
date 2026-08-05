@@ -53,10 +53,10 @@ function runAssembly(seed: SeedAssembly) {
   return { name: assembly.name, totals: priceLines(lines, STARTER_PRICING), laborHours };
 }
 
-describe("starter catalog — fidelity to the Package sheet", () => {
-  for (const seed of STARTER_ASSEMBLIES) {
-    const { name, totals, laborHours } = runAssembly(seed);
+const RESULTS = STARTER_ASSEMBLIES.map(runAssembly);
 
+describe("starter catalog — fidelity to the Package sheet", () => {
+  for (const { name, totals, laborHours } of RESULTS) {
     it(`${name} reproduces the sheet's material total and labor hours`, () => {
       const expected = EXPECTED[name];
       // Every registered assembly must have an expected figure, so adding one
@@ -65,5 +65,29 @@ describe("starter catalog — fidelity to the Package sheet", () => {
       expect(totals.materialCost).toBeCloseTo(expected.materialCost, 3);
       expect(laborHours).toBeCloseTo(expected.laborHours, 3);
     });
+
+    // Overhead is charged on materials only — the sheet's labor overhead cell
+    // is empty in every phase. Asserted per assembly so a regression in the
+    // base shows up against real seeded data, not just a synthetic fixture.
+    it(`${name} charges overhead on materials only`, () => {
+      expect(totals.materialCost + totals.overhead).toBeCloseTo(
+        totals.materialCost / 0.6,
+        5,
+      );
+    });
   }
+
+  // One assembly pinned end-to-end. Irrigation is all general labor ($35/hr),
+  // so its labor cost follows directly from its hours: 69.3695 × 35.
+  it("Irrigation's full buildup matches the sheet's per-phase pattern", () => {
+    const irrigation = RESULTS.find((r) => r.name === "Irrigation");
+    expect(irrigation, "Irrigation missing from STARTER_ASSEMBLIES").toBeDefined();
+    const { totals } = irrigation!;
+    expect(totals.materialCost).toBeCloseTo(1142.31378, 5);
+    expect(totals.laborCost).toBeCloseTo(2427.9325, 5);
+    expect(totals.directCost).toBeCloseTo(3570.24628, 5);
+    expect(totals.overhead).toBeCloseTo(761.54252, 5);
+    expect(totals.profit).toBeCloseTo(649.76832, 5);
+    expect(totals.total).toBeCloseTo(4981.55712, 5);
+  });
 });
