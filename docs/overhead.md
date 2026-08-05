@@ -5,48 +5,52 @@ This surprises people, so here's the plain-English version.
 
 ## The two ways to add a percentage
 
-Say a job's **direct cost** (materials + labor) is **$100** and the overhead
-rate is **40%**.
+Say a job's **materials** cost is **$100** and the overhead rate is **40%**.
 
-- **Markup basis** — "add 40% of cost": `$100 × 0.40 = $40`. Price = $140.
-- **Margin basis** — "overhead should be 40% of the *price*": gross up the cost
-  so that 40% of the final price covers overhead.
+- **Markup basis** — "add 40% of cost": `$100 × 0.40 = $40`. Materials +
+  overhead = $140.
+- **Margin basis** — "overhead should be 40% of the _materials + overhead
+  subtotal_": gross up the cost so that 40% of that subtotal covers overhead.
 
   ```
-  price    = cost / (1 − 0.40) = 100 / 0.60 = $166.67
-  overhead = price − cost      = 166.67 − 100 = $66.67
+  subtotal = cost / (1 − 0.40)     = 100 / 0.60 = $166.67
+  overhead = subtotal − cost       = 166.67 − 100 = $66.67
   ```
 
-  Check: `$66.67 / $166.67 = 40%` of the price. ✅
+  Check: `$66.67 / $166.67 = 40%` of the subtotal. ✅
 
 Landscape uses the **margin** version.
 
 ## Why margin?
 
 Contractors think of overhead as a slice of the money coming in the door
-(revenue), not an add-on to what they paid for a job. Overhead — trucks,
+(revenue), not an add-on to what they paid for materials. Overhead — trucks,
 office, insurance — has to be covered by a fraction of **revenue**.
 
 The trap this avoids:
 
-> "My overhead is ~40% of my business, so I'll mark up every job 40%."
+> "My overhead is ~40% of my business, so I'll mark up every job's materials
+> 40%."
 
-Marking up 40% on cost only makes overhead **28.6%** of the price you charged
-(`40 / 140`) — so you under-recover overhead and slowly lose money. To actually
-capture 40% of revenue you divide by `(1 − rate)`, not multiply by `(1 + rate)`.
+Marking up 40% on materials only makes overhead **28.6%** of the materials +
+overhead subtotal (`40 / 140`) — so you under-recover overhead and slowly lose
+money. To actually capture 40% of that subtotal you divide by `(1 − rate)`,
+not multiply by `(1 + rate)`.
 
 ## Side by side at a 40% rate
 
-| | Markup (× 0.40) | Margin (÷ 0.60) |
-|---|---|---|
-| Direct cost | $100 | $100 |
-| Overhead added | $40 | $66.67 |
-| Price | $140 | $166.67 |
-| Overhead as % of **cost** | 40% | 66.7% |
-| Overhead as % of **price** | 28.6% | **40%** |
+|                                           | Markup (× 0.40) | Margin (÷ 0.60) |
+| ----------------------------------------- | --------------- | --------------- |
+| Materials                                 | $100            | $100            |
+| Overhead added                            | $40             | $66.67          |
+| Materials + overhead                      | $140            | $166.67         |
+| Overhead as % of **materials**            | 40%             | 66.7%           |
+| Overhead as % of **materials + overhead** | 28.6%           | **40%**         |
 
-Both are "40%" — they just measure against different bases. Landscape's rate is
-always a percentage of **price**.
+Both are "40%" — they just measure against different bases. Landscape's rate
+is a percentage of the **materials + overhead subtotal**, not of materials
+alone — and not of the estimate's total price, either: labor and profit sit
+outside this gross-up entirely.
 
 ## Where it lives in the code
 
