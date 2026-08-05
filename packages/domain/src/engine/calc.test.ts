@@ -297,3 +297,92 @@ describe("computeEstimate — pricing a stored snapshot", () => {
     expect(view.assemblyTotals[0].total).toBeCloseTo(view.totals.total, 8);
   });
 });
+
+describe("priceLines — material / labor split", () => {
+  const rates = { taxRate: 7.75, overheadRate: 40, profitRate: 15 };
+
+  it("splits profit and total the way the sheet's M and P columns do", () => {
+    const totals = priceLines(
+      [
+        {
+          type: "material",
+          quantity: 3,
+          unitPrice: 6.853,
+          taxable: true,
+          deliveryCost: 0,
+        },
+        {
+          type: "labor",
+          quantity: 21.375,
+          unitPrice: 35,
+          taxable: false,
+          deliveryCost: 0,
+        },
+      ],
+      rates,
+    );
+
+    // materials 3 × 6.853 = 20.559, +7.75% tax  = 22.1523225
+    // overhead  22.1523225 × (1/0.6 − 1)        = 14.768215
+    // labor     21.375 × 35                     = 748.125
+    expect(totals.materialProfit).toBeCloseTo(5.538080625, 8);
+    expect(totals.laborProfit).toBeCloseTo(112.21875, 8);
+    expect(totals.materialTotal).toBeCloseTo(42.458618125, 8);
+    expect(totals.laborTotal).toBeCloseTo(860.34375, 8);
+  });
+
+  it("the two columns sum to the combined figures exactly", () => {
+    const totals = priceLines(
+      [
+        {
+          type: "material",
+          quantity: 7,
+          unitPrice: 12.5,
+          taxable: true,
+          deliveryCost: 4.25,
+        },
+        {
+          type: "labor",
+          quantity: 4,
+          unitPrice: 55,
+          taxable: false,
+          deliveryCost: 0,
+        },
+      ],
+      rates,
+    );
+
+    // Both quantities are linear in their bases, so the parts sum to the whole
+    // with nothing left over. This is what lets the UI show two columns without
+    // a reconciling line.
+    expect(totals.materialProfit + totals.laborProfit).toBeCloseTo(
+      totals.profit,
+      10,
+    );
+    expect(totals.materialTotal + totals.laborTotal).toBeCloseTo(
+      totals.total,
+      10,
+    );
+  });
+
+  it("gives a labor-only estimate an empty material column", () => {
+    const totals = priceLines(
+      [
+        {
+          type: "labor",
+          quantity: 10,
+          unitPrice: 35,
+          taxable: false,
+          deliveryCost: 0,
+        },
+      ],
+      rates,
+    );
+
+    expect(totals.overhead).toBe(0);
+    expect(totals.materialProfit).toBe(0);
+    expect(totals.materialTotal).toBe(0);
+    expect(totals.laborTotal).toBeCloseTo(402.5, 8);
+    expect(totals.total).toBeCloseTo(402.5, 8);
+  });
+});

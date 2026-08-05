@@ -16,9 +16,16 @@ export interface EstimateTotals {
   laborCost: number; // labor base, untaxed
   tax: number; // sum of per-line material tax (informational)
   directCost: number; // materialCost + laborCost
-  overhead: number;
+  overhead: number; // materials only — labor carries none
   profit: number;
   total: number;
+  // The buildup split the way the workbook runs it: column M (materials) and
+  // column P (labor) side by side, combining only at the bottom. Each pair sums
+  // to its combined field exactly, because both are defined as that sum.
+  materialProfit: number; // (materialCost + overhead) × profitRate
+  laborProfit: number; // laborCost × profitRate
+  materialTotal: number; // materialCost + overhead + materialProfit
+  laborTotal: number; // laborCost + laborProfit
 }
 
 /** One assembly's own cost buildup, carrying the same shape as the job totals. */
@@ -88,10 +95,33 @@ export function priceLines(
 
   const directCost = materialCost + laborCost;
   const overhead = materialCost * (1 / (1 - rates.overheadRate / 100) - 1);
-  const profit = (directCost + overhead) * (rates.profitRate / 100);
-  const total = directCost + overhead + profit;
 
-  return { materialCost, laborCost, tax, directCost, overhead, profit, total };
+  // The sheet's per-phase pattern, column by column:
+  //   M58 = (M56 + M57) × 0.15      P58 = P56 × 0.15
+  //   M59 =  M56 + M57 + M58        P59 = P56 + P58
+  // profit and total are the sums of these, so the columns tie out by
+  // definition rather than by luck.
+  const profitRate = rates.profitRate / 100;
+  const materialProfit = (materialCost + overhead) * profitRate;
+  const laborProfit = laborCost * profitRate;
+  const materialTotal = materialCost + overhead + materialProfit;
+  const laborTotal = laborCost + laborProfit;
+  const profit = materialProfit + laborProfit;
+  const total = materialTotal + laborTotal;
+
+  return {
+    materialCost,
+    laborCost,
+    tax,
+    directCost,
+    overhead,
+    profit,
+    total,
+    materialProfit,
+    laborProfit,
+    materialTotal,
+    laborTotal,
+  };
 }
 
 /**

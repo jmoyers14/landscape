@@ -396,6 +396,10 @@ const EMPTY_TOTALS: EstimateTotals = Object.freeze({
   overhead: 0,
   profit: 0,
   total: 0,
+  materialProfit: 0,
+  laborProfit: 0,
+  materialTotal: 0,
+  laborTotal: 0,
 });
 
 function totalsFor(view: EstimateView, assemblyId: string | null) {
