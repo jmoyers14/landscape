@@ -64,8 +64,8 @@ export interface PricedLine {
  * (per line, pre-markup) and delivery inside direct cost; labor is untaxed.
  * Overhead is margin-basis on MATERIALS ONLY (`materialCost / 0.6 − materialCost`
  * when overheadRate is 40) — the sheet charges no overhead on labor in any of its
- * six phases. Profit is a markup on cost + overhead. Rates are percentages. Nothing here is
- * persisted, so changing the formula is a one-function edit.
+ * six phases. Profit is a markup on cost + overhead. Rates are percentages.
+ * Nothing here is persisted, so changing the formula is a one-function edit.
  */
 export function priceLines(
   lines: PricedLine[],

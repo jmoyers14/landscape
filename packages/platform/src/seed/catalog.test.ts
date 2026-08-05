@@ -71,7 +71,7 @@ describe("starter catalog — fidelity to the Package sheet", () => {
     // base shows up against real seeded data, not just a synthetic fixture.
     it(`${name} charges overhead on materials only`, () => {
       expect(totals.materialCost + totals.overhead).toBeCloseTo(
-        totals.materialCost / 0.6,
+        totals.materialCost / (1 - STARTER_PRICING.overheadRate / 100),
         5,
       );
     });

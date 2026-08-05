@@ -89,7 +89,7 @@ export function previewEstimate(
   }
 
   // Wrap into a synthetic Estimate so the view is shaped by the same
-  // computeEstimate the server uses — totals, phase rollups and all.
+  // computeEstimate the server uses — totals, per-assembly rollups and all.
   const estimate: Estimate = {
     id: "preview",
     projectId: "",

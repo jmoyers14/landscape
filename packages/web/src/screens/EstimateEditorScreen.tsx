@@ -7,6 +7,7 @@ import {
   previewEstimate,
   type CatalogContext,
   type EstimateSelection,
+  type EstimateTotals,
   type EstimateView,
 } from "@landscape/domain";
 import { queryClient, trpc } from "../trpc.ts";
@@ -329,39 +330,65 @@ function DraftEditor({
 }
 
 // Read-only view of a saved (non-draft) estimate: same two-column shell, with
-// each assembly's frozen driver values and line items grouped together.
+// each assembly's frozen driver values and line items grouped together. Also
+// renders any assemblyTotals bucket the engine produced that isn't one of the
+// estimate's own assemblies — the "Other" (no source assembly) and "Unknown
+// assembly" (a since-renamed/removed catalog entry) buckets — so their money
+// always appears somewhere on screen, not just in the totals panel.
 function SavedEstimateView({ estimate }: { estimate: SavedEstimate }) {
   const view: EstimateView = estimate;
+  const knownIds = new Set(estimate.assemblies.map((a) => a.assemblyId));
+  const orphanTotals = view.assemblyTotals.filter(
+    (t) => t.assemblyId === null || !knownIds.has(t.assemblyId),
+  );
   return (
     <EstimateLayout aside={<TotalsPanel estimate={view} />}>
-      {estimate.assemblies.length === 0 ? (
+      {estimate.assemblies.length === 0 && orphanTotals.length === 0 ? (
         <p className="text-sm text-slate-400">
           This estimate has no assemblies.
         </p>
       ) : (
-        estimate.assemblies.map((assembly) => (
-          <SavedAssemblyBlock
-            key={assembly.assemblyId}
-            assemblyId={assembly.assemblyId}
-            view={view}
-            name={assembly.name}
-            driverValues={assembly.driverValues}
-            lines={lineItemsFor(view, assembly.assemblyId)}
-          />
-        ))
+        <>
+          {estimate.assemblies.map((assembly) => (
+            <SavedAssemblyBlock
+              key={assembly.assemblyId}
+              assemblyId={assembly.assemblyId}
+              view={view}
+              name={assembly.name}
+              driverValues={assembly.driverValues}
+              lines={lineItemsFor(view, assembly.assemblyId)}
+            />
+          ))}
+          {orphanTotals.map((t) => (
+            <SavedAssemblyBlock
+              key={t.assemblyId ?? "__none__"}
+              assemblyId={t.assemblyId}
+              view={view}
+              name={t.name}
+              driverValues={{}}
+              lines={lineItemsFor(view, t.assemblyId)}
+            />
+          ))}
+        </>
       )}
     </EstimateLayout>
   );
 }
 
-// The generated lines for one assembly, in engine order.
-function lineItemsFor(view: EstimateView, assemblyId: string): LineItemView[] {
+// The generated lines for one assembly, in engine order. assemblyId is
+// nullable so the orphan "Other" bucket (lines with no source assembly) can
+// share this lookup too.
+function lineItemsFor(
+  view: EstimateView,
+  assemblyId: string | null,
+): LineItemView[] {
   return view.lineItems.filter((line) => line.sourceAssemblyId === assemblyId);
 }
 
 // The engine's buildup for one assembly. An assembly with no lines yet has no
-// entry, so fall back to zeros rather than letting the block disappear.
-const EMPTY_TOTALS = {
+// entry, so fall back to zeros rather than letting the block disappear. Frozen
+// since one shared instance is handed to every empty block.
+const EMPTY_TOTALS: EstimateTotals = Object.freeze({
   materialCost: 0,
   laborCost: 0,
   tax: 0,
@@ -369,9 +396,9 @@ const EMPTY_TOTALS = {
   overhead: 0,
   profit: 0,
   total: 0,
-};
+});
 
-function totalsFor(view: EstimateView, assemblyId: string) {
+function totalsFor(view: EstimateView, assemblyId: string | null) {
   const found = view.assemblyTotals.find((a) => a.assemblyId === assemblyId);
   if (!found) {
     return EMPTY_TOTALS;
@@ -379,7 +406,7 @@ function totalsFor(view: EstimateView, assemblyId: string) {
   return found;
 }
 
-// One assembly block in the draft editor: header + subtotal, editable driver
+// One assembly block in the draft editor: header + total, editable driver
 // inputs, its live line items, then its own overhead/profit buildup.
 function DraftAssemblyBlock({
   selection,
@@ -397,7 +424,7 @@ function DraftAssemblyBlock({
   const totals = totalsFor(view, selection.assemblyId);
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200 shadow-sm">
-      <BlockHeader name={selection.name} subtotal={totals.total}>
+      <BlockHeader name={selection.name} total={totals.total}>
         <button
           onClick={onRemove}
           className="text-sm text-slate-400 hover:text-red-600"
@@ -448,7 +475,7 @@ function SavedAssemblyBlock({
   driverValues,
   lines,
 }: {
-  assemblyId: string;
+  assemblyId: string | null;
   view: EstimateView;
   name: string;
   driverValues: Record<string, number>;
@@ -458,7 +485,7 @@ function SavedAssemblyBlock({
   const totals = totalsFor(view, assemblyId);
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200 shadow-sm">
-      <BlockHeader name={name} subtotal={totals.total} />
+      <BlockHeader name={name} total={totals.total} />
       {drivers.length > 0 && (
         <div className="border-b border-slate-100 px-4 py-2 text-sm text-slate-500">
           {drivers.map(([key, value]) => `${key}: ${value}`).join(", ")}
@@ -476,11 +503,11 @@ function SavedAssemblyBlock({
 
 function BlockHeader({
   name,
-  subtotal,
+  total,
   children,
 }: {
   name: string;
-  subtotal: number;
+  total: number;
   children?: ReactNode;
 }) {
   return (
@@ -488,7 +515,7 @@ function BlockHeader({
       <span className="font-medium text-slate-800">{name}</span>
       <div className="flex items-center gap-3">
         <span className="text-sm font-medium text-slate-700">
-          {formatCurrency(subtotal)}
+          {formatCurrency(total)}
         </span>
         {children}
       </div>
@@ -504,7 +531,7 @@ function AssemblyFooter({
   overheadRate,
   profitRate,
 }: {
-  totals: typeof EMPTY_TOTALS;
+  totals: EstimateTotals;
   overheadRate: number;
   profitRate: number;
 }) {
@@ -743,13 +770,15 @@ function TotalsPanel({ estimate }: { estimate: EstimateView }) {
   return (
     <div className="w-full space-y-1 rounded-lg border border-slate-200 p-4 text-sm shadow-sm">
       <h2 className="mb-2 text-sm font-medium text-slate-600">Estimate</h2>
-      {row("Direct cost", totals.directCost)}
+      {row(
+        `Direct cost (incl. ${formatCurrency(totals.tax)} tax at ${estimate.taxRate}%)`,
+        totals.directCost,
+      )}
       {row(
         `Overhead (${estimate.overheadRate}% of materials)`,
         totals.overhead,
       )}
       {row(`Profit (${estimate.profitRate}%)`, totals.profit)}
-      {row(`Tax (${estimate.taxRate}%)`, totals.tax)}
       {row("Total", totals.total, true)}
     </div>
   );
