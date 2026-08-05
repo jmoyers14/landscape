@@ -76,16 +76,25 @@ describe("starter catalog — fidelity to the Package sheet", () => {
       );
     });
 
-    // The two columns are each linear in their base, so they sum to the
-    // combined figures with nothing left over — per assembly, not just for the
-    // job. This is what lets the editor show two columns with no fudge line.
-    it(`${name}'s material and labor columns sum to its totals`, () => {
-      expect(totals.materialProfit + totals.laborProfit).toBeCloseTo(
-        totals.profit,
+    // Each column follows the sheet's own per-phase pattern:
+    //   M58 = (M56 + M57) × 0.15      P58 = P56 × 0.15
+    //   M59 =  M56 + M57 + M58        P59 = P56 + P58
+    // Derived from the rate, deliberately NOT from `profit`/`total` — those are
+    // defined as the sum of these two columns, so asserting the sum against
+    // them is a tautology that survives any error in either column.
+    it(`${name}'s material and labor columns follow the sheet's pattern`, () => {
+      const rate = STARTER_PRICING.profitRate / 100;
+      expect(totals.materialProfit).toBeCloseTo(
+        (totals.materialCost + totals.overhead) * rate,
         8,
       );
-      expect(totals.materialTotal + totals.laborTotal).toBeCloseTo(
-        totals.total,
+      expect(totals.laborProfit).toBeCloseTo(totals.laborCost * rate, 8);
+      expect(totals.materialTotal).toBeCloseTo(
+        totals.materialCost + totals.overhead + totals.materialProfit,
+        8,
+      );
+      expect(totals.laborTotal).toBeCloseTo(
+        totals.laborCost + totals.laborProfit,
         8,
       );
     });
