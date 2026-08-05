@@ -75,6 +75,20 @@ describe("starter catalog — fidelity to the Package sheet", () => {
         5,
       );
     });
+
+    // The two columns are each linear in their base, so they sum to the
+    // combined figures with nothing left over — per assembly, not just for the
+    // job. This is what lets the editor show two columns with no fudge line.
+    it(`${name}'s material and labor columns sum to its totals`, () => {
+      expect(totals.materialProfit + totals.laborProfit).toBeCloseTo(
+        totals.profit,
+        8,
+      );
+      expect(totals.materialTotal + totals.laborTotal).toBeCloseTo(
+        totals.total,
+        8,
+      );
+    });
   }
 
   // One assembly pinned end-to-end. Irrigation is all general labor ($35/hr),
@@ -89,5 +103,16 @@ describe("starter catalog — fidelity to the Package sheet", () => {
     expect(totals.overhead).toBeCloseTo(761.54252, 5);
     expect(totals.profit).toBeCloseTo(649.76832, 5);
     expect(totals.total).toBeCloseTo(4981.55712, 5);
+
+    // The workbook runs this phase as two columns (rows 56–59):
+    //   M56 1,142.31*  P56 2,427.93     *seed-corrected; the sheet's SUM
+    //   M57   761.54   (no labor OH)     drops its last three material rows
+    //   M58   285.58   P58   364.19
+    //   M59 2,189.43   P59 2,792.12
+    expect(totals.materialProfit).toBeCloseTo(285.578445, 5);
+    expect(totals.laborProfit).toBeCloseTo(364.189875, 5);
+    expect(totals.materialTotal).toBeCloseTo(2189.434745, 5);
+    expect(totals.laborTotal).toBeCloseTo(2792.122375, 5);
+    expect(totals.materialTotal + totals.laborTotal).toBeCloseTo(4981.55712, 5);
   });
 });
