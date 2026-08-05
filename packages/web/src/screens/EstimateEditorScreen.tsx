@@ -699,12 +699,7 @@ function GroupRows({
         </td>
       </tr>
       {group.lines.map((line) => (
-        <LineRow
-          key={line.id}
-          line={line}
-          showTotal={showTotal}
-          indented
-        />
+        <LineRow key={line.id} line={line} showTotal={showTotal} indented />
       ))}
       <tr className="border-b border-slate-200">
         <td
