@@ -55,15 +55,20 @@ The calculation is in `priceLines()` in
 
 ```ts
 const directCost = materialCost + laborCost;
-const overhead   = directCost * (1 / (1 - rates.overheadRate / 100) - 1);
+const overhead   = materialCost * (1 / (1 - rates.overheadRate / 100) - 1);
 const profit     = (directCost + overhead) * (rates.profitRate / 100);
 const total      = directCost + overhead + profit;
 ```
 
-That `1 / (1 - rate) - 1` is the margin gross-up. It's the single source of
-truth — used both server-side and in the generative preview engine — and the
-`Overhead (40%)` line in the Estimate screen's totals box displays its result.
+That `1 / (1 - rate) - 1` is the margin gross-up. Note its base: **materials
+only**. The source sheet charges no overhead on labor — the labor overhead cell
+is empty in all six of its phases — so neither do we.
 
-> **Heads up on the label:** the totals box shows `Overhead (40%)` next to a
-> number that is 66.7% of direct cost. That's correct for a margin rate, but it
-> can read as a bug to anyone expecting markup math.
+This is computed **per assembly** as well as for the whole estimate; see
+[the per-assembly design](./superpowers/specs/2026-08-04-per-assembly-overhead-profit-design.md).
+Because the gross-up is linear in its base, the per-assembly figures sum exactly
+to the estimate's.
+
+> **Heads up on the label:** the UI says `Overhead (40% of materials)` rather
+> than `Overhead (40%)`. The bare percentage reads as a bug next to a number
+> that is 66.7% of the material cost.

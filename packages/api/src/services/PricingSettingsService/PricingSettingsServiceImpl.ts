@@ -49,8 +49,8 @@ export class PricingSettingsServiceImpl implements PricingSettingsService {
 function validate(input: PricingSettings): PricingSettings {
   assertNonNegative("taxRate", input.taxRate);
   assertNonNegative("profitRate", input.profitRate);
-  // Overhead is margin-basis (overhead = cost / (1 - rate/100) - cost), so a
-  // rate of 100+ would divide by zero or go negative.
+  // Overhead is margin-basis on materials (overhead = materialCost / (1 - rate/100)
+  // - materialCost), so a rate of 100+ would divide by zero or go negative.
   if (
     !Number.isFinite(input.overheadRate) ||
     input.overheadRate < 0 ||
