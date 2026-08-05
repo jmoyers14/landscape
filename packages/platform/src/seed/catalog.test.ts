@@ -90,13 +90,10 @@ describe("starter catalog — fidelity to the Package sheet", () => {
       );
       expect(totals.laborProfit).toBeCloseTo(totals.laborCost * rate, 8);
       expect(totals.materialTotal).toBeCloseTo(
-        totals.materialCost + totals.overhead + totals.materialProfit,
+        (totals.materialCost + totals.overhead) * (1 + rate),
         8,
       );
-      expect(totals.laborTotal).toBeCloseTo(
-        totals.laborCost + totals.laborProfit,
-        8,
-      );
+      expect(totals.laborTotal).toBeCloseTo(totals.laborCost * (1 + rate), 8);
     });
   }
 
