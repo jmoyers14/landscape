@@ -264,4 +264,36 @@ describe("computeEstimate — pricing a stored snapshot", () => {
     expect(view.assemblyTotals[0].name).toBe("Other");
     expect(view.assemblyTotals[0].total).toBeCloseTo(view.totals.total, 8);
   });
+
+  it("falls back to a placeholder name for a line whose assembly id no longer resolves", () => {
+    const view = computeEstimate(
+      makeEstimate({
+        taxRate: 0,
+        assemblies: [],
+        lineItems: [
+          {
+            id: "li_orphan",
+            phase: "Deleted Assembly",
+            type: "material",
+            description: "Orphaned line",
+            quantity: 2,
+            unit: "unit(s)",
+            unitPrice: 10,
+            taxable: false,
+            deliveryCost: 0,
+            quantityFormula: "2",
+            sourceAssemblyId: "deleted-assembly",
+            sourceLineKey: "li_orphan",
+            taskKey: null,
+            taskName: null,
+          },
+        ],
+      }),
+    );
+
+    expect(view.assemblyTotals).toHaveLength(1);
+    expect(view.assemblyTotals[0].assemblyId).toBe("deleted-assembly");
+    expect(view.assemblyTotals[0].name).toBe("Unknown assembly");
+    expect(view.assemblyTotals[0].total).toBeCloseTo(view.totals.total, 8);
+  });
 });
