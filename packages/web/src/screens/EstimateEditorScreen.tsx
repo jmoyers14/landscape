@@ -296,6 +296,7 @@ function DraftEditor({
           <DraftAssemblyBlock
             key={selection.assemblyId}
             selection={selection}
+            view={view}
             lines={lineItemsFor(view, selection.assemblyId)}
             onRemove={() => removeAssembly(selection.assemblyId)}
             onValue={(key, value) =>
@@ -341,6 +342,8 @@ function SavedEstimateView({ estimate }: { estimate: SavedEstimate }) {
         estimate.assemblies.map((assembly) => (
           <SavedAssemblyBlock
             key={assembly.assemblyId}
+            assemblyId={assembly.assemblyId}
+            view={view}
             name={assembly.name}
             driverValues={assembly.driverValues}
             lines={lineItemsFor(view, assembly.assemblyId)}
@@ -356,25 +359,45 @@ function lineItemsFor(view: EstimateView, assemblyId: string): LineItemView[] {
   return view.lineItems.filter((line) => line.sourceAssemblyId === assemblyId);
 }
 
-const blockSubtotal = (lines: LineItemView[]): number =>
-  lines.reduce((sum, line) => sum + line.cost, 0);
+// The engine's buildup for one assembly. An assembly with no lines yet has no
+// entry, so fall back to zeros rather than letting the block disappear.
+const EMPTY_TOTALS = {
+  materialCost: 0,
+  laborCost: 0,
+  tax: 0,
+  directCost: 0,
+  overhead: 0,
+  profit: 0,
+  total: 0,
+};
+
+function totalsFor(view: EstimateView, assemblyId: string) {
+  const found = view.assemblyTotals.find((a) => a.assemblyId === assemblyId);
+  if (!found) {
+    return EMPTY_TOTALS;
+  }
+  return found;
+}
 
 // One assembly block in the draft editor: header + subtotal, editable driver
-// inputs, then its live line items.
+// inputs, its live line items, then its own overhead/profit buildup.
 function DraftAssemblyBlock({
   selection,
+  view,
   lines,
   onRemove,
   onValue,
 }: {
   selection: Selection;
+  view: EstimateView;
   lines: LineItemView[];
   onRemove: () => void;
   onValue: (key: string, value: string) => void;
 }) {
+  const totals = totalsFor(view, selection.assemblyId);
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200 shadow-sm">
-      <BlockHeader name={selection.name} subtotal={blockSubtotal(lines)}>
+      <BlockHeader name={selection.name} subtotal={totals.total}>
         <button
           onClick={onRemove}
           className="text-sm text-slate-400 hover:text-red-600"
@@ -407,31 +430,46 @@ function DraftAssemblyBlock({
       )}
 
       <AssemblyLines lines={lines} />
+      <AssemblyFooter
+        totals={totals}
+        overheadRate={view.overheadRate}
+        profitRate={view.profitRate}
+      />
     </div>
   );
 }
 
-// One assembly block in the read-only saved view: header + subtotal, the frozen
-// driver values, then its line items.
+// One assembly block in the read-only saved view: header + total, the frozen
+// driver values, its line items, then its own overhead/profit buildup.
 function SavedAssemblyBlock({
+  assemblyId,
+  view,
   name,
   driverValues,
   lines,
 }: {
+  assemblyId: string;
+  view: EstimateView;
   name: string;
   driverValues: Record<string, number>;
   lines: LineItemView[];
 }) {
   const drivers = Object.entries(driverValues);
+  const totals = totalsFor(view, assemblyId);
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200 shadow-sm">
-      <BlockHeader name={name} subtotal={blockSubtotal(lines)} />
+      <BlockHeader name={name} subtotal={totals.total} />
       {drivers.length > 0 && (
         <div className="border-b border-slate-100 px-4 py-2 text-sm text-slate-500">
           {drivers.map(([key, value]) => `${key}: ${value}`).join(", ")}
         </div>
       )}
       <AssemblyLines lines={lines} />
+      <AssemblyFooter
+        totals={totals}
+        overheadRate={view.overheadRate}
+        profitRate={view.profitRate}
+      />
     </div>
   );
 }
@@ -454,6 +492,39 @@ function BlockHeader({
         </span>
         {children}
       </div>
+    </div>
+  );
+}
+
+// The sheet ends each phase with its own Overhead / Profit / Total. Overhead is
+// charged on materials only, so the label says so — a bare "(40%)" next to a
+// number that is 40% of materials reads as a bug.
+function AssemblyFooter({
+  totals,
+  overheadRate,
+  profitRate,
+}: {
+  totals: typeof EMPTY_TOTALS;
+  overheadRate: number;
+  profitRate: number;
+}) {
+  const row = (label: string, value: number, strong = false) => (
+    <div
+      className={`flex justify-between ${
+        strong ? "pt-1 font-semibold text-slate-800" : "text-slate-600"
+      }`}
+    >
+      <span>{label}</span>
+      <span>{formatCurrency(value)}</span>
+    </div>
+  );
+
+  return (
+    <div className="space-y-1 border-t border-slate-200 bg-slate-50/60 px-4 py-3 text-sm">
+      {row("Cost", totals.directCost)}
+      {row(`Overhead (${overheadRate}% of materials)`, totals.overhead)}
+      {row(`Profit (${profitRate}%)`, totals.profit)}
+      {row("Total", totals.total, true)}
     </div>
   );
 }
@@ -673,7 +744,10 @@ function TotalsPanel({ estimate }: { estimate: EstimateView }) {
     <div className="w-full space-y-1 rounded-lg border border-slate-200 p-4 text-sm shadow-sm">
       <h2 className="mb-2 text-sm font-medium text-slate-600">Estimate</h2>
       {row("Direct cost", totals.directCost)}
-      {row(`Overhead (${estimate.overheadRate}%)`, totals.overhead)}
+      {row(
+        `Overhead (${estimate.overheadRate}% of materials)`,
+        totals.overhead,
+      )}
       {row(`Profit (${estimate.profitRate}%)`, totals.profit)}
       {row(`Tax (${estimate.taxRate}%)`, totals.tax)}
       {row("Total", totals.total, true)}
