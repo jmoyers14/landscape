@@ -640,7 +640,7 @@ function AssemblyLines({ lines }: { lines: LineItemView[] }) {
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[44rem] border-collapse text-sm">
+      <table className="w-full min-w-[52rem] border-collapse text-sm">
         <thead>
           <tr className="border-b border-slate-200 text-left text-xs text-slate-400">
             <th className="px-4 py-1.5 font-medium">Description</th>
