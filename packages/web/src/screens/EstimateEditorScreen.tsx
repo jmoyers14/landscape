@@ -5,9 +5,12 @@ import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@landscape/api";
 import {
   previewEstimate,
+  summarizeTasks,
   type CatalogContext,
   type EstimateSelection,
+  type EstimateTotals,
   type EstimateView,
+  type TaskGroup,
 } from "@landscape/domain";
 import { queryClient, trpc } from "../trpc.ts";
 import { ErrorNote, Page } from "../components/ui.tsx";
@@ -39,7 +42,9 @@ export function EstimateEditorScreen() {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
 
-  const estimate = useQuery(trpc.estimates.get.queryOptions({ id: estimateId }));
+  const estimate = useQuery(
+    trpc.estimates.get.queryOptions({ id: estimateId }),
+  );
   const context = useQuery(trpc.estimates.context.queryOptions());
 
   const invalidate = () => {
@@ -57,7 +62,10 @@ export function EstimateEditorScreen() {
   };
 
   const updateMeta = useMutation(
-    trpc.estimates.updateMeta.mutationOptions({ onSuccess: onMutated, onError }),
+    trpc.estimates.updateMeta.mutationOptions({
+      onSuccess: onMutated,
+      onError,
+    }),
   );
   const setAssemblies = useMutation(
     trpc.estimates.setAssemblies.mutationOptions({
@@ -296,11 +304,10 @@ function DraftEditor({
           <DraftAssemblyBlock
             key={selection.assemblyId}
             selection={selection}
+            view={view}
             lines={lineItemsFor(view, selection.assemblyId)}
             onRemove={() => removeAssembly(selection.assemblyId)}
-            onValue={(key, value) =>
-              setValue(selection.assemblyId, key, value)
-            }
+            onValue={(key, value) => setValue(selection.assemblyId, key, value)}
           />
         ))
       )}
@@ -328,53 +335,105 @@ function DraftEditor({
 }
 
 // Read-only view of a saved (non-draft) estimate: same two-column shell, with
-// each assembly's frozen driver values and line items grouped together.
+// each assembly's frozen driver values and line items grouped together. Also
+// renders any assemblyTotals bucket the engine produced that isn't one of the
+// estimate's own assemblies — the "Other" (no source assembly) and "Unknown
+// assembly" (a since-renamed/removed catalog entry) buckets — so their money
+// always appears somewhere on screen, not just in the totals panel.
 function SavedEstimateView({ estimate }: { estimate: SavedEstimate }) {
   const view: EstimateView = estimate;
+  const knownIds = new Set(estimate.assemblies.map((a) => a.assemblyId));
+  const orphanTotals = view.assemblyTotals.filter(
+    (t) => t.assemblyId === null || !knownIds.has(t.assemblyId),
+  );
   return (
     <EstimateLayout aside={<TotalsPanel estimate={view} />}>
-      {estimate.assemblies.length === 0 ? (
+      {estimate.assemblies.length === 0 && orphanTotals.length === 0 ? (
         <p className="text-sm text-slate-400">
           This estimate has no assemblies.
         </p>
       ) : (
-        estimate.assemblies.map((assembly) => (
-          <SavedAssemblyBlock
-            key={assembly.assemblyId}
-            name={assembly.name}
-            driverValues={assembly.driverValues}
-            lines={lineItemsFor(view, assembly.assemblyId)}
-          />
-        ))
+        <>
+          {estimate.assemblies.map((assembly) => (
+            <SavedAssemblyBlock
+              key={assembly.assemblyId}
+              assemblyId={assembly.assemblyId}
+              view={view}
+              name={assembly.name}
+              driverValues={assembly.driverValues}
+              lines={lineItemsFor(view, assembly.assemblyId)}
+            />
+          ))}
+          {orphanTotals.map((t) => (
+            <SavedAssemblyBlock
+              key={t.assemblyId ?? "__none__"}
+              assemblyId={t.assemblyId}
+              view={view}
+              name={t.name}
+              driverValues={{}}
+              lines={lineItemsFor(view, t.assemblyId)}
+            />
+          ))}
+        </>
       )}
     </EstimateLayout>
   );
 }
 
-// The generated lines for one assembly, in engine order.
-function lineItemsFor(view: EstimateView, assemblyId: string): LineItemView[] {
+// The generated lines for one assembly, in engine order. assemblyId is
+// nullable so the orphan "Other" bucket (lines with no source assembly) can
+// share this lookup too.
+function lineItemsFor(
+  view: EstimateView,
+  assemblyId: string | null,
+): LineItemView[] {
   return view.lineItems.filter((line) => line.sourceAssemblyId === assemblyId);
 }
 
-const blockSubtotal = (lines: LineItemView[]): number =>
-  lines.reduce((sum, line) => sum + line.cost, 0);
+// The engine's buildup for one assembly. An assembly with no lines yet has no
+// entry, so fall back to zeros rather than letting the block disappear. Frozen
+// since one shared instance is handed to every empty block.
+const EMPTY_TOTALS: EstimateTotals = Object.freeze({
+  materialCost: 0,
+  laborCost: 0,
+  tax: 0,
+  directCost: 0,
+  overhead: 0,
+  profit: 0,
+  total: 0,
+  materialProfit: 0,
+  laborProfit: 0,
+  materialTotal: 0,
+  laborTotal: 0,
+});
 
-// One assembly block in the draft editor: header + subtotal, editable driver
-// inputs, then its live line items.
+function totalsFor(view: EstimateView, assemblyId: string | null) {
+  const found = view.assemblyTotals.find((a) => a.assemblyId === assemblyId);
+  if (!found) {
+    return EMPTY_TOTALS;
+  }
+  return found;
+}
+
+// One assembly block in the draft editor: header + total, editable driver
+// inputs, its live line items, then its own overhead/profit buildup.
 function DraftAssemblyBlock({
   selection,
+  view,
   lines,
   onRemove,
   onValue,
 }: {
   selection: Selection;
+  view: EstimateView;
   lines: LineItemView[];
   onRemove: () => void;
   onValue: (key: string, value: string) => void;
 }) {
+  const totals = totalsFor(view, selection.assemblyId);
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200 shadow-sm">
-      <BlockHeader name={selection.name} subtotal={blockSubtotal(lines)}>
+      <BlockHeader name={selection.name} total={totals.total}>
         <button
           onClick={onRemove}
           className="text-sm text-slate-400 hover:text-red-600"
@@ -406,43 +465,58 @@ function DraftAssemblyBlock({
         </div>
       )}
 
-      <AssemblyLines lines={lines} />
+      <AssemblyLines
+        lines={lines}
+        totals={totals}
+        overheadRate={view.overheadRate}
+        profitRate={view.profitRate}
+      />
     </div>
   );
 }
 
-// One assembly block in the read-only saved view: header + subtotal, the frozen
-// driver values, then its line items.
+// One assembly block in the read-only saved view: header + total, the frozen
+// driver values, its line items, then its own overhead/profit buildup.
 function SavedAssemblyBlock({
+  assemblyId,
+  view,
   name,
   driverValues,
   lines,
 }: {
+  assemblyId: string | null;
+  view: EstimateView;
   name: string;
   driverValues: Record<string, number>;
   lines: LineItemView[];
 }) {
   const drivers = Object.entries(driverValues);
+  const totals = totalsFor(view, assemblyId);
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200 shadow-sm">
-      <BlockHeader name={name} subtotal={blockSubtotal(lines)} />
+      <BlockHeader name={name} total={totals.total} />
       {drivers.length > 0 && (
         <div className="border-b border-slate-100 px-4 py-2 text-sm text-slate-500">
           {drivers.map(([key, value]) => `${key}: ${value}`).join(", ")}
         </div>
       )}
-      <AssemblyLines lines={lines} />
+      <AssemblyLines
+        lines={lines}
+        totals={totals}
+        overheadRate={view.overheadRate}
+        profitRate={view.profitRate}
+      />
     </div>
   );
 }
 
 function BlockHeader({
   name,
-  subtotal,
+  total,
   children,
 }: {
   name: string;
-  subtotal: number;
+  total: number;
   children?: ReactNode;
 }) {
   return (
@@ -450,7 +524,7 @@ function BlockHeader({
       <span className="font-medium text-slate-800">{name}</span>
       <div className="flex items-center gap-3">
         <span className="text-sm font-medium text-slate-700">
-          {formatCurrency(subtotal)}
+          {formatCurrency(total)}
         </span>
         {children}
       </div>
@@ -458,69 +532,185 @@ function BlockHeader({
   );
 }
 
-// A task group for display: a named grouping that owns a mix of labor and
-// material lines. Loose lines are ungrouped lines shown on their own.
-interface TaskGroup {
-  kind: "group";
-  key: string;
-  name: string;
+// The workbook's two money columns — M (materials) and P (labor) — run down the
+// whole buildup and combine only at the bottom. The four rows are defined once
+// here so the assembly footer and the estimate panel, which render them into
+// different table shapes, can never disagree about a figure or a label.
+interface BuildupRow {
+  label: string;
+  material: ReactNode;
+  labor: ReactNode;
+  strong?: boolean;
+}
+
+function buildupRows(
+  totals: EstimateTotals,
+  overheadRate: number,
+  profitRate: number,
+): BuildupRow[] {
+  return [
+    {
+      label: "Subtotal",
+      material: formatCurrency(totals.materialCost),
+      labor: formatCurrency(totals.laborCost),
+    },
+    // An em dash, not $0.00 — labor never carries overhead, so there is no
+    // figure. A zero would claim the rate applied and came to nothing.
+    {
+      label: `Overhead (${overheadRate}%)`,
+      material: formatCurrency(totals.overhead),
+      labor: "—",
+    },
+    {
+      label: `Profit (${profitRate}%)`,
+      material: formatCurrency(totals.materialProfit),
+      labor: formatCurrency(totals.laborProfit),
+    },
+    {
+      label: "Total",
+      material: formatCurrency(totals.materialTotal),
+      labor: formatCurrency(totals.laborTotal),
+      strong: true,
+    },
+  ];
+}
+
+// The estimate panel's buildup. It stands alone in the sidebar with no line
+// items beneath it, so it carries its own Material/Labor headings.
+function BuildupTable({
+  totals,
+  overheadRate,
+  profitRate,
+}: {
+  totals: EstimateTotals;
+  overheadRate: number;
+  profitRate: number;
+}) {
+  return (
+    <table className="w-full border-collapse text-sm">
+      <thead>
+        <tr className="text-xs text-slate-400">
+          <th />
+          <th className="pb-1 text-right font-medium">Material</th>
+          <th className="pb-1 text-right font-medium">Labor</th>
+        </tr>
+      </thead>
+      <tbody>
+        {buildupRows(totals, overheadRate, profitRate).map((r) => (
+          <tr
+            key={r.label}
+            className={
+              r.strong ? "font-semibold text-slate-800" : "text-slate-600"
+            }
+          >
+            <td className={r.strong ? "pt-1" : undefined}>{r.label}</td>
+            <td className={`text-right tabular-nums ${r.strong ? "pt-1" : ""}`}>
+              {r.material}
+            </td>
+            <td className={`text-right tabular-nums ${r.strong ? "pt-1" : ""}`}>
+              {r.labor}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+// The sheet ends each phase with its own buildup in the same two columns its
+// line items use (rows 56–59). Rendering it as the line table's own <tfoot> is
+// what makes Material and Labor line up from the first line item down to the
+// phase total, exactly as M and P do in the workbook — two separate tables
+// size their columns independently and cannot be made to agree.
+function AssemblyBuildupFoot({
+  totals,
+  overheadRate,
+  profitRate,
+}: {
+  totals: EstimateTotals;
+  overheadRate: number;
+  profitRate: number;
+}) {
+  const rows = buildupRows(totals, overheadRate, profitRate);
+  return (
+    <tfoot className="border-t border-slate-200 bg-slate-50/60">
+      {rows.map((r, i) => {
+        const pad = `${i === 0 ? "pt-3 " : ""}${
+          i === rows.length - 1 ? "pb-3 " : ""
+        }py-0.5`;
+        const money = `px-4 ${pad} text-right tabular-nums whitespace-nowrap`;
+        return (
+          <tr
+            key={r.label}
+            className={
+              r.strong ? "font-semibold text-slate-800" : "text-slate-600"
+            }
+          >
+            <td colSpan={3} className={`px-4 ${pad}`}>
+              {r.label}
+            </td>
+            <td className={money}>{r.material}</td>
+            <td className={money}>{r.labor}</td>
+            {/* The Total column reads the same the whole way down: the combined
+                total of the rows above it. Task rows carry their task's; this
+                carries the assembly's. */}
+            <td className={money}>
+              {r.strong ? formatCurrency(totals.total) : ""}
+            </td>
+          </tr>
+        );
+      })}
+    </tfoot>
+  );
+}
+
+// One assembly's line items and its closing buildup, in a single table. The
+// buildup has to share this table — not sit in one of its own below it — or its
+// Material and Labor figures will not fall under the Material and Labor columns
+// of the lines they summarize.
+function AssemblyLines({
+  lines,
+  totals,
+  overheadRate,
+  profitRate,
+}: {
   lines: LineItemView[];
-  total: number; // direct cost of the whole task
-}
-interface LooseLine {
-  kind: "loose";
-  line: LineItemView;
-}
-type LineBlock = TaskGroup | LooseLine;
-
-// Buckets the flat (engine-ordered) lines into task groups by taskKey, keeping
-// each group at the position of its first line. Ungrouped lines stay loose.
-function toBlocks(lines: LineItemView[]): LineBlock[] {
-  const blocks: LineBlock[] = [];
-  const byKey = new Map<string, TaskGroup>();
-  for (const line of lines) {
-    if (line.taskKey == null) {
-      blocks.push({ kind: "loose", line });
-      continue;
-    }
-    let group = byKey.get(line.taskKey);
-    if (!group) {
-      group = {
-        kind: "group",
-        key: line.taskKey,
-        name: line.taskName ?? line.taskKey,
-        lines: [],
-        total: 0,
-      };
-      byKey.set(line.taskKey, group);
-      blocks.push(group);
-    }
-    group.lines.push(line);
-    group.total += line.cost;
-  }
-  return blocks;
-}
-
-function AssemblyLines({ lines }: { lines: LineItemView[] }) {
+  totals: EstimateTotals;
+  overheadRate: number;
+  profitRate: number;
+}) {
   if (lines.length === 0) {
     return (
       <p className="px-4 py-3 text-sm text-slate-400">No line items yet.</p>
     );
   }
-  const blocks = toBlocks(lines);
+  const blocks = summarizeTasks(lines);
   // Flatten a single-task assembly (e.g. Soil Prep): the assembly header already
-  // names it and shows its subtotal, so repeating a task header would be noise.
+  // names it and shows its total, so repeating a task header would be noise.
   const flat =
     blocks.length === 1 && blocks[0].kind === "group" ? blocks[0] : null;
+
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[32rem] border-collapse text-sm">
+      <table className="w-full min-w-[52rem] border-collapse text-sm">
         <thead>
           <tr className="border-b border-slate-200 text-left text-xs text-slate-400">
             <th className="px-4 py-1.5 font-medium">Description</th>
-            <th className="px-4 py-1.5 text-right font-medium">Qty</th>
-            <th className="px-4 py-1.5 text-right font-medium">Unit price</th>
-            <th className="px-4 py-1.5 text-right font-medium">Total</th>
+            <th className="px-4 py-1.5 text-right font-medium whitespace-nowrap">
+              Qty
+            </th>
+            <th className="px-4 py-1.5 text-right font-medium whitespace-nowrap">
+              Unit price
+            </th>
+            <th className="px-4 py-1.5 text-right font-medium whitespace-nowrap">
+              Material
+            </th>
+            <th className="px-4 py-1.5 text-right font-medium whitespace-nowrap">
+              Labor
+            </th>
+            <th className="px-4 py-1.5 text-right font-medium whitespace-nowrap">
+              Total
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -534,15 +724,20 @@ function AssemblyLines({ lines }: { lines: LineItemView[] }) {
                 ),
               )}
         </tbody>
+        <AssemblyBuildupFoot
+          totals={totals}
+          overheadRate={overheadRate}
+          profitRate={profitRate}
+        />
       </table>
     </div>
   );
 }
 
-// A task: a header row naming the task, its lines (labor + materials, uniform)
-// indented beneath, and a "Task total" row so the lines visibly add up. A
-// single-line task collapses to just that line — a header + subtotal around one
-// row is only noise.
+// A task: a header row naming it, its lines indented beneath, and a "Task total"
+// row carrying all three money columns — the workbook's Q34 pattern. A
+// single-line task collapses to just that line; a header and a total around one
+// row is only noise, and its one number is already on screen.
 function GroupRows({ group }: { group: TaskGroup }) {
   if (group.lines.length === 1) {
     return <LineRow line={group.lines[0]} />;
@@ -550,7 +745,7 @@ function GroupRows({ group }: { group: TaskGroup }) {
   return (
     <>
       <tr className="border-b border-slate-100 bg-slate-50/60">
-        <td colSpan={4} className="px-4 py-2 font-medium text-slate-800">
+        <td colSpan={6} className="px-4 py-2 font-medium text-slate-800">
           {group.name}
         </td>
       </tr>
@@ -560,11 +755,17 @@ function GroupRows({ group }: { group: TaskGroup }) {
       <tr className="border-b border-slate-200">
         <td
           colSpan={3}
-          className="px-4 pb-2 pt-1 text-right text-xs font-medium uppercase tracking-wide text-slate-400"
+          className="whitespace-nowrap px-4 pb-2 pt-1 text-right text-xs font-medium uppercase tracking-wide text-slate-400"
         >
           Task total
         </td>
-        <td className="px-4 pb-2 pt-1 text-right font-semibold text-slate-800">
+        <td className="whitespace-nowrap px-4 pb-2 pt-1 text-right font-semibold text-slate-800">
+          {formatCurrency(group.materialCost)}
+        </td>
+        <td className="whitespace-nowrap px-4 pb-2 pt-1 text-right font-semibold text-slate-800">
+          {formatCurrency(group.laborCost)}
+        </td>
+        <td className="whitespace-nowrap px-4 pb-2 pt-1 text-right font-semibold text-slate-800">
           {formatCurrency(group.total)}
         </td>
       </tr>
@@ -573,6 +774,9 @@ function GroupRows({ group }: { group: TaskGroup }) {
 }
 
 // One line item row, uniform for labor (qty in hours) and material (qty + unit).
+// A line is one or the other, never both, so it fills exactly one money column
+// and leaves the rest blank — a "$0.00" there would read as "this cost nothing"
+// rather than "not applicable".
 function LineRow({
   line,
   indented = false,
@@ -586,16 +790,23 @@ function LineRow({
       <td className={`py-2 text-slate-700 ${indented ? "pl-8 pr-4" : "px-4"}`}>
         {line.description}
       </td>
-      <td className="px-4 py-2 text-right text-slate-600">
+      <td className="whitespace-nowrap px-4 py-2 text-right text-slate-600">
         {formatQuantity(line.quantity)}
         {isLabor ? " hr" : line.unit ? ` ${line.unit}` : ""}
       </td>
-      <td className="px-4 py-2 text-right text-slate-600">
+      <td className="whitespace-nowrap px-4 py-2 text-right text-slate-600">
         {formatCurrency(line.unitPrice)}
       </td>
-      <td className="px-4 py-2 text-right text-slate-700">
-        {formatCurrency(line.cost)}
+      <td className="whitespace-nowrap px-4 py-2 text-right tabular-nums text-slate-700">
+        {isLabor ? "" : formatCurrency(line.cost)}
       </td>
+      <td className="whitespace-nowrap px-4 py-2 text-right tabular-nums text-slate-700">
+        {isLabor ? formatCurrency(line.cost) : ""}
+      </td>
+      {/* The Total column holds combined totals only — a task's, or the
+          assembly's in the footer. A line contributes to one column, so it has
+          nothing to put here. */}
+      <td className="whitespace-nowrap" />
     </tr>
   );
 }
@@ -656,27 +867,24 @@ function MetaHeader({
 
 function TotalsPanel({ estimate }: { estimate: EstimateView }) {
   const { totals } = estimate;
-  const row = (label: string, value: number, strong = false) => (
-    <div
-      className={`flex justify-between ${
-        strong
-          ? "border-t border-slate-200 pt-2 font-semibold text-slate-800"
-          : "text-slate-600"
-      }`}
-    >
-      <span>{label}</span>
-      <span>{formatCurrency(value)}</span>
-    </div>
-  );
-
   return (
-    <div className="w-full space-y-1 rounded-lg border border-slate-200 p-4 text-sm shadow-sm">
-      <h2 className="mb-2 text-sm font-medium text-slate-600">Estimate</h2>
-      {row("Direct cost", totals.directCost)}
-      {row(`Overhead (${estimate.overheadRate}%)`, totals.overhead)}
-      {row(`Profit (${estimate.profitRate}%)`, totals.profit)}
-      {row(`Tax (${estimate.taxRate}%)`, totals.tax)}
-      {row("Total", totals.total, true)}
+    <div className="w-full space-y-2 rounded-lg border border-slate-200 p-4 text-sm shadow-sm">
+      <h2 className="text-sm font-medium text-slate-600">Estimate</h2>
+      <BuildupTable
+        totals={totals}
+        overheadRate={estimate.overheadRate}
+        profitRate={estimate.profitRate}
+      />
+      <div className="flex justify-between border-t border-slate-200 pt-2 font-semibold text-slate-800">
+        <span>Price</span>
+        <span className="tabular-nums">{formatCurrency(totals.total)}</span>
+      </div>
+      {/* Tax is already inside materialCost, so it is a note, not a row — a
+          fifth additive-looking row would break the column arithmetic above. */}
+      <p className="text-xs text-slate-400">
+        includes {formatCurrency(totals.tax)} sales tax on materials at{" "}
+        {estimate.taxRate}%
+      </p>
     </div>
   );
 }

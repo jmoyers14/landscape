@@ -152,7 +152,7 @@ interface LaborRate {
 interface PricingSettings {
   orgId: string;          // unique
   taxRate: number;        // 7.75  (% on taxable material lines)
-  overheadRate: number;   // 40 — margin basis; see "Cost buildup" below
+  overheadRate: number;   // 40 — margin basis on materials; see "Cost buildup" below
   profitRate: number;     // 15
   laborRates: LaborRate[];// [{general,35}, {skilled,55}]
 }
@@ -241,22 +241,46 @@ for each line:
     lineCost += deliveryCost
     if taxable: lineCost += (quantity * unitPrice) * taxRate/100
 
-directCost = sum(lineCost)
-overhead   = directCost * (1 / (1 - overheadRate/100) - 1)
-profit     = (directCost + overhead) * profitRate/100
-total      = directCost + overhead + profit
+materialCost = sum(lineCost for material lines)
+laborCost    = sum(lineCost for labor lines)
+directCost   = materialCost + laborCost
+overhead     = materialCost * (1 / (1 - overheadRate/100) - 1)
+
+materialProfit = (materialCost + overhead) * profitRate/100
+laborProfit    =  laborCost               * profitRate/100
+materialTotal  =  materialCost + overhead + materialProfit
+laborTotal     =  laborCost               + laborProfit
+profit         = materialProfit + laborProfit
+total          = materialTotal  + laborTotal
 ```
 
 The engine reproduces the spreadsheet exactly (the current placeholder engine is
-being replaced, not preserved). Two things to note:
+being replaced, not preserved). Three things to note:
 
-1. **Overhead is margin-basis.** The sheet computes overhead as `cost / 0.6 −
-   cost` — it marks cost up so cost becomes 60% of the cost+overhead subtotal.
-   Generalized, `overhead = cost × (1 / (1 − rate) − 1)`. With `overheadRate =
-   40` this is exactly `cost / 0.6 − cost`, so the stored rate stays a clean 40.
+1. **Overhead is margin-basis, on materials only.** The sheet computes overhead
+   as `materials / 0.6 − materials` — it marks materials up so they become 60%
+   of the materials+overhead subtotal. Generalized,
+   `overhead = materialCost × (1 / (1 − rate) − 1)`. With `overheadRate = 40`
+   this is exactly `materials / 0.6 − materials`, so the stored rate stays a
+   clean 40. **Labor carries no overhead** — the sheet's labor overhead cell is
+   empty in every phase. Overhead is computed per assembly and for the estimate.
 2. **Tax is per material line.** The sheet taxes each **material** line *before*
    overhead/profit and never taxes labor. That's why `taxable` lives on the
    line, not as a single estimate-level tax added at the end.
+3. **Profit and total are split into material/labor columns, mirroring the
+   sheet's `M` (materials) and `P` (labor) columns.** `materialProfit` marks up
+   `materialCost + overhead`; `laborProfit` marks up `laborCost` alone — labor's
+   base carries no overhead, so its profit doesn't either. `materialTotal` and
+   `laborTotal` are each column's running total (`materialCost + overhead +
+   materialProfit`, and `laborCost + laborProfit`). `profit` and `total` are
+   *defined* as `materialProfit + laborProfit` and `materialTotal + laborTotal`
+   — not computed independently and checked against those sums — so the two
+   columns always tie out exactly. `EstimateTotals` (and `AssemblyTotals`, its
+   per-assembly counterpart) carries `materialProfit`, `laborProfit`,
+   `materialTotal`, and `laborTotal` alongside `materialCost`, `laborCost`, and
+   `overhead` — together enough to render the buildup as two columns (Material,
+   Labor) with Subtotal/Overhead/Profit/Total rows, instead of a single blended
+   total.
 
 ## What is intentionally deferred
 

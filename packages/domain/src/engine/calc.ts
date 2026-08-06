@@ -11,19 +11,31 @@ export interface LineItemView extends LineItem {
   cost: number; // direct-cost contribution: base + delivery + tax (materials), base (labor)
 }
 
-export interface PhaseSummary {
-  phase: string | null;
-  subtotal: number;
-}
-
 export interface EstimateTotals {
   materialCost: number; // material base + delivery + tax
   laborCost: number; // labor base, untaxed
   tax: number; // sum of per-line material tax (informational)
-  directCost: number; // materialCost + laborCost
-  overhead: number;
+  // materialCost + laborCost. Superseded in the UI by the material/labor
+  // columns and their Subtotal row (nothing renders this field directly
+  // anymore); kept as an API/test-only field — it's still a meaningful
+  // total, and per-line `cost` sums exactly to it.
+  directCost: number;
+  overhead: number; // materials only — labor carries none
   profit: number;
   total: number;
+  // The buildup split the way the workbook runs it: column M (materials) and
+  // column P (labor) side by side, combining only at the bottom. Each pair sums
+  // to its combined field exactly, because both are defined as that sum.
+  materialProfit: number; // (materialCost + overhead) × profitRate
+  laborProfit: number; // laborCost × profitRate
+  materialTotal: number; // materialCost + overhead + materialProfit
+  laborTotal: number; // laborCost + laborProfit
+}
+
+/** One assembly's own cost buildup, carrying the same shape as the job totals. */
+export interface AssemblyTotals extends EstimateTotals {
+  assemblyId: string | null; // null = lines with no source assembly
+  name: string;
 }
 
 export interface EstimateView {
@@ -37,7 +49,7 @@ export interface EstimateView {
   createdAt: string;
   assemblies: EstimateAssembly[];
   lineItems: LineItemView[];
-  phases: PhaseSummary[];
+  assemblyTotals: AssemblyTotals[];
   totals: EstimateTotals;
 }
 
@@ -61,9 +73,10 @@ export interface PricedLine {
  * The cost buildup — the single source of truth for how an estimate's money is
  * computed, faithful to the spreadsheet. Material lines carry their sales tax
  * (per line, pre-markup) and delivery inside direct cost; labor is untaxed.
- * Overhead is margin-basis (`cost / 0.6 − cost` when overheadRate is 40); profit
- * is a markup on cost + overhead. Rates are percentages. Nothing here is
- * persisted, so changing the formula is a one-function edit.
+ * Overhead is margin-basis on MATERIALS ONLY (`materialCost / 0.6 − materialCost`
+ * when overheadRate is 40) — the sheet charges no overhead on labor in any of its
+ * six phases. Profit is a markup on cost + overhead. Rates are percentages.
+ * Nothing here is persisted, so changing the formula is a one-function edit.
  */
 export function priceLines(
   lines: PricedLine[],
@@ -85,11 +98,34 @@ export function priceLines(
   }
 
   const directCost = materialCost + laborCost;
-  const overhead = directCost * (1 / (1 - rates.overheadRate / 100) - 1);
-  const profit = (directCost + overhead) * (rates.profitRate / 100);
-  const total = directCost + overhead + profit;
+  const overhead = materialCost * (1 / (1 - rates.overheadRate / 100) - 1);
 
-  return { materialCost, laborCost, tax, directCost, overhead, profit, total };
+  // The sheet's per-phase pattern, column by column:
+  //   M58 = (M56 + M57) × 0.15      P58 = P56 × 0.15
+  //   M59 =  M56 + M57 + M58        P59 = P56 + P58
+  // profit and total are the sums of these, so the columns tie out by
+  // definition rather than by luck.
+  const profitRate = rates.profitRate / 100;
+  const materialProfit = (materialCost + overhead) * profitRate;
+  const laborProfit = laborCost * profitRate;
+  const materialTotal = materialCost + overhead + materialProfit;
+  const laborTotal = laborCost + laborProfit;
+  const profit = materialProfit + laborProfit;
+  const total = materialTotal + laborTotal;
+
+  return {
+    materialCost,
+    laborCost,
+    tax,
+    directCost,
+    overhead,
+    profit,
+    total,
+    materialProfit,
+    laborProfit,
+    materialTotal,
+    laborTotal,
+  };
 }
 
 /**
@@ -116,7 +152,7 @@ export function computeEstimate(estimate: Estimate): EstimateView {
     createdAt: estimate.createdAt,
     assemblies: estimate.assemblies,
     lineItems,
-    phases: summarizePhases(lineItems),
+    assemblyTotals: summarizeAssemblies(estimate),
     totals: priceLines(estimate.lineItems, estimate),
   };
 }
@@ -133,17 +169,34 @@ function directCostOfLine(item: LineItem, taxRate: number): number {
   return base + item.deliveryCost + tax;
 }
 
-// Phase subtotals in first-seen order (the spec's per-phase cost rollup), on the
-// direct cost of each line so phases sum to the estimate's direct cost.
-function summarizePhases(items: LineItemView[]): PhaseSummary[] {
+// Each assembly's own cost buildup. The sheet computes overhead and profit per
+// phase (our assembly), not once for the whole bid. Both are linear in their
+// bases, so these sum exactly to the estimate's totals — no reconciling line.
+// Order is first-seen, which is generation order, which follows `assemblies`.
+function summarizeAssemblies(estimate: Estimate): AssemblyTotals[] {
+  const nameById = new Map(
+    estimate.assemblies.map((a) => [a.assemblyId, a.name]),
+  );
   const order: (string | null)[] = [];
-  const subtotals = new Map<string | null, number>();
-  for (const item of items) {
-    if (!subtotals.has(item.phase)) {
-      order.push(item.phase);
-      subtotals.set(item.phase, 0);
+  const grouped = new Map<string | null, LineItem[]>();
+
+  for (const item of estimate.lineItems) {
+    const key = item.sourceAssemblyId;
+    let bucket = grouped.get(key);
+    if (!bucket) {
+      bucket = [];
+      grouped.set(key, bucket);
+      order.push(key);
     }
-    subtotals.set(item.phase, (subtotals.get(item.phase) ?? 0) + item.cost);
+    bucket.push(item);
   }
-  return order.map((phase) => ({ phase, subtotal: subtotals.get(phase) ?? 0 }));
+
+  return order.map((assemblyId) => ({
+    assemblyId,
+    name:
+      assemblyId === null
+        ? "Other"
+        : (nameById.get(assemblyId) ?? "Unknown assembly"),
+    ...priceLines(grouped.get(assemblyId) ?? [], estimate),
+  }));
 }

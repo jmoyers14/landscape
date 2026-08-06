@@ -10,8 +10,9 @@ export interface LaborRate {
 
 /**
  * The org's global pricing knobs for the cost buildup. Rates are percentages.
- * `overheadRate` is margin-basis: overhead = cost × (1 / (1 − rate/100) − 1),
- * so 40 reproduces the spreadsheet's `cost / 0.6 − cost`.
+ * `overheadRate` is margin-basis on materials only: overhead = materialCost ×
+ * (1 / (1 − rate/100) − 1), so 40 reproduces the spreadsheet's
+ * `materials / 0.6 − materials`.
  */
 export interface PricingSettings {
   taxRate: number;

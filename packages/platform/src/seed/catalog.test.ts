@@ -25,7 +25,10 @@ const EXPECTED: Record<string, { materialCost: number; laborHours: number }> = {
   Planting: { materialCost: 4113.464295, laborHours: 80.0424 },
   // Concrete's material total (M127) and labor hours (N130) EXCLUDE the omitted
   // "Finishers" flat fee, which lives only in the sheet's labor-$ total (P127).
-  Concrete: { materialCost: 5159.3210139444445, laborHours: 113.12452901234568 },
+  Concrete: {
+    materialCost: 5159.3210139444445,
+    laborHours: 113.12452901234568,
+  },
   "Seating Wall": { materialCost: 515.9567125, laborHours: 37.18225 },
 };
 
@@ -37,7 +40,10 @@ function runAssembly(seed: SeedAssembly) {
   // build() returns an AssemblyInput; the engine wants a persisted Assembly.
   const assembly = { ...built, id: built.name, createdAt: "" };
   const materialsById = new Map<string, Material>(
-    seed.materials.map((m) => [m.slug, { id: m.slug, createdAt: "", ...m.input }]),
+    seed.materials.map((m) => [
+      m.slug,
+      { id: m.slug, createdAt: "", ...m.input },
+    ]),
   );
   const driverValues = Object.fromEntries(
     assembly.drivers.map((d) => [d.key, d.defaultValue]),
@@ -50,20 +56,85 @@ function runAssembly(seed: SeedAssembly) {
   const laborHours = lines
     .filter((line) => line.type === "labor")
     .reduce((sum, line) => sum + line.quantity, 0);
-  return { name: assembly.name, totals: priceLines(lines, STARTER_PRICING), laborHours };
+  return {
+    name: assembly.name,
+    totals: priceLines(lines, STARTER_PRICING),
+    laborHours,
+  };
 }
 
-describe("starter catalog — fidelity to the Package sheet", () => {
-  for (const seed of STARTER_ASSEMBLIES) {
-    const { name, totals, laborHours } = runAssembly(seed);
+const RESULTS = STARTER_ASSEMBLIES.map(runAssembly);
 
+describe("starter catalog — fidelity to the Package sheet", () => {
+  for (const { name, totals, laborHours } of RESULTS) {
     it(`${name} reproduces the sheet's material total and labor hours`, () => {
       const expected = EXPECTED[name];
       // Every registered assembly must have an expected figure, so adding one
       // without transcribing its sheet totals fails loudly here.
-      expect(expected, `no expected fidelity figures for "${name}"`).toBeDefined();
+      expect(
+        expected,
+        `no expected fidelity figures for "${name}"`,
+      ).toBeDefined();
       expect(totals.materialCost).toBeCloseTo(expected.materialCost, 3);
       expect(laborHours).toBeCloseTo(expected.laborHours, 3);
     });
+
+    // Overhead is charged on materials only — the sheet's labor overhead cell
+    // is empty in every phase. Asserted per assembly so a regression in the
+    // base shows up against real seeded data, not just a synthetic fixture.
+    it(`${name} charges overhead on materials only`, () => {
+      expect(totals.materialCost + totals.overhead).toBeCloseTo(
+        totals.materialCost / (1 - STARTER_PRICING.overheadRate / 100),
+        5,
+      );
+    });
+
+    // Each column follows the sheet's own per-phase pattern:
+    //   M58 = (M56 + M57) × 0.15      P58 = P56 × 0.15
+    //   M59 =  M56 + M57 + M58        P59 = P56 + P58
+    // Derived from the rate, deliberately NOT from `profit`/`total` — those are
+    // defined as the sum of these two columns, so asserting the sum against
+    // them is a tautology that survives any error in either column.
+    it(`${name}'s material and labor columns follow the sheet's pattern`, () => {
+      const rate = STARTER_PRICING.profitRate / 100;
+      expect(totals.materialProfit).toBeCloseTo(
+        (totals.materialCost + totals.overhead) * rate,
+        8,
+      );
+      expect(totals.laborProfit).toBeCloseTo(totals.laborCost * rate, 8);
+      expect(totals.materialTotal).toBeCloseTo(
+        (totals.materialCost + totals.overhead) * (1 + rate),
+        8,
+      );
+      expect(totals.laborTotal).toBeCloseTo(totals.laborCost * (1 + rate), 8);
+    });
   }
+
+  // One assembly pinned end-to-end. Irrigation is all general labor ($35/hr),
+  // so its labor cost follows directly from its hours: 69.3695 × 35.
+  it("Irrigation's full buildup matches the sheet's per-phase pattern", () => {
+    const irrigation = RESULTS.find((r) => r.name === "Irrigation");
+    expect(
+      irrigation,
+      "Irrigation missing from STARTER_ASSEMBLIES",
+    ).toBeDefined();
+    const { totals } = irrigation!;
+    expect(totals.materialCost).toBeCloseTo(1142.31378, 5);
+    expect(totals.laborCost).toBeCloseTo(2427.9325, 5);
+    expect(totals.directCost).toBeCloseTo(3570.24628, 5);
+    expect(totals.overhead).toBeCloseTo(761.54252, 5);
+    expect(totals.profit).toBeCloseTo(649.76832, 5);
+    expect(totals.total).toBeCloseTo(4981.55712, 5);
+
+    // The workbook runs this phase as two columns (rows 56–59):
+    //   M56 1,142.31*  P56 2,427.93     *seed-corrected; the sheet's SUM
+    //   M57   761.54   (no labor OH)     drops its last three material rows
+    //   M58   285.58   P58   364.19
+    //   M59 2,189.43   P59 2,792.12
+    expect(totals.materialProfit).toBeCloseTo(285.578445, 5);
+    expect(totals.laborProfit).toBeCloseTo(364.189875, 5);
+    expect(totals.materialTotal).toBeCloseTo(2189.434745, 5);
+    expect(totals.laborTotal).toBeCloseTo(2792.122375, 5);
+    expect(totals.materialTotal + totals.laborTotal).toBeCloseTo(4981.55712, 5);
+  });
 });
