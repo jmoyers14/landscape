@@ -644,12 +644,22 @@ function AssemblyLines({ lines }: { lines: LineItemView[] }) {
         <thead>
           <tr className="border-b border-slate-200 text-left text-xs text-slate-400">
             <th className="px-4 py-1.5 font-medium">Description</th>
-            <th className="px-4 py-1.5 text-right font-medium">Qty</th>
-            <th className="px-4 py-1.5 text-right font-medium">Unit price</th>
-            <th className="px-4 py-1.5 text-right font-medium">Material</th>
-            <th className="px-4 py-1.5 text-right font-medium">Labor</th>
+            <th className="px-4 py-1.5 text-right font-medium whitespace-nowrap">
+              Qty
+            </th>
+            <th className="px-4 py-1.5 text-right font-medium whitespace-nowrap">
+              Unit price
+            </th>
+            <th className="px-4 py-1.5 text-right font-medium whitespace-nowrap">
+              Material
+            </th>
+            <th className="px-4 py-1.5 text-right font-medium whitespace-nowrap">
+              Labor
+            </th>
             {showTotal && (
-              <th className="px-4 py-1.5 text-right font-medium">Total</th>
+              <th className="px-4 py-1.5 text-right font-medium whitespace-nowrap">
+                Total
+              </th>
             )}
           </tr>
         </thead>
@@ -707,18 +717,18 @@ function GroupRows({
       <tr className="border-b border-slate-200">
         <td
           colSpan={3}
-          className="px-4 pb-2 pt-1 text-right text-xs font-medium uppercase tracking-wide text-slate-400"
+          className="whitespace-nowrap px-4 pb-2 pt-1 text-right text-xs font-medium uppercase tracking-wide text-slate-400"
         >
           Task total
         </td>
-        <td className="px-4 pb-2 pt-1 text-right font-semibold text-slate-800">
+        <td className="whitespace-nowrap px-4 pb-2 pt-1 text-right font-semibold text-slate-800">
           {formatCurrency(group.materialCost)}
         </td>
-        <td className="px-4 pb-2 pt-1 text-right font-semibold text-slate-800">
+        <td className="whitespace-nowrap px-4 pb-2 pt-1 text-right font-semibold text-slate-800">
           {formatCurrency(group.laborCost)}
         </td>
         {showTotal && (
-          <td className="px-4 pb-2 pt-1 text-right font-semibold text-slate-800">
+          <td className="whitespace-nowrap px-4 pb-2 pt-1 text-right font-semibold text-slate-800">
             {formatCurrency(group.total)}
           </td>
         )}
@@ -746,20 +756,20 @@ function LineRow({
       <td className={`py-2 text-slate-700 ${indented ? "pl-8 pr-4" : "px-4"}`}>
         {line.description}
       </td>
-      <td className="px-4 py-2 text-right text-slate-600">
+      <td className="whitespace-nowrap px-4 py-2 text-right text-slate-600">
         {formatQuantity(line.quantity)}
         {isLabor ? " hr" : line.unit ? ` ${line.unit}` : ""}
       </td>
-      <td className="px-4 py-2 text-right text-slate-600">
+      <td className="whitespace-nowrap px-4 py-2 text-right text-slate-600">
         {formatCurrency(line.unitPrice)}
       </td>
-      <td className="px-4 py-2 text-right tabular-nums text-slate-700">
+      <td className="whitespace-nowrap px-4 py-2 text-right tabular-nums text-slate-700">
         {isLabor ? "" : formatCurrency(line.cost)}
       </td>
-      <td className="px-4 py-2 text-right tabular-nums text-slate-700">
+      <td className="whitespace-nowrap px-4 py-2 text-right tabular-nums text-slate-700">
         {isLabor ? formatCurrency(line.cost) : ""}
       </td>
-      {showTotal && <td />}
+      {showTotal && <td className="whitespace-nowrap" />}
     </tr>
   );
 }
