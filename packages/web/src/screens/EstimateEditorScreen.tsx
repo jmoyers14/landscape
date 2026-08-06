@@ -465,8 +465,8 @@ function DraftAssemblyBlock({
         </div>
       )}
 
-      <AssemblyLines lines={lines} />
-      <AssemblyFooter
+      <AssemblyLines
+        lines={lines}
         totals={totals}
         overheadRate={view.overheadRate}
         profitRate={view.profitRate}
@@ -500,8 +500,8 @@ function SavedAssemblyBlock({
           {drivers.map(([key, value]) => `${key}: ${value}`).join(", ")}
         </div>
       )}
-      <AssemblyLines lines={lines} />
-      <AssemblyFooter
+      <AssemblyLines
+        lines={lines}
         totals={totals}
         overheadRate={view.overheadRate}
         profitRate={view.profitRate}
@@ -533,8 +533,50 @@ function BlockHeader({
 }
 
 // The workbook's two money columns — M (materials) and P (labor) — run down the
-// whole buildup and combine only at the bottom. Shared by the per-assembly
-// footer and the estimate panel so the two can never disagree about shape.
+// whole buildup and combine only at the bottom. The four rows are defined once
+// here so the assembly footer and the estimate panel, which render them into
+// different table shapes, can never disagree about a figure or a label.
+interface BuildupRow {
+  label: string;
+  material: ReactNode;
+  labor: ReactNode;
+  strong?: boolean;
+}
+
+function buildupRows(
+  totals: EstimateTotals,
+  overheadRate: number,
+  profitRate: number,
+): BuildupRow[] {
+  return [
+    {
+      label: "Subtotal",
+      material: formatCurrency(totals.materialCost),
+      labor: formatCurrency(totals.laborCost),
+    },
+    // An em dash, not $0.00 — labor never carries overhead, so there is no
+    // figure. A zero would claim the rate applied and came to nothing.
+    {
+      label: `Overhead (${overheadRate}%)`,
+      material: formatCurrency(totals.overhead),
+      labor: "—",
+    },
+    {
+      label: `Profit (${profitRate}%)`,
+      material: formatCurrency(totals.materialProfit),
+      labor: formatCurrency(totals.laborProfit),
+    },
+    {
+      label: "Total",
+      material: formatCurrency(totals.materialTotal),
+      labor: formatCurrency(totals.laborTotal),
+      strong: true,
+    },
+  ];
+}
+
+// The estimate panel's buildup. It stands alone in the sidebar with no line
+// items beneath it, so it carries its own Material/Labor headings.
 function BuildupTable({
   totals,
   overheadRate,
@@ -544,23 +586,6 @@ function BuildupTable({
   overheadRate: number;
   profitRate: number;
 }) {
-  const row = (
-    label: string,
-    material: ReactNode,
-    labor: ReactNode,
-    strong = false,
-  ) => (
-    <tr className={strong ? "font-semibold text-slate-800" : "text-slate-600"}>
-      <td className={strong ? "pt-1" : undefined}>{label}</td>
-      <td className={`text-right tabular-nums ${strong ? "pt-1" : ""}`}>
-        {material}
-      </td>
-      <td className={`text-right tabular-nums ${strong ? "pt-1" : ""}`}>
-        {labor}
-      </td>
-    </tr>
-  );
-
   return (
     <table className="w-full border-collapse text-sm">
       <thead>
@@ -571,37 +596,33 @@ function BuildupTable({
         </tr>
       </thead>
       <tbody>
-        {row(
-          "Subtotal",
-          formatCurrency(totals.materialCost),
-          formatCurrency(totals.laborCost),
-        )}
-        {/* An em dash, not $0.00 — labor never carries overhead, so there is no
-            figure. A zero would claim the rate applied and came to nothing. */}
-        {row(
-          `Overhead (${overheadRate}%)`,
-          formatCurrency(totals.overhead),
-          "—",
-        )}
-        {row(
-          `Profit (${profitRate}%)`,
-          formatCurrency(totals.materialProfit),
-          formatCurrency(totals.laborProfit),
-        )}
-        {row(
-          "Total",
-          formatCurrency(totals.materialTotal),
-          formatCurrency(totals.laborTotal),
-          true,
-        )}
+        {buildupRows(totals, overheadRate, profitRate).map((r) => (
+          <tr
+            key={r.label}
+            className={
+              r.strong ? "font-semibold text-slate-800" : "text-slate-600"
+            }
+          >
+            <td className={r.strong ? "pt-1" : undefined}>{r.label}</td>
+            <td className={`text-right tabular-nums ${r.strong ? "pt-1" : ""}`}>
+              {r.material}
+            </td>
+            <td className={`text-right tabular-nums ${r.strong ? "pt-1" : ""}`}>
+              {r.labor}
+            </td>
+          </tr>
+        ))}
       </tbody>
     </table>
   );
 }
 
-// The sheet ends each phase with its own two-column buildup (rows 56–59). The
-// assembly's combined total already sits in the block header above.
-function AssemblyFooter({
+// The sheet ends each phase with its own buildup in the same two columns its
+// line items use (rows 56–59). Rendering it as the line table's own <tfoot> is
+// what makes Material and Labor line up from the first line item down to the
+// phase total, exactly as M and P do in the workbook — two separate tables
+// size their columns independently and cannot be made to agree.
+function AssemblyBuildupFoot({
   totals,
   overheadRate,
   profitRate,
@@ -610,18 +631,54 @@ function AssemblyFooter({
   overheadRate: number;
   profitRate: number;
 }) {
+  const rows = buildupRows(totals, overheadRate, profitRate);
   return (
-    <div className="border-t border-slate-200 bg-slate-50/60 px-4 py-3">
-      <BuildupTable
-        totals={totals}
-        overheadRate={overheadRate}
-        profitRate={profitRate}
-      />
-    </div>
+    <tfoot className="border-t border-slate-200 bg-slate-50/60">
+      {rows.map((r, i) => {
+        const pad = `${i === 0 ? "pt-3 " : ""}${
+          i === rows.length - 1 ? "pb-3 " : ""
+        }py-0.5`;
+        const money = `px-4 ${pad} text-right tabular-nums whitespace-nowrap`;
+        return (
+          <tr
+            key={r.label}
+            className={
+              r.strong ? "font-semibold text-slate-800" : "text-slate-600"
+            }
+          >
+            <td colSpan={3} className={`px-4 ${pad}`}>
+              {r.label}
+            </td>
+            <td className={money}>{r.material}</td>
+            <td className={money}>{r.labor}</td>
+            {/* The Total column reads the same the whole way down: the combined
+                total of the rows above it. Task rows carry their task's; this
+                carries the assembly's. */}
+            <td className={money}>
+              {r.strong ? formatCurrency(totals.total) : ""}
+            </td>
+          </tr>
+        );
+      })}
+    </tfoot>
   );
 }
 
-function AssemblyLines({ lines }: { lines: LineItemView[] }) {
+// One assembly's line items and its closing buildup, in a single table. The
+// buildup has to share this table — not sit in one of its own below it — or its
+// Material and Labor figures will not fall under the Material and Labor columns
+// of the lines they summarize.
+function AssemblyLines({
+  lines,
+  totals,
+  overheadRate,
+  profitRate,
+}: {
+  lines: LineItemView[];
+  totals: EstimateTotals;
+  overheadRate: number;
+  profitRate: number;
+}) {
   if (lines.length === 0) {
     return (
       <p className="px-4 py-3 text-sm text-slate-400">No line items yet.</p>
@@ -632,11 +689,6 @@ function AssemblyLines({ lines }: { lines: LineItemView[] }) {
   // names it and shows its total, so repeating a task header would be noise.
   const flat =
     blocks.length === 1 && blocks[0].kind === "group" ? blocks[0] : null;
-  // The Total column holds task totals only — the workbook's Q. A flattened
-  // assembly, or one whose every task is a single line, has no task-total row,
-  // so the column would never fill. Drop it rather than leave it empty.
-  const showTotal =
-    !flat && blocks.some((b) => b.kind === "group" && b.lines.length > 1);
 
   return (
     <div className="overflow-x-auto">
@@ -656,34 +708,27 @@ function AssemblyLines({ lines }: { lines: LineItemView[] }) {
             <th className="px-4 py-1.5 text-right font-medium whitespace-nowrap">
               Labor
             </th>
-            {showTotal && (
-              <th className="px-4 py-1.5 text-right font-medium whitespace-nowrap">
-                Total
-              </th>
-            )}
+            <th className="px-4 py-1.5 text-right font-medium whitespace-nowrap">
+              Total
+            </th>
           </tr>
         </thead>
         <tbody>
           {flat
-            ? flat.lines.map((line) => (
-                <LineRow key={line.id} line={line} showTotal={showTotal} />
-              ))
+            ? flat.lines.map((line) => <LineRow key={line.id} line={line} />)
             : blocks.map((block) =>
                 block.kind === "group" ? (
-                  <GroupRows
-                    key={block.key}
-                    group={block}
-                    showTotal={showTotal}
-                  />
+                  <GroupRows key={block.key} group={block} />
                 ) : (
-                  <LineRow
-                    key={block.line.id}
-                    line={block.line}
-                    showTotal={showTotal}
-                  />
+                  <LineRow key={block.line.id} line={block.line} />
                 ),
               )}
         </tbody>
+        <AssemblyBuildupFoot
+          totals={totals}
+          overheadRate={overheadRate}
+          profitRate={profitRate}
+        />
       </table>
     </div>
   );
@@ -693,26 +738,19 @@ function AssemblyLines({ lines }: { lines: LineItemView[] }) {
 // row carrying all three money columns — the workbook's Q34 pattern. A
 // single-line task collapses to just that line; a header and a total around one
 // row is only noise, and its one number is already on screen.
-function GroupRows({
-  group,
-  showTotal,
-}: {
-  group: TaskGroup;
-  showTotal: boolean;
-}) {
+function GroupRows({ group }: { group: TaskGroup }) {
   if (group.lines.length === 1) {
-    return <LineRow line={group.lines[0]} showTotal={showTotal} />;
+    return <LineRow line={group.lines[0]} />;
   }
-  const columns = showTotal ? 6 : 5;
   return (
     <>
       <tr className="border-b border-slate-100 bg-slate-50/60">
-        <td colSpan={columns} className="px-4 py-2 font-medium text-slate-800">
+        <td colSpan={6} className="px-4 py-2 font-medium text-slate-800">
           {group.name}
         </td>
       </tr>
       {group.lines.map((line) => (
-        <LineRow key={line.id} line={line} showTotal={showTotal} indented />
+        <LineRow key={line.id} line={line} indented />
       ))}
       <tr className="border-b border-slate-200">
         <td
@@ -727,11 +765,9 @@ function GroupRows({
         <td className="whitespace-nowrap px-4 pb-2 pt-1 text-right font-semibold text-slate-800">
           {formatCurrency(group.laborCost)}
         </td>
-        {showTotal && (
-          <td className="whitespace-nowrap px-4 pb-2 pt-1 text-right font-semibold text-slate-800">
-            {formatCurrency(group.total)}
-          </td>
-        )}
+        <td className="whitespace-nowrap px-4 pb-2 pt-1 text-right font-semibold text-slate-800">
+          {formatCurrency(group.total)}
+        </td>
       </tr>
     </>
   );
@@ -743,11 +779,9 @@ function GroupRows({
 // rather than "not applicable".
 function LineRow({
   line,
-  showTotal,
   indented = false,
 }: {
   line: LineItemView;
-  showTotal: boolean;
   indented?: boolean;
 }) {
   const isLabor = line.type === "labor";
@@ -769,7 +803,10 @@ function LineRow({
       <td className="whitespace-nowrap px-4 py-2 text-right tabular-nums text-slate-700">
         {isLabor ? formatCurrency(line.cost) : ""}
       </td>
-      {showTotal && <td className="whitespace-nowrap" />}
+      {/* The Total column holds combined totals only — a task's, or the
+          assembly's in the footer. A line contributes to one column, so it has
+          nothing to put here. */}
+      <td className="whitespace-nowrap" />
     </tr>
   );
 }
