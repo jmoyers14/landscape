@@ -44,13 +44,32 @@ describe("summarizeTasks", () => {
       throw new Error("expected a group");
     }
     expect(first.lines.map((l) => l.id)).toEqual(["a", "c"]);
+    // group.name is the task header the landscaper reads on screen, so it
+    // must resolve to the human-readable taskName, not the raw taskKey.
+    expect(first.name).toBe("Install valves");
   });
 
   it("splits each task's money into material and labor, summing to its total", () => {
     const blocks = summarizeTasks([
-      line({ id: "labor", taskKey: "t1", taskName: "Install valves", type: "labor", cost: 130.81 }),
-      line({ id: "valves", taskKey: "t1", taskName: "Install valves", cost: 134.69 }),
-      line({ id: "tape", taskKey: "t1", taskName: "Install valves", cost: 0.65 }),
+      line({
+        id: "labor",
+        taskKey: "t1",
+        taskName: "Install valves",
+        type: "labor",
+        cost: 130.81,
+      }),
+      line({
+        id: "valves",
+        taskKey: "t1",
+        taskName: "Install valves",
+        cost: 134.69,
+      }),
+      line({
+        id: "tape",
+        taskKey: "t1",
+        taskName: "Install valves",
+        cost: 0.65,
+      }),
     ]);
 
     expect(blocks).toHaveLength(1);

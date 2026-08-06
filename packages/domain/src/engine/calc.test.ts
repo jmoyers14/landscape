@@ -355,6 +355,12 @@ describe("priceLines — material / labor split", () => {
     // Both quantities are linear in their bases, so the parts sum to the whole
     // with nothing left over. This is what lets the UI show two columns without
     // a reconciling line.
+    //
+    // NOTE: this can't fail today — calc.ts defines `profit`/`total` as
+    // exactly these sums, so it's true by construction, not by coincidence.
+    // It's documentation of that invariant, not coverage of it. Keep it
+    // anyway: it guards against a future refactor that re-derives profit/
+    // total independently instead of summing the two columns.
     expect(totals.materialProfit + totals.laborProfit).toBeCloseTo(
       totals.profit,
       10,
