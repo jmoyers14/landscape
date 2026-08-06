@@ -59,20 +59,38 @@ The calculation is in `priceLines()` in
 
 ```ts
 const directCost = materialCost + laborCost;
-const overhead   = materialCost * (1 / (1 - rates.overheadRate / 100) - 1);
-const profit     = (directCost + overhead) * (rates.profitRate / 100);
-const total      = directCost + overhead + profit;
+const overhead = materialCost * (1 / (1 - rates.overheadRate / 100) - 1);
+
+const profitRate = rates.profitRate / 100;
+const materialProfit = (materialCost + overhead) * profitRate;
+const laborProfit = laborCost * profitRate;
+const materialTotal = materialCost + overhead + materialProfit;
+const laborTotal = laborCost + laborProfit;
+const profit = materialProfit + laborProfit;
+const total = materialTotal + laborTotal;
 ```
 
 That `1 / (1 - rate) - 1` is the margin gross-up. Note its base: **materials
 only**. The source sheet charges no overhead on labor — the labor overhead cell
 is empty in all six of its phases — so neither do we.
 
+Profit and total are split the same way the sheet's `M` (materials) and `P`
+(labor) columns are, then combined: `materialProfit` marks up materials +
+overhead, `laborProfit` marks up labor alone (no overhead in its base), and
+`profit`/`total` are defined as the sums of the two columns rather than
+computed independently — so the columns always tie out exactly, by
+construction, not by luck.
+
 This is computed **per assembly** as well as for the whole estimate; see
 [the per-assembly design](./superpowers/specs/2026-08-04-per-assembly-overhead-profit-design.md).
 Because the gross-up is linear in its base, the per-assembly figures sum exactly
 to the estimate's.
 
-> **Heads up on the label:** the UI says `Overhead (40% of materials)` rather
-> than `Overhead (40%)`. The bare percentage reads as a bug next to a number
-> that is 66.7% of the material cost.
+> **On the label:** the UI says `Overhead (40%)`, not `Overhead (40% of
+> materials)`. The buildup renders as two columns, Material and Labor (see
+> `BuildupTable` in
+> [`packages/web/src/screens/EstimateEditorScreen.tsx`](../packages/web/src/screens/EstimateEditorScreen.tsx)),
+> and the Overhead row shows an em dash under Labor rather than `$0.00`. That
+> dash is what tells the reader overhead applies to materials only — the base
+> doesn't need to be asserted in the label too, so the bare percentage is
+> enough.

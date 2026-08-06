@@ -245,12 +245,17 @@ materialCost = sum(lineCost for material lines)
 laborCost    = sum(lineCost for labor lines)
 directCost   = materialCost + laborCost
 overhead     = materialCost * (1 / (1 - overheadRate/100) - 1)
-profit       = (directCost + overhead) * profitRate/100
-total        = directCost + overhead + profit
+
+materialProfit = (materialCost + overhead) * profitRate/100
+laborProfit    =  laborCost               * profitRate/100
+materialTotal  =  materialCost + overhead + materialProfit
+laborTotal     =  laborCost               + laborProfit
+profit         = materialProfit + laborProfit
+total          = materialTotal  + laborTotal
 ```
 
 The engine reproduces the spreadsheet exactly (the current placeholder engine is
-being replaced, not preserved). Two things to note:
+being replaced, not preserved). Three things to note:
 
 1. **Overhead is margin-basis, on materials only.** The sheet computes overhead
    as `materials / 0.6 − materials` — it marks materials up so they become 60%
@@ -262,6 +267,20 @@ being replaced, not preserved). Two things to note:
 2. **Tax is per material line.** The sheet taxes each **material** line *before*
    overhead/profit and never taxes labor. That's why `taxable` lives on the
    line, not as a single estimate-level tax added at the end.
+3. **Profit and total are split into material/labor columns, mirroring the
+   sheet's `M` (materials) and `P` (labor) columns.** `materialProfit` marks up
+   `materialCost + overhead`; `laborProfit` marks up `laborCost` alone — labor's
+   base carries no overhead, so its profit doesn't either. `materialTotal` and
+   `laborTotal` are each column's running total (`materialCost + overhead +
+   materialProfit`, and `laborCost + laborProfit`). `profit` and `total` are
+   *defined* as `materialProfit + laborProfit` and `materialTotal + laborTotal`
+   — not computed independently and checked against those sums — so the two
+   columns always tie out exactly. `EstimateTotals` (and `AssemblyTotals`, its
+   per-assembly counterpart) carries `materialProfit`, `laborProfit`,
+   `materialTotal`, and `laborTotal` alongside `materialCost`, `laborCost`, and
+   `overhead` — together enough to render the buildup as two columns (Material,
+   Labor) with Subtotal/Overhead/Profit/Total rows, instead of a single blended
+   total.
 
 ## What is intentionally deferred
 
