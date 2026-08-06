@@ -42,7 +42,9 @@ export function EstimateEditorScreen() {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
 
-  const estimate = useQuery(trpc.estimates.get.queryOptions({ id: estimateId }));
+  const estimate = useQuery(
+    trpc.estimates.get.queryOptions({ id: estimateId }),
+  );
   const context = useQuery(trpc.estimates.context.queryOptions());
 
   const invalidate = () => {
@@ -60,7 +62,10 @@ export function EstimateEditorScreen() {
   };
 
   const updateMeta = useMutation(
-    trpc.estimates.updateMeta.mutationOptions({ onSuccess: onMutated, onError }),
+    trpc.estimates.updateMeta.mutationOptions({
+      onSuccess: onMutated,
+      onError,
+    }),
   );
   const setAssemblies = useMutation(
     trpc.estimates.setAssemblies.mutationOptions({
@@ -302,9 +307,7 @@ function DraftEditor({
             view={view}
             lines={lineItemsFor(view, selection.assemblyId)}
             onRemove={() => removeAssembly(selection.assemblyId)}
-            onValue={(key, value) =>
-              setValue(selection.assemblyId, key, value)
-            }
+            onValue={(key, value) => setValue(selection.assemblyId, key, value)}
           />
         ))
       )}

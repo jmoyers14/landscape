@@ -25,7 +25,10 @@ const EXPECTED: Record<string, { materialCost: number; laborHours: number }> = {
   Planting: { materialCost: 4113.464295, laborHours: 80.0424 },
   // Concrete's material total (M127) and labor hours (N130) EXCLUDE the omitted
   // "Finishers" flat fee, which lives only in the sheet's labor-$ total (P127).
-  Concrete: { materialCost: 5159.3210139444445, laborHours: 113.12452901234568 },
+  Concrete: {
+    materialCost: 5159.3210139444445,
+    laborHours: 113.12452901234568,
+  },
   "Seating Wall": { materialCost: 515.9567125, laborHours: 37.18225 },
 };
 
@@ -37,7 +40,10 @@ function runAssembly(seed: SeedAssembly) {
   // build() returns an AssemblyInput; the engine wants a persisted Assembly.
   const assembly = { ...built, id: built.name, createdAt: "" };
   const materialsById = new Map<string, Material>(
-    seed.materials.map((m) => [m.slug, { id: m.slug, createdAt: "", ...m.input }]),
+    seed.materials.map((m) => [
+      m.slug,
+      { id: m.slug, createdAt: "", ...m.input },
+    ]),
   );
   const driverValues = Object.fromEntries(
     assembly.drivers.map((d) => [d.key, d.defaultValue]),
@@ -50,7 +56,11 @@ function runAssembly(seed: SeedAssembly) {
   const laborHours = lines
     .filter((line) => line.type === "labor")
     .reduce((sum, line) => sum + line.quantity, 0);
-  return { name: assembly.name, totals: priceLines(lines, STARTER_PRICING), laborHours };
+  return {
+    name: assembly.name,
+    totals: priceLines(lines, STARTER_PRICING),
+    laborHours,
+  };
 }
 
 const RESULTS = STARTER_ASSEMBLIES.map(runAssembly);
@@ -61,7 +71,10 @@ describe("starter catalog — fidelity to the Package sheet", () => {
       const expected = EXPECTED[name];
       // Every registered assembly must have an expected figure, so adding one
       // without transcribing its sheet totals fails loudly here.
-      expect(expected, `no expected fidelity figures for "${name}"`).toBeDefined();
+      expect(
+        expected,
+        `no expected fidelity figures for "${name}"`,
+      ).toBeDefined();
       expect(totals.materialCost).toBeCloseTo(expected.materialCost, 3);
       expect(laborHours).toBeCloseTo(expected.laborHours, 3);
     });
@@ -101,7 +114,10 @@ describe("starter catalog — fidelity to the Package sheet", () => {
   // so its labor cost follows directly from its hours: 69.3695 × 35.
   it("Irrigation's full buildup matches the sheet's per-phase pattern", () => {
     const irrigation = RESULTS.find((r) => r.name === "Irrigation");
-    expect(irrigation, "Irrigation missing from STARTER_ASSEMBLIES").toBeDefined();
+    expect(
+      irrigation,
+      "Irrigation missing from STARTER_ASSEMBLIES",
+    ).toBeDefined();
     const { totals } = irrigation!;
     expect(totals.materialCost).toBeCloseTo(1142.31378, 5);
     expect(totals.laborCost).toBeCloseTo(2427.9325, 5);
