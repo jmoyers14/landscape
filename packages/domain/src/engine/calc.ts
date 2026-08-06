@@ -15,7 +15,11 @@ export interface EstimateTotals {
   materialCost: number; // material base + delivery + tax
   laborCost: number; // labor base, untaxed
   tax: number; // sum of per-line material tax (informational)
-  directCost: number; // materialCost + laborCost
+  // materialCost + laborCost. Superseded in the UI by the material/labor
+  // columns and their Subtotal row (nothing renders this field directly
+  // anymore); kept as an API/test-only field — it's still a meaningful
+  // total, and per-line `cost` sums exactly to it.
+  directCost: number;
   overhead: number; // materials only — labor carries none
   profit: number;
   total: number;
