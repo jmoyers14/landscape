@@ -8,7 +8,9 @@ import {
   makeProjectRepoMock,
 } from "@landscape/platform/test-support";
 import {
+  makeAssembly,
   makeEstimate,
+  makeMaterial,
   makePricingSettings,
   makeProject,
 } from "@landscape/platform/test-support";
@@ -99,6 +101,104 @@ describe("EstimateServiceImpl.create", () => {
       projects: makeProjectRepoMock({ findById: mock(async () => null) }),
     });
     expect(service.create("org_1", "missing")).rejects.toThrow(ServiceError);
+  });
+
+  // Two assemblies out of catalog order plus a deactivated one, each with a
+  // material line that bills a flat delivery — the shape that would put money
+  // on a brand-new estimate if either half of this feature regressed.
+  const catalogAssemblies = () => [
+    makeAssembly({
+      id: "assembly_b",
+      name: "Planting",
+      sortOrder: 2,
+      drivers: [
+        { key: "trees", label: "Trees", unit: "unit(s)", defaultValue: 80 },
+      ],
+      lines: [
+        {
+          kind: "material",
+          key: "tree",
+          description: "1-gallon tree",
+          quantityFormula: "trees",
+          deliveriesFormula: "1",
+          materialId: "material_1",
+          sortOrder: 1,
+          taskKey: null,
+        },
+      ],
+    }),
+    makeAssembly({
+      id: "assembly_a",
+      name: "Drainage",
+      sortOrder: 1,
+      drivers: [
+        { key: "feet", label: "Length", unit: "ft.", defaultValue: 225 },
+      ],
+      lines: [
+        {
+          kind: "material",
+          key: "pipe",
+          description: "Solid pipe",
+          quantityFormula: "feet",
+          deliveriesFormula: "1",
+          materialId: "material_1",
+          sortOrder: 1,
+          taskKey: null,
+        },
+      ],
+    }),
+    makeAssembly({
+      id: "assembly_off",
+      name: "Retired",
+      sortOrder: 3,
+      active: false,
+    }),
+  ];
+
+  const populatingService = () =>
+    makeService({
+      estimates: echoingEstimates({
+        findByProject: mock(async () => []),
+        create: mock(async (_orgId, data) => makeEstimate(data)),
+      }),
+      assemblies: makeAssemblyRepoMock({
+        findByOrg: mock(async () => catalogAssemblies()),
+      }),
+      materials: makeMaterialRepoMock({
+        findByIds: mock(async () => [
+          makeMaterial({ id: "material_1", unitPrice: 40, deliveryCost: 150 }),
+        ]),
+      }),
+    });
+
+  it("starts a new estimate holding every active assembly, in sortOrder", async () => {
+    const view = await populatingService().create("org_1", "project_1");
+
+    expect(view.assemblies.map((a) => a.assemblyId)).toEqual([
+      "assembly_a",
+      "assembly_b",
+    ]);
+    expect(view.assemblies.map((a) => a.name)).toEqual([
+      "Drainage",
+      "Planting",
+    ]);
+  });
+
+  it("starts every driver at zero rather than its catalog default", async () => {
+    const view = await populatingService().create("org_1", "project_1");
+
+    expect(view.assemblies[0]!.driverValues).toEqual({ feet: 0 });
+    expect(view.assemblies[1]!.driverValues).toEqual({ trees: 0 });
+  });
+
+  it("generates a snapshot that prices to nothing", async () => {
+    const view = await populatingService().create("org_1", "project_1");
+
+    // The lines exist — this is a real generated snapshot, not an empty one.
+    expect(view.lineItems.length).toBe(2);
+    expect(view.lineItems.every((line) => line.quantity === 0)).toBe(true);
+    // …and none of them bills its flat delivery, so the estimate opens at zero.
+    expect(view.totals.total).toBe(0);
   });
 });
 

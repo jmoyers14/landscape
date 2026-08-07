@@ -113,7 +113,25 @@ export class EstimateServiceImpl implements EstimateService {
       profitRate: settings.profitRate,
       taxRate: settings.taxRate,
     });
-    return computeEstimate(estimate);
+
+    // A new estimate arrives holding every assembly, each at zero quantity, so
+    // it matches the shape of the source bid workbook: all phases present, fill
+    // in the ones the job needs. Removing an unwanted one is a click; having to
+    // learn the catalog before the screen means anything is not.
+    const all = await this.assemblies.findByOrg(orgId);
+    const chosen: SelectedAssembly[] = all
+      .filter((assembly) => assembly.active)
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((assembly) => ({
+        assembly,
+        driverValues: Object.fromEntries(
+          assembly.drivers.map((driver) => [driver.key, 0]),
+        ),
+      }));
+    if (chosen.length === 0) {
+      return computeEstimate(estimate);
+    }
+    return this.generateSnapshot(orgId, estimate.id, chosen, settings);
   }
 
   async updateMeta(
