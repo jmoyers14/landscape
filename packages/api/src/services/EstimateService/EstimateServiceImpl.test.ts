@@ -191,13 +191,13 @@ describe("EstimateServiceImpl.create", () => {
     expect(view.assemblies[1]!.driverValues).toEqual({ trees: 0 });
   });
 
-  it("generates a snapshot that prices to nothing", async () => {
+  it("generates no line items, so a new estimate prices to nothing", async () => {
     const view = await populatingService().create("org_1", "project_1");
 
-    // The lines exist — this is a real generated snapshot, not an empty one.
-    expect(view.lineItems.length).toBe(2);
-    expect(view.lineItems.every((line) => line.quantity === 0)).toBe(true);
-    // …and none of them bills its flat delivery, so the estimate opens at zero.
+    // Deliberately empty rather than a snapshot of zero-quantity lines: the
+    // workbook's formulas carry driver-independent constants, so generating at
+    // zero would put real money on an untouched estimate. See zeroDrivers.test.ts.
+    expect(view.lineItems).toEqual([]);
     expect(view.totals.total).toBe(0);
   });
 });

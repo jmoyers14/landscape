@@ -22,7 +22,6 @@ import {
   generateAssemblyLines,
   resolveDriverValues,
   type EstimateView,
-  type SelectedAssembly,
 } from "@landscape/domain";
 import type {
   EstimateContext,
@@ -37,7 +36,9 @@ import type {
  * `setAssemblies` runs the chosen catalog assemblies + driver values through the
  * engine and freezes the result (with the rates used), so a sent estimate's
  * money never drifts when the catalog changes. Reads always recompute totals
- * from the stored snapshot via the calc engine.
+ * from the stored snapshot via the calc engine. `create` seeds the estimate's
+ * assemblies with every active one at zero driver values and no line items;
+ * that snapshot is only generated once `setAssemblies` runs.
  */
 @injectable()
 export class EstimateServiceImpl implements EstimateService {
@@ -101,8 +102,8 @@ export class EstimateServiceImpl implements EstimateService {
       resolvedTitle = `Estimate ${existing.length + 1}`;
     }
 
-    // Snapshot the org's current rates so a fresh estimate has sensible defaults
-    // before any assemblies are added; setAssemblies re-snapshots on generation.
+    // Snapshot the org's current rates for the estimate shell; setAssemblies
+    // re-snapshots them whenever it regenerates the line-item snapshot.
     const settings = await this.pricingSettings.get(orgId);
     const estimate = await this.estimates.create(orgId, {
       projectId,
@@ -113,58 +114,29 @@ export class EstimateServiceImpl implements EstimateService {
       taxRate: settings.taxRate,
     });
 
-    // A new estimate arrives holding every assembly, each at zero quantity, so
-    // it matches the shape of the source bid workbook: all phases present, fill
-    // in the ones the job needs. Removing an unwanted one is a click; having to
-    // learn the catalog before the screen means anything is not.
-    const all = await this.assemblies.findByOrg(orgId);
-    const chosen: SelectedAssembly[] = all
+    // A new estimate arrives holding every assembly, so it matches the shape of
+    // the source bid workbook: all phases present, fill in the ones the job
+    // needs. No line items are generated — at zero quantities the workbook's
+    // formulas still yield their driver-independent constants (12 tree stakes,
+    // a curb core, half a yard of concrete), so generating here would open every
+    // new estimate with over a thousand dollars of work nobody asked for.
+    // Saving from the editor generates the snapshot; see `setAssemblies`.
+    const active = (await this.assemblies.findByOrg(orgId))
       .filter((assembly) => assembly.active)
-      .sort((a, b) => a.sortOrder - b.sortOrder)
-      .map((assembly) => ({
-        assembly,
-        driverValues: Object.fromEntries(
-          assembly.drivers.map((driver) => [driver.key, 0]),
-        ),
-      }));
-    if (chosen.length === 0) {
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+    if (active.length === 0) {
       return computeEstimate(estimate);
     }
 
-    // Load every referenced material once, across all chosen assemblies.
-    const materialIds = new Set<string>();
-    for (const { assembly } of chosen) {
-      for (const line of assembly.lines) {
-        if (line.kind === "material") {
-          materialIds.add(line.materialId);
-        }
-      }
-    }
-    const materials = await this.materials.findByIds(orgId, [...materialIds]);
-    const materialsById = new Map(
-      materials.map((material) => [material.id, material]),
-    );
-
-    // Generate each assembly's lines in selection order.
-    const lineItems: LineItemInput[] = [];
-    const assemblies: EstimateAssembly[] = [];
-    for (const { assembly, driverValues } of chosen) {
-      const generated = generateAssemblyLines(
-        { assembly, driverValues },
-        materialsById,
-        settings,
-      );
-      lineItems.push(...generated);
-      assemblies.push({
+    const updated = await this.estimates.replaceSnapshot(orgId, estimate.id, {
+      assemblies: active.map((assembly) => ({
         assemblyId: assembly.id,
         name: assembly.name,
-        driverValues,
-      });
-    }
-
-    const updated = await this.estimates.replaceSnapshot(orgId, estimate.id, {
-      assemblies,
-      lineItems,
+        driverValues: Object.fromEntries(
+          assembly.drivers.map((driver) => [driver.key, 0]),
+        ),
+      })),
+      lineItems: [],
       overheadRate: settings.overheadRate,
       profitRate: settings.profitRate,
       taxRate: settings.taxRate,
