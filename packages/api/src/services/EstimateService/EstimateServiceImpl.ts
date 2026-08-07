@@ -19,9 +19,12 @@ import type { PricingSettingsService } from "../PricingSettingsService/PricingSe
 import { ServiceError } from "../errors.ts";
 import {
   computeEstimate,
+  FormulaError,
   generateAssemblyLines,
   resolveDriverValues,
   type EstimateView,
+  type PricingSettings,
+  type SelectedAssembly,
 } from "@landscape/domain";
 import type {
   EstimateContext,
@@ -36,9 +39,9 @@ import type {
  * `setAssemblies` runs the chosen catalog assemblies + driver values through the
  * engine and freezes the result (with the rates used), so a sent estimate's
  * money never drifts when the catalog changes. Reads always recompute totals
- * from the stored snapshot via the calc engine. `create` seeds the estimate's
- * assemblies with every active one at zero driver values and no line items;
- * that snapshot is only generated once `setAssemblies` runs.
+ * from the stored snapshot via the calc engine. `create` seeds the estimate
+ * with every active assembly at its catalog default driver values and generates
+ * the snapshot through that same path, so a new estimate opens priced.
  */
 @injectable()
 export class EstimateServiceImpl implements EstimateService {
@@ -115,33 +118,33 @@ export class EstimateServiceImpl implements EstimateService {
     });
 
     // A new estimate arrives holding every assembly, so it matches the shape of
-    // the source bid workbook: all phases present, fill in the ones the job
-    // needs. No line items are generated — at zero quantities the workbook's
-    // formulas still yield their driver-independent constants (12 tree stakes,
-    // a curb core, half a yard of concrete), so generating here would open every
-    // new estimate with over a thousand dollars of work nobody asked for.
-    // Saving from the editor generates the snapshot; see `setAssemblies`.
-    const active = (await this.assemblies.findByOrg(orgId))
+    // the source bid workbook: all phases present, adjust the ones the job
+    // needs. Each starts at its catalog defaults — the same values adding an
+    // assembly by hand has always produced — so the estimate opens priced
+    // rather than blank.
+    const chosen: SelectedAssembly[] = (await this.assemblies.findByOrg(orgId))
       .filter((assembly) => assembly.active)
-      .sort((a, b) => a.sortOrder - b.sortOrder);
-    if (active.length === 0) {
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((assembly) => ({
+        assembly,
+        driverValues: resolveDriverValues(assembly),
+      }));
+    if (chosen.length === 0) {
       return computeEstimate(estimate);
     }
 
-    const updated = await this.estimates.replaceSnapshot(orgId, estimate.id, {
-      assemblies: active.map((assembly) => ({
-        assemblyId: assembly.id,
-        name: assembly.name,
-        driverValues: Object.fromEntries(
-          assembly.drivers.map((driver) => [driver.key, 0]),
-        ),
-      })),
-      lineItems: [],
-      overheadRate: settings.overheadRate,
-      profitRate: settings.profitRate,
-      taxRate: settings.taxRate,
-    });
-    return this.requireView(updated);
+    try {
+      return await this.generateSnapshot(orgId, estimate.id, chosen, settings);
+    } catch (error) {
+      // The shell is already persisted, so a bad formula in any one assembly
+      // would otherwise leave an orphan draft AND block estimate creation for
+      // the whole org. Degrade to the empty shell instead: the user can still
+      // add assemblies by hand, and setAssemblies reports which one is broken.
+      if (error instanceof FormulaError) {
+        return computeEstimate(estimate);
+      }
+      throw error;
+    }
   }
 
   async updateMeta(
@@ -172,7 +175,7 @@ export class EstimateServiceImpl implements EstimateService {
     const settings = await this.pricingSettings.get(orgId);
 
     // Load each chosen assembly and resolve its driver values up front.
-    const chosen = [];
+    const chosen: SelectedAssembly[] = [];
     for (const selection of selections) {
       const assembly = await this.assemblies.findById(
         orgId,
@@ -190,6 +193,21 @@ export class EstimateServiceImpl implements EstimateService {
       });
     }
 
+    return this.generateSnapshot(orgId, id, chosen, settings);
+  }
+
+  /**
+   * Generate and persist an estimate's line-item snapshot from already-resolved
+   * assembly selections. Shared by `create` (every active assembly at its
+   * catalog defaults) and `setAssemblies` (the user's chosen set) so both freeze
+   * the same way; each caller owns its own validation before getting here.
+   */
+  private async generateSnapshot(
+    orgId: string,
+    id: string,
+    chosen: SelectedAssembly[],
+    settings: PricingSettings,
+  ): Promise<EstimateView> {
     // Load every referenced material once, across all chosen assemblies.
     const materialIds = new Set<string>();
     for (const { assembly } of chosen) {

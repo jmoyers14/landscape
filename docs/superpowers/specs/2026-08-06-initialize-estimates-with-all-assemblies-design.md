@@ -1,7 +1,7 @@
 # Initialize new estimates with every assembly
 
 **Date:** 2026-08-06
-**Status:** Designed, not implemented
+**Status:** Implemented
 
 ## Why
 
@@ -9,13 +9,14 @@ A new estimate today is empty. To get anywhere you first have to understand
 that assemblies exist, that they come from a catalog, and that you pick them
 from a dropdown before any of the screen means anything.
 
-The source bid workbook has no such step. Every phase is already on the sheet;
-you fill in quantities and the phases you left at zero cost nothing. That is
-the mental model the landscaper who wrote it already has, and it is also just
-the common case — nearly every job includes nearly every assembly.
+The source bid workbook has no such step. Every phase is already on the sheet,
+carrying the example quantities its author typed in; you adjust them for the
+job in front of you. That is the mental model the landscaper who wrote it
+already has, and it is also just the common case — nearly every job includes
+nearly every assembly.
 
-So: a new estimate arrives with every assembly already in it, each at zero
-quantity. Removing one is a click. Understanding a catalog is not a
+So: a new estimate arrives with every assembly already in it, each at its
+catalog default. Removing one is a click. Understanding a catalog is not a
 prerequisite for reading the screen.
 
 See `docs/superpowers/specs/2026-08-05-material-labor-split-design.md` for the
@@ -24,24 +25,31 @@ same motivation applied to the editor's columns.
 ## What a new estimate looks like
 
 ```
-Drainage        Drainage length     [   0 ] ft.        $0.00
-Irrigation      Control valves      [   0 ] unit(s)    $0.00
-Soil prep       Soil prep area      [   0 ] sq. ft.    $0.00
-Planting        1-gallon trees      [   0 ] unit(s)    $0.00
-                5-gallon trees      [   0 ] unit(s)
+Drainage        Drainage length     [ 225 ] ft.        $2,231.72
+Irrigation      Control valves      [   5 ] unit(s)    $4,981.56
+Soil prep       Soil prep area      [3000 ] sq. ft.    $2,582.03
+Planting        1-gallon trees      [  80 ] unit(s)   $11,105.85
+                5-gallon trees      [  50 ] unit(s)
                 …
-Concrete        Slab area           [   0 ] sq. ft.    $0.00
-Seating wall    Wall height         [   0 ] ft.        $0.00
-                Wall length         [   0 ] ft.
+Concrete        Slab area           [1000 ] sq. ft.  $15,929.25
+Seating wall    Wall height         [   2 ] ft.        $3,340.69
+                Wall length         [  25 ] ft.
 
-                                    Total              $0.00
+                                    Total            $40,171.09
 ```
 
-Zero quantities rather than the catalog's `defaultValue`s. The seeded defaults
-are the workbook's own example figures — 225 ft of drainage, 5 control valves,
-3,000 sq ft of soil prep — so defaults would open every new estimate as a
-priced copy of someone else's job, and a user who saved without editing would
-have a plausible-looking estimate they never wrote.
+Each driver at its catalog `defaultValue` — the same values that adding an
+assembly by hand has always produced. Those defaults are the workbook's own
+example figures (225 ft of drainage, 5 control valves, 3,000 sq ft of soil
+prep), so a new estimate opens as a priced copy of the sheet the partner
+wrote. For reviewing the app against the workbook that is a feature; for a
+real bid it means the first thing a user does is adjust numbers rather than
+type them from nothing.
+
+The cost is real and accepted: a user who saves without editing has a
+plausible-looking estimate they never wrote. The alternative — starting at
+zero — was tried first and abandoned, because zero does not mean what it
+appears to mean. See the correction below.
 
 ## Decisions
 
@@ -49,8 +57,8 @@ have a plausible-looking estimate they never wrote.
 |---|---|
 | Where does the population happen? | `EstimateService.create`. Not the web layer. |
 | Which assemblies? | Every `active` assembly, in `sortOrder`. |
-| Starting driver values? | `0` for every driver. |
-| Does `create` generate line items? | **No.** It stores the assemblies with an empty snapshot. See the correction below. |
+| Starting driver values? | Each driver's catalog `defaultValue`. (Originally `0` — see the correction below.) |
+| Does `create` generate line items? | Yes — the same generation path `setAssemblies` uses. |
 | Zero-quantity lines that carry a flat delivery? | Fixed in the engine: zero quantity, zero delivery. |
 | Existing estimates? | Untouched. No migration. |
 
@@ -74,30 +82,40 @@ have a plausible-looking estimate they never wrote.
 > pump delivery this spec claimed to have fixed: the pump's quantity is 0.5,
 > not 0, so the zero-quantity delivery rule never applies to it.
 >
-> **The resolution:** `create` stores its assemblies with an empty line-item
-> snapshot and does not call the engine. The estimate totals $0.00 by
-> construction rather than by arithmetic that happens to cancel.
-> `setAssemblies` is unchanged — a user who deliberately zeroes an assembly and
-> saves still gets its constant-quantity lines, which is what the workbook
-> does. "Never touched" and "deliberately set to zero" are different states.
+> **The resolution:** drop zero as the starting point. Each assembly starts at
+> its catalog `defaultValue` — the same values adding an assembly by hand has
+> always produced — and `create` generates the snapshot from those. A new
+> estimate opens **priced, at $40,171.09** for the seeded catalog, rather than
+> at a $0.00 that was never achievable.
 >
-> `packages/platform/src/seed/zeroDrivers.test.ts` now pins this, per assembly,
-> naming the responsible formula in each case. It is the companion to
+> That reverses this spec's original "zero for every driver" decision. The
+> reasoning for zero was that a user might send an estimate full of numbers
+> they never looked at; the reasoning against it is that zero does not mean
+> what it appears to mean. Zeroing an assembly's drivers does not zero its
+> cost — Seating Wall at zero length still bills $81.78 of constant-quantity
+> column block, and a negative dobie. **Making a zeroed assembly cost nothing
+> is its own piece of work, deliberately deferred.**
+>
+> `packages/platform/src/seed/zeroDrivers.test.ts` pins the zero-driver
+> behavior per assembly, naming the responsible formula in each case. It is the
+> evidence that deferred work starts from. It is also the companion to
 > `catalog.test.ts`: that file pins the workbook at its *default* drivers, this
-> one at *zero* — the state every estimate is now born in.
+> one at *zero*.
 
 ## Design
 
 ### 1. `EstimateService.create` populates the estimate
 
 `create` loads the org's assemblies, keeps the `active` ones in `sortOrder`,
-and persists one entry per assembly with every driver at `0` — and an empty
-`lineItems` array. It does not call the engine.
+resolves each one's drivers to their catalog defaults via `resolveDriverValues`,
+and generates the snapshot.
 
-`setAssemblies` is untouched: it still loads each chosen assembly, resolves
-driver values, collects materials, runs `generateAssemblyLines`, and freezes
-the result. Generation happens on save, where the user has supplied real
-quantities.
+The generation body — collect the referenced materials, run
+`generateAssemblyLines` per assembly, persist via `replaceSnapshot` — lives in a
+private `generateSnapshot` that both `create` and `setAssemblies` call.
+`setAssemblies` keeps its draft-status guard and its "assembly does not exist"
+error; neither applies to `create`, which builds its selections from assemblies
+it has already loaded.
 
 The repository boundary does not change. `create` makes the shell and
 `replaceSnapshot` fills it, which is exactly the split `NewEstimate`'s own
@@ -105,12 +123,15 @@ comment describes ("the generated parts the repository initializes empty").
 Two writes on a rare operation is the right price for not perforating that
 boundary.
 
-Not calling the engine also removes a failure mode that the generating version
-had: `generateAssemblyLines` throws `FormulaError` on a non-finite result, and
-a driver in a denominator is an explicitly supported authoring pattern that
-goes non-finite at zero. Because the shell is persisted first, a throw would
-have leaked an orphan draft and surfaced as a 500 — and it would have blocked
-estimate creation for the whole org, not just for the offending assembly.
+**Generation can throw, and the shell is already persisted.**
+`generateAssemblyLines` raises `FormulaError` on a non-finite result, and a
+driver in a denominator is an explicitly supported authoring pattern that goes
+non-finite when that driver defaults to zero. Left alone, one bad formula in one
+assembly would leak an orphan draft, surface as a 500 rather than a 400, and
+block estimate creation for the entire org. So `create` catches `FormulaError`
+and degrades to the bare shell: the user still gets a usable draft, adds
+assemblies by hand, and `setAssemblies` names the broken one. This mirrors
+`previewEstimate`, which already skips rather than throws.
 
 **Why the server and not the draft editor.** The alternative is seeding
 `DraftEditor`'s local state whenever the saved selection is empty. It fails on

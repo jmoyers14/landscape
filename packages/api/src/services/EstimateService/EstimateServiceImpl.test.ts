@@ -103,9 +103,9 @@ describe("EstimateServiceImpl.create", () => {
     expect(service.create("org_1", "missing")).rejects.toThrow(ServiceError);
   });
 
-  // Two assemblies out of catalog order plus a deactivated one, each with a
-  // material line that bills a flat delivery — the shape that would put money
-  // on a brand-new estimate if either half of this feature regressed.
+  // Two assemblies out of catalog order plus a deactivated one. Their drivers
+  // carry distinct non-zero defaults so the generated quantities show which
+  // values `create` actually resolved.
   const catalogAssemblies = () => [
     makeAssembly({
       id: "assembly_b",
@@ -184,21 +184,62 @@ describe("EstimateServiceImpl.create", () => {
     ]);
   });
 
-  it("starts every driver at zero rather than its catalog default", async () => {
+  it("starts every driver at its catalog default", async () => {
     const view = await populatingService().create("org_1", "project_1");
 
-    expect(view.assemblies[0]!.driverValues).toEqual({ feet: 0 });
-    expect(view.assemblies[1]!.driverValues).toEqual({ trees: 0 });
+    expect(view.assemblies[0]!.driverValues).toEqual({ feet: 225 });
+    expect(view.assemblies[1]!.driverValues).toEqual({ trees: 80 });
   });
 
-  it("generates no line items, so a new estimate prices to nothing", async () => {
+  it("generates a priced snapshot from those defaults", async () => {
     const view = await populatingService().create("org_1", "project_1");
 
-    // Deliberately empty rather than a snapshot of zero-quantity lines: the
-    // workbook's formulas carry driver-independent constants, so generating at
-    // zero would put real money on an untouched estimate. See zeroDrivers.test.ts.
+    // The quantities are the assertion that matters: they come from each
+    // driver's defaultValue, the same numbers adding an assembly by hand has
+    // always produced. Zeros here would mean `create` ignored the catalog.
+    expect(view.lineItems.map((line) => line.quantity)).toEqual([225, 80]);
+    expect(view.totals.total).toBeGreaterThan(0);
+  });
+
+  it("falls back to a bare shell when an assembly's formula cannot resolve", async () => {
+    const service = makeService({
+      estimates: echoingEstimates({
+        findByProject: mock(async () => []),
+        create: mock(async (_orgId, data) => makeEstimate(data)),
+      }),
+      assemblies: makeAssemblyRepoMock({
+        findByOrg: mock(async () => [
+          makeAssembly({
+            drivers: [
+              { key: "area", label: "Area", unit: "sq. ft.", defaultValue: 0 },
+            ],
+            lines: [
+              {
+                kind: "material",
+                key: "broken",
+                description: "Divides by a driver that defaults to zero",
+                quantityFormula: "1000 / area",
+                deliveriesFormula: null,
+                materialId: "material_1",
+                sortOrder: 1,
+                taskKey: null,
+              },
+            ],
+          }),
+        ]),
+      }),
+      materials: makeMaterialRepoMock({
+        findByIds: mock(async () => [makeMaterial({ id: "material_1" })]),
+      }),
+    });
+
+    const view = await service.create("org_1", "project_1");
+
+    // The estimate shell is persisted before generation runs, so an
+    // unevaluatable formula must not take estimate creation down for the whole
+    // org — nor leave a draft the user never gets a link to.
+    expect(view.assemblies).toEqual([]);
     expect(view.lineItems).toEqual([]);
-    expect(view.totals.total).toBe(0);
   });
 });
 

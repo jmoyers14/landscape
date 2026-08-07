@@ -6,14 +6,15 @@ import { STARTER_PRICING } from "./pricing.ts";
 import type { SeedAssembly } from "./types.ts";
 
 /**
- * Regression lock for the fact that drives `EstimateServiceImpl.create`'s
- * design: the starter catalog does NOT price to zero at all-zero drivers. The
- * source workbook's quantity formulas carry constants, conditionals, and
- * offsets that don't depend on any driver (12 tree stakes, a curb core, half a
- * yard of concrete, ...), so running the engine at zero would put real money
- * on a brand-new, untouched estimate. That's why `create` stores an empty
- * line-item snapshot instead of generating one — see the comment on `create`
- * in packages/api/src/services/EstimateService/EstimateServiceImpl.ts.
+ * Regression lock on a fact that is easy to assume away: the starter catalog
+ * does NOT price to zero at all-zero drivers. The source workbook's quantity
+ * formulas carry constants, conditionals, and offsets that don't depend on any
+ * driver — 12 tree stakes, a curb core, half a yard of concrete — and Seating
+ * Wall's `even(wallLength - 1)` even goes negative below 1 ft.
+ *
+ * Zeroing an assembly's drivers therefore does not zero its cost. Making it do
+ * so is its own piece of work; this file is the evidence that work starts from,
+ * and it will fail loudly when the behavior changes, which is the point.
  *
  * This is catalog.test.ts's companion at zero drivers rather than defaults;
  * catalog.test.ts is a frozen fidelity lock and is not touched here.
@@ -86,7 +87,10 @@ describe("starter catalog — pricing at zero drivers", () => {
   });
 
   // Seating Wall: column6x8Footing's quantity formula is the constant `2`.
-  // (dobies goes negative at zero wallLength — out of scope, see seatingWall.ts.)
+  // `dobies` is `even(wallLength - 1)`, and even() rounds away from zero as
+  // Excel's does, so below 1 ft it yields -2 pcs. — a negative line. Known and
+  // unfixed: it's the workbook author's formula, and it belongs with the
+  // "zero an assembly" work rather than here.
   it("Seating Wall totals more than zero — the footing always bills 2 columns", () => {
     expect(totalFor("Seating Wall")).toBeGreaterThan(0);
   });
