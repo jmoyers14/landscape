@@ -22,7 +22,6 @@ import {
   generateAssemblyLines,
   resolveDriverValues,
   type EstimateView,
-  type PricingSettings,
   type SelectedAssembly,
 } from "@landscape/domain";
 import type {
@@ -131,7 +130,46 @@ export class EstimateServiceImpl implements EstimateService {
     if (chosen.length === 0) {
       return computeEstimate(estimate);
     }
-    return this.generateSnapshot(orgId, estimate.id, chosen, settings);
+
+    // Load every referenced material once, across all chosen assemblies.
+    const materialIds = new Set<string>();
+    for (const { assembly } of chosen) {
+      for (const line of assembly.lines) {
+        if (line.kind === "material") {
+          materialIds.add(line.materialId);
+        }
+      }
+    }
+    const materials = await this.materials.findByIds(orgId, [...materialIds]);
+    const materialsById = new Map(
+      materials.map((material) => [material.id, material]),
+    );
+
+    // Generate each assembly's lines in selection order.
+    const lineItems: LineItemInput[] = [];
+    const assemblies: EstimateAssembly[] = [];
+    for (const { assembly, driverValues } of chosen) {
+      const generated = generateAssemblyLines(
+        { assembly, driverValues },
+        materialsById,
+        settings,
+      );
+      lineItems.push(...generated);
+      assemblies.push({
+        assemblyId: assembly.id,
+        name: assembly.name,
+        driverValues,
+      });
+    }
+
+    const updated = await this.estimates.replaceSnapshot(orgId, estimate.id, {
+      assemblies,
+      lineItems,
+      overheadRate: settings.overheadRate,
+      profitRate: settings.profitRate,
+      taxRate: settings.taxRate,
+    });
+    return this.requireView(updated);
   }
 
   async updateMeta(
@@ -162,7 +200,7 @@ export class EstimateServiceImpl implements EstimateService {
     const settings = await this.pricingSettings.get(orgId);
 
     // Load each chosen assembly and resolve its driver values up front.
-    const chosen: SelectedAssembly[] = [];
+    const chosen = [];
     for (const selection of selections) {
       const assembly = await this.assemblies.findById(
         orgId,
@@ -180,21 +218,6 @@ export class EstimateServiceImpl implements EstimateService {
       });
     }
 
-    return this.generateSnapshot(orgId, id, chosen, settings);
-  }
-
-  /**
-   * Generate and persist an estimate's line-item snapshot from already-resolved
-   * assembly selections. Shared by `create` (every active assembly at zero
-   * drivers) and `setAssemblies` (the user's chosen set) so both freeze the same
-   * way; each caller owns its own validation before getting here.
-   */
-  private async generateSnapshot(
-    orgId: string,
-    id: string,
-    chosen: SelectedAssembly[],
-    settings: PricingSettings,
-  ): Promise<EstimateView> {
     // Load every referenced material once, across all chosen assemblies.
     const materialIds = new Set<string>();
     for (const { assembly } of chosen) {
