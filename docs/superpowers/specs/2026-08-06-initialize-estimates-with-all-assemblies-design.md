@@ -50,30 +50,67 @@ have a plausible-looking estimate they never wrote.
 | Where does the population happen? | `EstimateService.create`. Not the web layer. |
 | Which assemblies? | Every `active` assembly, in `sortOrder`. |
 | Starting driver values? | `0` for every driver. |
-| Does `create` generate line items? | Yes — the same generation path `setAssemblies` uses. |
+| Does `create` generate line items? | **No.** It stores the assemblies with an empty snapshot. See the correction below. |
 | Zero-quantity lines that carry a flat delivery? | Fixed in the engine: zero quantity, zero delivery. |
 | Existing estimates? | Untouched. No migration. |
+
+> ### Correction (2026-08-06, after review)
+>
+> **This spec originally claimed that zero drivers produce a $0.00 estimate
+> once flat deliveries are fixed. That is false**, and the error was caught by
+> the final review rather than by anything written here.
+>
+> The delivery formulas were checked; the *quantity* formulas were not. The
+> workbook is full of quantities that do not depend on any driver — Planting's
+> `treeStakes` is the literal `12` (and `cinchTies` is `treeStakes * 4` = 48),
+> Drainage's `curbCore` is `drainageFt < 175 ? 1 : 2` = 1, Irrigation's
+> `funnyPipe` is `1`, Seating Wall's column blocks are literal `2` and `6`, and
+> Concrete's yardage carries the sheet's short-load allowance,
+> `(slabArea × 4/12) / 27 + 0.5` = 0.5. Seating Wall's `dobies`,
+> `even(wallLength - 1)`, goes **negative** at −2.
+>
+> Generated at zero drivers, the seeded catalog prices to **$1,230.41** — worse
+> than the empty estimate it replaced. That figure includes the $250 concrete
+> pump delivery this spec claimed to have fixed: the pump's quantity is 0.5,
+> not 0, so the zero-quantity delivery rule never applies to it.
+>
+> **The resolution:** `create` stores its assemblies with an empty line-item
+> snapshot and does not call the engine. The estimate totals $0.00 by
+> construction rather than by arithmetic that happens to cancel.
+> `setAssemblies` is unchanged — a user who deliberately zeroes an assembly and
+> saves still gets its constant-quantity lines, which is what the workbook
+> does. "Never touched" and "deliberately set to zero" are different states.
+>
+> `packages/platform/src/seed/zeroDrivers.test.ts` now pins this, per assembly,
+> naming the responsible formula in each case. It is the companion to
+> `catalog.test.ts`: that file pins the workbook at its *default* drivers, this
+> one at *zero* — the state every estimate is now born in.
 
 ## Design
 
 ### 1. `EstimateService.create` populates the estimate
 
 `create` loads the org's assemblies, keeps the `active` ones in `sortOrder`,
-builds one selection per assembly with every driver at `0`, and generates the
-snapshot.
+and persists one entry per assembly with every driver at `0` — and an empty
+`lineItems` array. It does not call the engine.
 
-The generation body of `setAssemblies` — load each assembly, resolve driver
-values, collect the referenced materials, run `generateAssemblyLines` per
-assembly, persist via `replaceSnapshot` — moves into a private method that both
-`create` and `setAssemblies` call. `setAssemblies` keeps its draft-status guard
-and its "assembly does not exist" error; neither applies to `create`, which
-builds its selections from assemblies it has already loaded.
+`setAssemblies` is untouched: it still loads each chosen assembly, resolves
+driver values, collects materials, runs `generateAssemblyLines`, and freezes
+the result. Generation happens on save, where the user has supplied real
+quantities.
 
 The repository boundary does not change. `create` makes the shell and
 `replaceSnapshot` fills it, which is exactly the split `NewEstimate`'s own
 comment describes ("the generated parts the repository initializes empty").
 Two writes on a rare operation is the right price for not perforating that
 boundary.
+
+Not calling the engine also removes a failure mode that the generating version
+had: `generateAssemblyLines` throws `FormulaError` on a non-finite result, and
+a driver in a denominator is an explicitly supported authoring pattern that
+goes non-finite at zero. Because the shell is persisted first, a throw would
+have leaked an orphan draft and surfaced as a 500 — and it would have blocked
+estimate creation for the whole org, not just for the offending assembly.
 
 **Why the server and not the draft editor.** The alternative is seeding
 `DraftEditor`'s local state whenever the saved selection is empty. It fails on
@@ -95,10 +132,16 @@ behavior is its own question and changing it is not what this change is for.
 
 Six seeded material lines carry `deliveriesFormula: "1"` — a flat delivery
 independent of quantity (Concrete's fill sand and pump, Seating Wall's block,
-Planting's 1-gallon trees and mulch). At zero drivers those still bill: $150
-fill-sand delivery, $250 pump, $150 block, plus Planting's, all marked up by
-overhead and profit. A "$0.00" new estimate would open somewhere north of
-$1,000 for zero work.
+Planting's 1-gallon trees and mulch). A line for zero units should not bill a
+delivery: nobody pays $150 to have zero blocks delivered.
+
+This is **not** load-bearing for the feature above — `create` no longer
+generates lines at all, so no delivery fires at creation regardless. It is kept
+because it is correct on its own merits, and it applies whenever a user zeroes
+a driver and saves. Of the charges this spec originally claimed it removed, it
+actually removes the $150 fill-sand and $150 block deliveries; the $250 pump
+survives, because the pump's quantity is 0.5 rather than 0. See the correction
+above.
 
 In `packages/domain/src/engine/generate.ts`:
 
@@ -141,18 +184,24 @@ The fix's real gate, over a pure function.
 
 **`packages/api/src/services/EstimateService/EstimateServiceImpl.test.ts`** —
 `create` returns an estimate whose `assemblies` are every active assembly in
-`sortOrder`, each driver at `0`; an inactive assembly is absent; `lineItems` is
-a generated snapshot rather than empty; and `totals.total` is `0`. That last
-assertion is what ties the two halves together — it fails if either the
-auto-add or the delivery fix regresses.
+`sortOrder`, each driver at `0`, with an inactive assembly absent and
+`lineItems` empty. The `lineItems` assertion is the gate; the accompanying
+`totals.total === 0` is true by construction once the snapshot is empty and is
+kept as documentation of intent, not as a check that can fail.
+
+**`packages/platform/src/seed/zeroDrivers.test.ts`** — the real regression lock
+on this feature's premise. It walks every seeded assembly at zero drivers,
+asserts Soil Preparation is the only one that costs nothing, and names the
+driver-independent formula responsible in each of the other five. If anyone
+reintroduces generation at creation, this file is where they find out why not.
 
 **`packages/platform/src/seed/catalog.test.ts`** — unchanged, deliberately. It
 is the regression lock proving the engine fix left the workbook tie-out alone.
 
 **`packages/web`** — nothing automated. The package has no test infrastructure
 and standing it up is out of scope. Verified with `bun run typecheck`,
-`bun run lint`, `bun run --cwd packages/web build`, and a live look at a
-newly created estimate.
+`bun run lint`, and `bun run --cwd packages/web build`. The live check of a
+newly created estimate is a manual step and has not been run.
 
 ## Out of scope
 
