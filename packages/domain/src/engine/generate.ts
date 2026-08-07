@@ -97,9 +97,12 @@ export function generateAssemblyLines(
           `Material line "${line.key}" references unknown material "${line.materialId}"`,
         );
       }
-      const deliveries = line.deliveriesFormula
-        ? evaluate(line.deliveriesFormula, scope)
-        : 0;
+      // A flat `deliveriesFormula` (e.g. "1") would otherwise bill a delivery
+      // for a line of nothing — no one pays to have zero mulch delivered.
+      const deliveries =
+        quantity === 0 || !line.deliveriesFormula
+          ? 0
+          : evaluate(line.deliveriesFormula, scope);
       return {
         ...base,
         type: "material",

@@ -4,6 +4,9 @@ import {
   drainageAssembly,
   drainageMaterials,
   drainagePricing,
+  makeAssembly,
+  makeMaterial,
+  makePricingSettings,
 } from "../test-support/fixture.ts";
 
 // The Drainage subset (drainageFt = 225). Quantities, prices, and the per-line
@@ -52,5 +55,50 @@ describe("generateAssemblyLines — fidelity to the spreadsheet", () => {
     expect(byKey("catchBasinSingle").taskName).toBe(
       "Installing pipe, basins, grates",
     );
+  });
+});
+
+describe("generateAssemblyLines — flat deliveries at zero quantity", () => {
+  // A material line with a flat `deliveriesFormula` of "1": one delivery no
+  // matter the quantity. Several seeded lines are shaped exactly this way.
+  const mulch = makeMaterial({
+    id: "mulch",
+    name: "Mulch",
+    unit: "yds.",
+    unitPrice: 40,
+    deliveryCost: 150,
+  });
+  const assembly = makeAssembly({
+    drivers: [{ key: "yards", label: "Mulch", unit: "yds.", defaultValue: 0 }],
+    lines: [
+      {
+        kind: "material",
+        key: "mulch",
+        description: "Mulch",
+        quantityFormula: "yards",
+        deliveriesFormula: "1",
+        materialId: "mulch",
+        sortOrder: 1,
+        taskKey: null,
+      },
+    ],
+  });
+  const generate = (yards: number) =>
+    generateAssemblyLines(
+      { assembly, driverValues: { yards } },
+      new Map([[mulch.id, mulch]]),
+      makePricingSettings(),
+    )[0]!;
+
+  it("charges no delivery for a line whose quantity resolves to zero", () => {
+    const line = generate(0);
+    expect(line.quantity).toBe(0);
+    expect(line.deliveryCost).toBe(0);
+  });
+
+  it("still charges the flat delivery once the quantity is non-zero", () => {
+    const line = generate(6);
+    expect(line.quantity).toBe(6);
+    expect(line.deliveryCost).toBe(150);
   });
 });
