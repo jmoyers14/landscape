@@ -22,6 +22,8 @@ import {
   generateAssemblyLines,
   resolveDriverValues,
   type EstimateView,
+  type PricingSettings,
+  type SelectedAssembly,
 } from "@landscape/domain";
 import type {
   EstimateContext,
@@ -142,7 +144,7 @@ export class EstimateServiceImpl implements EstimateService {
     const settings = await this.pricingSettings.get(orgId);
 
     // Load each chosen assembly and resolve its driver values up front.
-    const chosen = [];
+    const chosen: SelectedAssembly[] = [];
     for (const selection of selections) {
       const assembly = await this.assemblies.findById(
         orgId,
@@ -160,6 +162,21 @@ export class EstimateServiceImpl implements EstimateService {
       });
     }
 
+    return this.generateSnapshot(orgId, id, chosen, settings);
+  }
+
+  /**
+   * Generate and persist an estimate's line-item snapshot from already-resolved
+   * assembly selections. Shared by `create` (every active assembly at zero
+   * drivers) and `setAssemblies` (the user's chosen set) so both freeze the same
+   * way; each caller owns its own validation before getting here.
+   */
+  private async generateSnapshot(
+    orgId: string,
+    id: string,
+    chosen: SelectedAssembly[],
+    settings: PricingSettings,
+  ): Promise<EstimateView> {
     // Load every referenced material once, across all chosen assemblies.
     const materialIds = new Set<string>();
     for (const { assembly } of chosen) {
