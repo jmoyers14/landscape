@@ -239,3 +239,107 @@ describe("DocumentAssemblyServiceImpl.buildEstimateDocument", () => {
     );
   });
 });
+
+describe("DocumentAssemblyServiceImpl.buildPartsOrderDocument", () => {
+  const materialsEstimate = () =>
+    makeEstimate({
+      taxRate: 8,
+      assemblies: [
+        { assemblyId: "asm_a", name: "Irrigation", driverValues: {} },
+        { assemblyId: "asm_b", name: "Planting", driverValues: {} },
+      ],
+      lineItems: [
+        line({
+          id: "l1",
+          description: "1in PVC pipe",
+          unit: "ft",
+          quantity: 10,
+          unitPrice: 2,
+          deliveryCost: 5,
+        }),
+        // Same description/unit/price from another assembly — must merge.
+        line({
+          id: "l2",
+          description: "1in PVC pipe",
+          unit: "ft",
+          quantity: 15,
+          unitPrice: 2,
+          deliveryCost: 7,
+          sourceAssemblyId: "asm_b",
+        }),
+        // Same description, DIFFERENT price — must not merge.
+        line({
+          id: "l3",
+          description: "1in PVC pipe",
+          unit: "ft",
+          quantity: 4,
+          unitPrice: 3,
+          deliveryCost: 0,
+        }),
+        line({
+          id: "l4",
+          type: "labor",
+          description: "Install",
+          quantity: 8,
+          unitPrice: 45,
+          taxable: false,
+          deliveryCost: 0,
+        }),
+      ],
+    });
+
+  it("lists only material lines — a supplier is not quoting labor", async () => {
+    const { service } = build({ estimate: materialsEstimate() });
+    const doc = await service.buildPartsOrderDocument("org_1", "estimate_1");
+
+    expect(doc.lines.some((l) => l.description === "Install")).toBe(false);
+  });
+
+  it("merges identical materials and sums their quantities", async () => {
+    const { service } = build({ estimate: materialsEstimate() });
+    const doc = await service.buildPartsOrderDocument("org_1", "estimate_1");
+
+    const merged = doc.lines.find((l) => l.unitPrice === 2);
+    expect(merged).toMatchObject({
+      description: "1in PVC pipe",
+      unit: "ft",
+      quantity: 25,
+      lineTotal: 50,
+    });
+  });
+
+  it("keeps materials at different unit prices apart", async () => {
+    const { service } = build({ estimate: materialsEstimate() });
+    const doc = await service.buildPartsOrderDocument("org_1", "estimate_1");
+
+    expect(
+      doc.lines.filter((l) => l.description === "1in PVC pipe"),
+    ).toHaveLength(2);
+  });
+
+  it("quotes catalog cost, never a marked-up price", async () => {
+    const { service } = build({ estimate: materialsEstimate() });
+    const doc = await service.buildPartsOrderDocument("org_1", "estimate_1");
+
+    // 2.00 is the line's unitPrice as snapshotted — overhead and profit only
+    // ever apply in aggregate, so a line's price IS cost.
+    expect(doc.lines.find((l) => l.unitPrice === 2)?.unitPrice).toBe(2);
+  });
+
+  it("subtotals pre-tax and notes delivery separately", async () => {
+    const { service } = build({ estimate: materialsEstimate() });
+    const doc = await service.buildPartsOrderDocument("org_1", "estimate_1");
+
+    expect(doc.subtotal).toBe(62); // (25 × 2) + (4 × 3)
+    expect(doc.deliveryTotal).toBe(12); // 5 + 7 + 0
+    expect(doc.total).toBe(74);
+  });
+
+  it("throws MissingEstimateError for an unknown or cross-org estimate", async () => {
+    const { service } = build({ estimate: null });
+
+    expect(service.buildPartsOrderDocument("org_1", "nope")).rejects.toThrow(
+      MissingEstimateError,
+    );
+  });
+});

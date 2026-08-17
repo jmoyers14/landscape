@@ -23,7 +23,13 @@ import {
   type DocumentProject,
   type EstimateDocument,
   type PartsOrderDocument,
+  type PartsOrderLine,
 } from "./types.ts";
+
+/** Quantities are not money: three places, trailing noise from the formula engine trimmed. */
+function roundQuantity(value: number): number {
+  return Math.round(value * 1000) / 1000 + 0;
+}
 
 @injectable()
 export class DocumentAssemblyServiceImpl implements DocumentAssemblyService {
@@ -87,10 +93,75 @@ export class DocumentAssemblyServiceImpl implements DocumentAssemblyService {
   }
 
   async buildPartsOrderDocument(
-    _orgId: string,
-    _estimateId: string,
+    orgId: string,
+    estimateId: string,
   ): Promise<PartsOrderDocument> {
-    throw new Error("not implemented");
+    const estimate = await this.loadEstimate(orgId, estimateId);
+    const { company, project } = await this.loadHeader(orgId, estimate);
+
+    // Grouped by (description, unit, unitPrice) with quantities summed. Price is
+    // part of the key on purpose: two lines with the same description at
+    // different prices are genuinely different purchases and must stay apart.
+    // Insertion order is preserved, which is generation order.
+    const merged = new Map<string, PartsOrderLine>();
+    let deliveryTotal = 0;
+
+    for (const item of estimate.lineItems) {
+      if (item.type !== "material") {
+        continue;
+      }
+      // Delivery is a separately noted total rather than folded into unit
+      // prices — a supplier quotes goods, and burying freight in a unit price
+      // would misstate what is being ordered.
+      deliveryTotal += item.deliveryCost;
+
+      const key = `${item.description} ${item.unit ?? ""} ${item.unitPrice}`;
+      const existing = merged.get(key);
+      if (existing) {
+        existing.quantity += item.quantity;
+        continue;
+      }
+      merged.set(key, {
+        description: item.description,
+        unit: item.unit,
+        quantity: item.quantity,
+        // A material line's unitPrice IS catalog cost: markup only ever happens
+        // in aggregate, never per line. So this is correct by construction, not
+        // by subtracting anything back out.
+        unitPrice: item.unitPrice,
+        lineTotal: 0,
+      });
+    }
+
+    const lines = [...merged.values()].map((line) => {
+      // lineTotal is computed from the ROUNDED quantity, the one actually
+      // printed, so a supplier multiplying the row out always lands on the
+      // figure beside it.
+      const quantity = roundQuantity(line.quantity);
+      return {
+        ...line,
+        quantity,
+        lineTotal: roundCents(quantity * line.unitPrice),
+      };
+    });
+
+    // Pre-tax: the supplier charges their own sales tax, so quoting ours here
+    // would double it on their invoice.
+    const subtotal = roundCents(
+      lines.reduce((acc, line) => acc + line.lineTotal, 0),
+    );
+    const delivery = roundCents(deliveryTotal);
+
+    return {
+      company,
+      project,
+      title: estimate.title,
+      createdAt: estimate.createdAt,
+      lines,
+      subtotal,
+      deliveryTotal: delivery,
+      total: roundCents(subtotal + delivery),
+    };
   }
 
   private async loadEstimate(
