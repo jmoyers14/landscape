@@ -35,6 +35,12 @@ export * from "./integrations/webhooks/WebhookVerifier.ts";
 export * from "./integrations/tasks/TaskQueue.ts";
 export * from "./integrations/storage/ObjectStorage.ts";
 
+// Documents: view models, key layout and errors. Pure data — the assembly
+// service itself is server-only and registered via registerServerCore.
+export * from "./documents/types.ts";
+export * from "./documents/keys.ts";
+export * from "./documents/errors.ts";
+
 // Seed: the port + token only (the impl and starter content are server-only,
 // registered via registerServerCore).
 export { type SeedService, SEED_SERVICE_TOKEN } from "./seed/SeedService.ts";
