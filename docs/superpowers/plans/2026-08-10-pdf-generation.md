@@ -3226,7 +3226,7 @@ A derived view of the estimate's material lines. No new entity — the renderer 
 - Consumes: everything from Task 10.
 - Produces: a working `buildPartsOrderDocument`, replacing the `not implemented` stub.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `DocumentAssemblyServiceImpl.test.ts`:
 
@@ -3304,7 +3304,7 @@ describe("DocumentAssemblyServiceImpl.buildPartsOrderDocument", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 ```bash
 bun test packages/platform/src/documents/DocumentAssemblyServiceImpl.test.ts
@@ -3312,7 +3312,7 @@ bun test packages/platform/src/documents/DocumentAssemblyServiceImpl.test.ts
 
 Expected: FAIL — six failures, all `not implemented` except the `MissingEstimateError` case, which fails because the stub throws before loading.
 
-- [ ] **Step 3: Implement it**
+- [x] **Step 3: Implement it**
 
 Replace the stub in `DocumentAssemblyServiceImpl.ts`:
 
@@ -3391,7 +3391,7 @@ function roundQuantity(value: number): number {
 }
 ```
 
-- [ ] **Step 4: Run the test**
+- [x] **Step 4: Run the test**
 
 ```bash
 bun test packages/platform/src/documents/DocumentAssemblyServiceImpl.test.ts
@@ -3399,7 +3399,7 @@ bun test packages/platform/src/documents/DocumentAssemblyServiceImpl.test.ts
 
 Expected: PASS, all seventeen cases.
 
-- [ ] **Step 5: Run everything and commit**
+- [x] **Step 5: Run everything and commit**
 
 ```bash
 bun run typecheck && bun test && bun run lint
