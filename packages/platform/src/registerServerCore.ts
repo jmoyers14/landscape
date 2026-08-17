@@ -49,6 +49,8 @@ import { GoogleMapsClient } from "./integrations/maps/GoogleMapsClient.ts";
 import { PostHogClient } from "./integrations/analytics/PostHogClient.ts";
 import { SEED_SERVICE_TOKEN } from "./seed/SeedService.ts";
 import { SeedServiceImpl } from "./seed/SeedServiceImpl.ts";
+import { DOCUMENT_ASSEMBLY_SERVICE_TOKEN } from "./documents/DocumentAssemblyService.ts";
+import { DocumentAssemblyServiceImpl } from "./documents/DocumentAssemblyServiceImpl.ts";
 import { LOGGER_TOKEN } from "./logging/Logger.ts";
 import { rootLogger } from "./logging/pinoLogger.ts";
 
@@ -130,4 +132,11 @@ export function registerServerCore(container: DependencyContainer): void {
   // repos), resolved by both the worker's org.created handler and the dev seed
   // CLI — hence in the shared core rather than an entrypoint.
   container.registerSingleton(SEED_SERVICE_TOKEN, SeedServiceImpl);
+
+  // Same rationale as SeedService: a shared platform capability both the API
+  // (status/first-request path) and the worker (rendering) resolve.
+  container.registerSingleton(
+    DOCUMENT_ASSEMBLY_SERVICE_TOKEN,
+    DocumentAssemblyServiceImpl,
+  );
 }

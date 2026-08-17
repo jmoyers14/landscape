@@ -9,6 +9,7 @@ import { mock } from "bun:test";
 import type { MaterialRepository } from "../data-access/repositories/MaterialRepository/MaterialRepository.ts";
 import type { AssemblyRepository } from "../data-access/repositories/AssemblyRepository/AssemblyRepository.ts";
 import type { PricingSettingsRepository } from "../data-access/repositories/PricingSettingsRepository/PricingSettingsRepository.ts";
+import type { ClientRepository } from "../data-access/repositories/ClientRepository/ClientRepository.ts";
 import type { ProjectRepository } from "../data-access/repositories/ProjectRepository/ProjectRepository.ts";
 import type { EstimateRepository } from "../data-access/repositories/EstimateRepository/EstimateRepository.ts";
 import type { JobRepository } from "../data-access/repositories/JobRepository/JobRepository.ts";
@@ -56,6 +57,20 @@ export const makePricingSettingsRepoMock = (
   upsert: mock(async () => {
     throw new Error("not stubbed: PricingSettingsRepository.upsert");
   }),
+  ...over,
+});
+
+export const makeClientRepoMock = (
+  over: Partial<ClientRepository> = {},
+): ClientRepository => ({
+  findByOrg: mock(async () => []),
+  findById: mock(async () => null),
+  findByEmail: mock(async () => null),
+  create: mock(async () => {
+    throw new Error("not stubbed: ClientRepository.create");
+  }),
+  update: mock(async () => null),
+  deleteById: mock(async () => {}),
   ...over,
 });
 

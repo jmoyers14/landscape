@@ -40,6 +40,10 @@ export * from "./integrations/storage/ObjectStorage.ts";
 export * from "./documents/types.ts";
 export * from "./documents/keys.ts";
 export * from "./documents/errors.ts";
+export {
+  type DocumentAssemblyService,
+  DOCUMENT_ASSEMBLY_SERVICE_TOKEN,
+} from "./documents/DocumentAssemblyService.ts";
 
 // Seed: the port + token only (the impl and starter content are server-only,
 // registered via registerServerCore).
