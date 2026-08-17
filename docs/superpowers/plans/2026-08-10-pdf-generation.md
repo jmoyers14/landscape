@@ -1942,13 +1942,13 @@ The one file that knows which storage provider is in use.
 - Consumes: `ObjectStorage`, `StorageConfig` (Task 6).
 - Produces: `GcsObjectStorage implements ObjectStorage`, bound to `OBJECT_STORAGE_TOKEN` in every non-local environment.
 
-- [ ] **Step 1: Install the SDK**
+- [x] **Step 1: Install the SDK**
 
 ```bash
 bun add --cwd packages/platform @google-cloud/storage
 ```
 
-- [ ] **Step 2: Write the adapter**
+- [x] **Step 2: Write the adapter**
 
 There is no test here: every method is a thin delegation to the SDK, and a test would only assert that mocks were called. The behaviour worth testing (`head` returning null, key layout) is covered by `LocalObjectStorage.test.ts` and Task 10's key tests, which exercise the same contract.
 
@@ -2042,11 +2042,11 @@ export class GcsObjectStorage implements ObjectStorage {
 }
 ```
 
-- [ ] **Step 3: Bind it for non-local environments**
+- [x] **Step 3: Bind it for non-local environments**
 
 In `packages/platform/src/registerServerCore.ts`, import `GcsObjectStorage` and replace the Task 6 `// TODO(Task 7)` placeholder so the factory resolves `LocalObjectStorage` for `local` and `GcsObjectStorage` otherwise.
 
-- [ ] **Step 4: Typecheck and test**
+- [x] **Step 4: Typecheck and test**
 
 ```bash
 bun run typecheck && bun test && bun run lint
@@ -2054,7 +2054,7 @@ bun run typecheck && bun test && bun run lint
 
 Expected: clean.
 
-- [ ] **Step 5: Confirm the API image still builds with the SDK present**
+- [x] **Step 5: Confirm the API image still builds with the SDK present**
 
 ```bash
 docker build --platform linux/amd64 -t landscape-api-check -f packages/api/Dockerfile .
@@ -2062,7 +2062,7 @@ docker build --platform linux/amd64 -t landscape-api-check -f packages/api/Docke
 
 Expected: builds clean. This is the check that Task 6's Dockerfile change actually bought what it was meant to.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/platform bun.lock
