@@ -2,10 +2,14 @@ import { inject, injectable } from "tsyringe";
 import { z } from "zod";
 import {
   SEED_SERVICE_TOKEN,
+  WEBHOOK_EVENT_REPOSITORY_TOKEN,
+  type Job,
   type SeedService,
-  type WebhookEvent,
+  type WebhookEventRepository,
 } from "@landscape/platform";
-import type { WebhookHandler } from "../WebhookHandler.ts";
+import type { JobHandler } from "../JobHandler.ts";
+import { PoisonJobError } from "../PoisonJobError.ts";
+import { webhookPayloadSchema } from "./webhookPayload.ts";
 
 // Clerk's organization.* payload (event.data). We need only the org id, which
 // is the tenant boundary the whole app scopes to.
@@ -22,13 +26,23 @@ const clerkOrgSchema = z.object({ id: z.string().min(1) });
  * what lets this handler satisfy the queue's at-least-once contract.
  */
 @injectable()
-export class SeedOrgHandler implements WebhookHandler {
+export class SeedOrgHandler implements JobHandler {
   constructor(
+    @inject(WEBHOOK_EVENT_REPOSITORY_TOKEN)
+    private readonly events: WebhookEventRepository,
     @inject(SEED_SERVICE_TOKEN)
     private readonly seedService: SeedService,
   ) {}
 
-  async handle(event: WebhookEvent): Promise<void> {
+  async handle(job: Job): Promise<void> {
+    const { source, sourceEventId } = webhookPayloadSchema.parse(job.payload);
+    const event = await this.events.findBySourceEventId(source, sourceEventId);
+    if (!event) {
+      // The event is recorded before the job is enqueued, so its absence is
+      // permanent, not a race worth retrying.
+      throw new PoisonJobError("raw event missing");
+    }
+
     // A bad shape throws, which the runner records as a failed job. Clerk's org
     // id IS the app's orgId (the Clerk org is the tenant).
     const { id: orgId } = clerkOrgSchema.parse(event.payload);

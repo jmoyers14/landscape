@@ -1,15 +1,15 @@
 import { describe, expect, it } from "bun:test";
 import type {
+  Job,
+  JobRepository,
+  JobStatus,
   Logger,
-  WebhookEvent,
-  WebhookEventRepository,
-  WebhookJob,
-  WebhookJobRepository,
-  WebhookJobStatus,
 } from "@landscape/platform";
+import { makeJob } from "@landscape/platform/test-support";
 import { JobRunner } from "./runJob.ts";
-import type { WebhookHandlerRegistry } from "./registry.ts";
-import type { WebhookHandler } from "./WebhookHandler.ts";
+import type { JobHandlerRegistry } from "./registry.ts";
+import type { JobHandler } from "./JobHandler.ts";
+import { PoisonJobError } from "./PoisonJobError.ts";
 
 // The runner logs; these tests assert behaviour, not log output, so swallow it.
 const noopLogger: Logger = {
@@ -22,125 +22,143 @@ const noopLogger: Logger = {
 };
 
 const JOB_TYPE = "syncUser";
-
-const makeJob = (overrides: Partial<WebhookJob> = {}): WebhookJob => ({
-  id: "job_1",
-  source: "clerk",
-  sourceEventId: "msg_1",
-  jobType: JOB_TYPE,
-  status: "pending",
-  attempts: 0,
-  lastError: null,
-  orgId: null,
-  createdAt: "2026-01-01T00:00:00.000Z",
-  updatedAt: "2026-01-01T00:00:00.000Z",
-  ...overrides,
-});
+const DEDUP_KEY = "clerk:msg_1";
 
 /** Records the lifecycle transitions the runner drives, for assertion. */
-class FakeJobRepository implements WebhookJobRepository {
+class FakeJobRepository implements JobRepository {
   public calls: string[] = [];
-  constructor(private job: WebhookJob | null) {}
+  public lastResult: unknown = undefined;
+  constructor(private job: Job | null) {}
 
-  async enqueuePending() {
+  async enqueuePending(): Promise<Job> {
     throw new Error("not used by the runner");
-    return makeJob();
   }
-  async findByJobKey() {
+  async findByKey() {
+    return this.job;
+  }
+  async findForOrg() {
     return this.job;
   }
   async markRunning(id: string) {
     this.calls.push(`markRunning:${id}`);
     if (this.job) {
-      this.job = { ...this.job, status: "running", attempts: this.job.attempts + 1 };
+      this.job = {
+        ...this.job,
+        status: "running",
+        attempts: this.job.attempts + 1,
+      };
     }
     return this.job;
   }
-  async markSucceeded(id: string) {
+  async markSucceeded(id: string, result?: unknown) {
     this.calls.push(`markSucceeded:${id}`);
+    this.lastResult = result;
     return this.job;
   }
   async markFailed(id: string, error: string) {
     this.calls.push(`markFailed:${id}:${error}`);
     return this.job;
   }
-  async findById() {
-    return this.job;
-  }
-  async findByStatus(_status: WebhookJobStatus) {
+  async findByStatus(_status: JobStatus) {
     return [];
   }
 }
 
-const event: WebhookEvent = {
-  id: "evt_1",
-  source: "clerk",
-  sourceEventId: "msg_1",
-  type: "user.created",
-  payload: { id: "user_abc" },
-  receivedAt: "2026-01-01T00:00:00.000Z",
+const registryWith = (handler: JobHandler | null): JobHandlerRegistry =>
+  ({ get: () => handler }) as unknown as JobHandlerRegistry;
+
+const okHandler: JobHandler = { handle: async () => undefined };
+const resultHandler: JobHandler = {
+  handle: async () => ({ storageKey: "orgs/org_1/x.pdf", byteSize: 1024 }),
 };
-
-const eventRepo = (found: WebhookEvent | null = event): WebhookEventRepository =>
-  ({
-    record: async () => ({ event, alreadySeen: false }),
-    findBySourceEventId: async () => found,
-  }) as unknown as WebhookEventRepository;
-
-const registryWith = (handler: WebhookHandler | null): WebhookHandlerRegistry =>
-  ({ get: () => handler }) as unknown as WebhookHandlerRegistry;
-
-const okHandler: WebhookHandler = { handle: async () => {} };
-const throwingHandler: WebhookHandler = {
+const throwingHandler: JobHandler = {
   handle: async () => {
     throw new Error("boom");
   },
 };
+const poisonHandler: JobHandler = {
+  handle: async () => {
+    throw new PoisonJobError("estimate not found");
+  },
+};
 
 const taskRequest = (body: unknown): Request =>
-  new Request("http://worker.local/tasks/syncUser", {
+  new Request(`http://worker.local/tasks/${JOB_TYPE}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
 
-const validKey = { source: "clerk", sourceEventId: "msg_1" };
+const validBody = { dedupKey: DEDUP_KEY };
+const pendingJob = (over: Partial<Job> = {}): Job =>
+  makeJob({ jobType: JOB_TYPE, dedupKey: DEDUP_KEY, ...over });
 
 describe("JobRunner", () => {
   it("runs the handler and marks the job succeeded (200)", async () => {
-    const jobs = new FakeJobRepository(makeJob());
-    const runner = new JobRunner(eventRepo(), jobs, registryWith(okHandler), noopLogger);
+    const jobs = new FakeJobRepository(pendingJob());
+    const runner = new JobRunner(jobs, registryWith(okHandler), noopLogger);
 
-    const result = await runner.run(JOB_TYPE, taskRequest(validKey));
+    const result = await runner.run(JOB_TYPE, taskRequest(validBody));
 
     expect(result.status).toBe(200);
     expect(jobs.calls).toEqual(["markRunning:job_1", "markSucceeded:job_1"]);
   });
 
-  it("marks failed and returns 500 (retry) when the handler throws", async () => {
-    const jobs = new FakeJobRepository(makeJob());
-    const runner = new JobRunner(eventRepo(), jobs, registryWith(throwingHandler), noopLogger);
+  it("persists the handler's return value as the job result", async () => {
+    const jobs = new FakeJobRepository(pendingJob());
+    const runner = new JobRunner(jobs, registryWith(resultHandler), noopLogger);
 
-    const result = await runner.run(JOB_TYPE, taskRequest(validKey));
+    await runner.run(JOB_TYPE, taskRequest(validBody));
+
+    expect(jobs.lastResult).toEqual({
+      storageKey: "orgs/org_1/x.pdf",
+      byteSize: 1024,
+    });
+  });
+
+  it("marks failed and returns 500 (retry) when the handler throws", async () => {
+    const jobs = new FakeJobRepository(pendingJob());
+    const runner = new JobRunner(
+      jobs,
+      registryWith(throwingHandler),
+      noopLogger,
+    );
+
+    const result = await runner.run(JOB_TYPE, taskRequest(validBody));
 
     expect(result.status).toBe(500);
     expect(jobs.calls).toEqual(["markRunning:job_1", "markFailed:job_1:boom"]);
   });
 
-  it("acks an already-succeeded job without re-running it (200)", async () => {
-    const jobs = new FakeJobRepository(makeJob({ status: "succeeded", attempts: 1 }));
-    const runner = new JobRunner(eventRepo(), jobs, registryWith(okHandler), noopLogger);
+  it("acks (200) without retrying when the handler throws PoisonJobError", async () => {
+    const jobs = new FakeJobRepository(pendingJob());
+    const runner = new JobRunner(jobs, registryWith(poisonHandler), noopLogger);
 
-    const result = await runner.run(JOB_TYPE, taskRequest(validKey));
+    const result = await runner.run(JOB_TYPE, taskRequest(validBody));
 
     expect(result.status).toBe(200);
-    expect(await responseBody(result)).toMatchObject({ status: "already-succeeded" });
+    expect(jobs.calls).toEqual([
+      "markRunning:job_1",
+      "markFailed:job_1:estimate not found",
+    ]);
+  });
+
+  it("acks an already-succeeded job without re-running it (200)", async () => {
+    const jobs = new FakeJobRepository(
+      pendingJob({ status: "succeeded", attempts: 1 }),
+    );
+    const runner = new JobRunner(jobs, registryWith(okHandler), noopLogger);
+
+    const result = await runner.run(JOB_TYPE, taskRequest(validBody));
+
+    expect(result.status).toBe(200);
+    expect(result.body).toMatchObject({ status: "already-succeeded" });
     expect(jobs.calls).toEqual([]); // never touched
   });
 
   it("acks a malformed task payload as poison (200), touching no job", async () => {
-    const jobs = new FakeJobRepository(makeJob());
-    const runner = new JobRunner(eventRepo(), jobs, registryWith(okHandler), noopLogger);
+    const jobs = new FakeJobRepository(pendingJob());
+    const runner = new JobRunner(jobs, registryWith(okHandler), noopLogger);
 
     const result = await runner.run(JOB_TYPE, taskRequest({ nonsense: true }));
 
@@ -149,34 +167,24 @@ describe("JobRunner", () => {
   });
 
   it("acks poison (200) and records failure when no handler is registered", async () => {
-    const jobs = new FakeJobRepository(makeJob());
-    const runner = new JobRunner(eventRepo(), jobs, registryWith(null), noopLogger);
+    const jobs = new FakeJobRepository(pendingJob());
+    const runner = new JobRunner(jobs, registryWith(null), noopLogger);
 
-    const result = await runner.run(JOB_TYPE, taskRequest(validKey));
+    const result = await runner.run(JOB_TYPE, taskRequest(validBody));
 
     expect(result.status).toBe(200);
-    expect(jobs.calls).toEqual([`markFailed:job_1:no handler registered for ${JOB_TYPE}`]);
+    expect(jobs.calls).toEqual([
+      `markFailed:job_1:no handler registered for ${JOB_TYPE}`,
+    ]);
   });
 
   it("acks (200) when the job row can't be found", async () => {
     const jobs = new FakeJobRepository(null);
-    const runner = new JobRunner(eventRepo(), jobs, registryWith(okHandler), noopLogger);
+    const runner = new JobRunner(jobs, registryWith(okHandler), noopLogger);
 
-    const result = await runner.run(JOB_TYPE, taskRequest(validKey));
+    const result = await runner.run(JOB_TYPE, taskRequest(validBody));
 
     expect(result.status).toBe(200);
     expect(jobs.calls).toEqual([]);
   });
-
-  it("marks failed and acks (200) when the raw event is missing", async () => {
-    const jobs = new FakeJobRepository(makeJob());
-    const runner = new JobRunner(eventRepo(null), jobs, registryWith(okHandler), noopLogger);
-
-    const result = await runner.run(JOB_TYPE, taskRequest(validKey));
-
-    expect(result.status).toBe(200);
-    expect(jobs.calls).toEqual(["markFailed:job_1:raw event missing"]);
-  });
 });
-
-const responseBody = async (result: { body: unknown }): Promise<unknown> => result.body;

@@ -1,6 +1,6 @@
 import { injectable } from "tsyringe";
 import { JOB_TYPES } from "./jobTypes.ts";
-import type { WebhookHandler } from "./WebhookHandler.ts";
+import type { JobHandler } from "./JobHandler.ts";
 import { SyncUserHandler } from "./handlers/syncUser.ts";
 import { SeedOrgHandler } from "./handlers/seedOrg.ts";
 
@@ -15,17 +15,17 @@ import { SeedOrgHandler } from "./handlers/seedOrg.ts";
  * deploy whose handler this process doesn't have.
  */
 @injectable()
-export class WebhookHandlerRegistry {
-  private readonly handlers: Map<string, WebhookHandler>;
+export class JobHandlerRegistry {
+  private readonly handlers: Map<string, JobHandler>;
 
   constructor(syncUser: SyncUserHandler, seedOrg: SeedOrgHandler) {
-    this.handlers = new Map<string, WebhookHandler>([
+    this.handlers = new Map<string, JobHandler>([
       [JOB_TYPES.SYNC_USER, syncUser],
       [JOB_TYPES.SEED_ORG, seedOrg],
     ]);
   }
 
-  get(jobType: string): WebhookHandler | null {
+  get(jobType: string): JobHandler | null {
     return this.handlers.get(jobType) ?? null;
   }
 }

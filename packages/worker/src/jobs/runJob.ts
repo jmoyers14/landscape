@@ -1,14 +1,13 @@
 import { inject, injectable } from "tsyringe";
 import {
+  JOB_REPOSITORY_TOKEN,
   LOGGER_TOKEN,
-  WEBHOOK_EVENT_REPOSITORY_TOKEN,
-  WEBHOOK_JOB_REPOSITORY_TOKEN,
+  type JobRepository,
   type Logger,
-  type WebhookEventRepository,
-  type WebhookJobRepository,
 } from "@landscape/platform";
-import { WebhookHandlerRegistry } from "./registry.ts";
-import { taskKeySchema } from "../ingest/taskKey.ts";
+import { JobHandlerRegistry } from "./registry.ts";
+import { PoisonJobError } from "./PoisonJobError.ts";
+import { taskBodySchema } from "./taskKey.ts";
 
 /** An HTTP outcome for the route to return to Cloud Tasks. */
 export interface JobResult {
@@ -23,12 +22,12 @@ export interface JobResult {
  * non-2xx until the queue's max-attempts:
  *  - **200** — done with, do not retry. Covers success AND every permanent
  *    ("poison") outcome: malformed payload, unknown job type, missing rows,
- *    already-succeeded. Retrying those can never help, so we ack and record the
- *    reason in the job row instead of burning attempts.
- *  - **500** — a handler threw. Treated as transient: mark failed, let the queue
- *    retry per policy. A genuinely permanent handler error simply exhausts the
- *    queue's attempts and stays `failed` for manual inspection — the acceptable
- *    cost of not being able to tell transient from permanent from inside a catch.
+ *    already-succeeded, and a handler that threw PoisonJobError. Retrying those
+ *    can never help, so we ack and record the reason in the job row instead of
+ *    burning attempts.
+ *  - **500** — a handler threw anything else. Treated as transient: mark failed,
+ *    let the queue retry per policy. A genuinely permanent handler error simply
+ *    exhausts the queue's attempts and stays `failed` for manual inspection.
  *
  * Idempotency backstop: a job already `succeeded` is acked without re-running,
  * which covers the case where the queue's task-name dedup window has lapsed and
@@ -37,29 +36,27 @@ export interface JobResult {
 @injectable()
 export class JobRunner {
   constructor(
-    @inject(WEBHOOK_EVENT_REPOSITORY_TOKEN)
-    private readonly events: WebhookEventRepository,
-    @inject(WEBHOOK_JOB_REPOSITORY_TOKEN)
-    private readonly jobs: WebhookJobRepository,
-    private readonly registry: WebhookHandlerRegistry,
+    @inject(JOB_REPOSITORY_TOKEN)
+    private readonly jobs: JobRepository,
+    private readonly registry: JobHandlerRegistry,
     @inject(LOGGER_TOKEN)
     private readonly logger: Logger,
   ) {}
 
   async run(jobType: string, request: Request): Promise<JobResult> {
-    const parsed = taskKeySchema.safeParse(await readJson(request));
+    const parsed = taskBodySchema.safeParse(await readJson(request));
     if (!parsed.success) {
       // Nothing addressable — can't even find the job. Poison: ack and drop.
       this.logger.warn({ jobType }, "task with malformed payload; acking");
       return { status: 200, body: { error: "malformed task payload" } };
     }
-    const { source, sourceEventId } = parsed.data;
+    const { dedupKey } = parsed.data;
 
     // Job-scoped logger: every line for this job carries its identity so a job's
     // whole lifecycle correlates in Cloud Logging.
-    const log = this.logger.child({ jobType, source, sourceEventId });
+    const log = this.logger.child({ jobType, dedupKey });
 
-    const job = await this.jobs.findByJobKey(source, sourceEventId, jobType);
+    const job = await this.jobs.findByKey(jobType, dedupKey);
     if (!job) {
       // The pending row is written before the task is enqueued, so this
       // shouldn't happen. Ack rather than retry forever against a row that isn't
@@ -80,26 +77,24 @@ export class JobRunner {
       return { status: 200, body: { error: `unknown job type ${jobType}` } };
     }
 
-    const event = await this.events.findBySourceEventId(source, sourceEventId);
-    if (!event) {
-      log.error("raw event missing; marking failed");
-      await this.jobs.markFailed(job.id, "raw event missing");
-      return { status: 200, body: { error: "raw event missing" } };
-    }
-
     // Count the run before doing the work, so `attempts` reflects reality even
     // if the handler hangs or the instance dies mid-run.
     const running = await this.jobs.markRunning(job.id);
     const attempt = running?.attempts ?? job.attempts + 1;
 
     try {
-      await handler.handle(event);
-      await this.jobs.markSucceeded(job.id);
+      const result = await handler.handle(running ?? job);
+      await this.jobs.markSucceeded(job.id, result);
       log.info({ attempt }, "job succeeded");
       return { status: 200, body: { status: "succeeded", jobType } };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       await this.jobs.markFailed(job.id, message);
+      if (error instanceof PoisonJobError) {
+        // Permanent by construction. Recorded, then acked — a retry cannot help.
+        log.error({ err: error, attempt }, "job is poison; acking");
+        return { status: 200, body: { error: message } };
+      }
       // 500 → Cloud Tasks retries per the queue's policy.
       log.error({ err: error, attempt }, "job failed; will retry");
       return { status: 500, body: { error: message } };
