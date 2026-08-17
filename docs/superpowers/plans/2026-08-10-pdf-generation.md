@@ -2749,7 +2749,7 @@ The real logic, in `platform` because both the API and the worker need it. Org-s
 
 `buildPartsOrderDocument` is declared here and implemented in Task 11; until then it throws `new Error("not implemented")` so the port is stable for Task 12's renderer work.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // packages/platform/src/documents/DocumentAssemblyServiceImpl.test.ts
@@ -2967,7 +2967,7 @@ describe("DocumentAssemblyServiceImpl.buildEstimateDocument", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 ```bash
 bun test packages/platform/src/documents/DocumentAssemblyServiceImpl.test.ts
@@ -2975,7 +2975,7 @@ bun test packages/platform/src/documents/DocumentAssemblyServiceImpl.test.ts
 
 Expected: FAIL — cannot resolve `./DocumentAssemblyServiceImpl.ts`. (`makeClientRepoMock` may also be missing from `repoMocks.ts`; add it in the same shape as the others if so — `findByOrg`, `findById`, `create`, `update`, `deleteById`, matching `ClientRepository`.)
 
-- [ ] **Step 3: Write the port**
+- [x] **Step 3: Write the port**
 
 ```ts
 // packages/platform/src/documents/DocumentAssemblyService.ts
@@ -3005,7 +3005,7 @@ export interface DocumentAssemblyService {
 }
 ```
 
-- [ ] **Step 4: Write the implementation**
+- [x] **Step 4: Write the implementation**
 
 ```ts
 // packages/platform/src/documents/DocumentAssemblyServiceImpl.ts
@@ -3176,7 +3176,7 @@ export class DocumentAssemblyServiceImpl implements DocumentAssemblyService {
 }
 ```
 
-- [ ] **Step 5: Run the test**
+- [x] **Step 5: Run the test**
 
 ```bash
 bun test packages/platform/src/documents/DocumentAssemblyServiceImpl.test.ts
@@ -3184,7 +3184,7 @@ bun test packages/platform/src/documents/DocumentAssemblyServiceImpl.test.ts
 
 Expected: PASS, all eleven cases.
 
-- [ ] **Step 6: Register the service**
+- [x] **Step 6: Register the service**
 
 In `packages/platform/src/registerServerCore.ts`, beside `SEED_SERVICE_TOKEN` (same rationale — a shared platform capability both entrypoints resolve):
 
@@ -3204,7 +3204,7 @@ export {
 } from "./documents/DocumentAssemblyService.ts";
 ```
 
-- [ ] **Step 7: Run everything and commit**
+- [x] **Step 7: Run everything and commit**
 
 ```bash
 bun run typecheck && bun test && bun run lint
