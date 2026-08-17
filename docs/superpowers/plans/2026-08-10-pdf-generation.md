@@ -864,7 +864,7 @@ The worker is broken between Tasks 4 and 5; this task closes it.
   - `taskBodySchema` (zod, `{ dedupKey: string }`) and `taskName(jobType, dedupKey, attempts): string`
   - `JobHandlerRegistry.get(jobType): JobHandler | null`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Rewrite `packages/worker/src/jobs/runJob.test.ts` wholesale. Every semantic from the current file is carried over, plus two new ones (`result` persisted on success, and `PoisonJobError` → 200):
 
@@ -1046,7 +1046,7 @@ describe("JobRunner", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 ```bash
 bun test packages/worker/src/jobs/runJob.test.ts
@@ -1054,7 +1054,7 @@ bun test packages/worker/src/jobs/runJob.test.ts
 
 Expected: FAIL — cannot resolve `./JobHandler.ts` and `./PoisonJobError.ts`.
 
-- [ ] **Step 3: Write the handler contract and the poison marker**
+- [x] **Step 3: Write the handler contract and the poison marker**
 
 ```ts
 // packages/worker/src/jobs/JobHandler.ts
@@ -1100,7 +1100,7 @@ export class PoisonJobError extends Error {
 }
 ```
 
-- [ ] **Step 4: Move and rewrite the task key**
+- [x] **Step 4: Move and rewrite the task key**
 
 Delete `packages/worker/src/ingest/taskKey.ts` and create `packages/worker/src/jobs/taskKey.ts` — it is no longer webhook-specific:
 
@@ -1139,7 +1139,7 @@ export function taskName(
 }
 ```
 
-- [ ] **Step 5: Rewrite the runner**
+- [x] **Step 5: Rewrite the runner**
 
 Replace the body of `packages/worker/src/jobs/runJob.ts` below its doc comment. Keep the existing class doc comment verbatim — the retry contract it describes is unchanged — and add the PoisonJobError clause to it.
 
@@ -1258,7 +1258,7 @@ async function readJson(request: Request): Promise<unknown> {
 }
 ```
 
-- [ ] **Step 6: Run the runner test**
+- [x] **Step 6: Run the runner test**
 
 ```bash
 bun test packages/worker/src/jobs/runJob.test.ts
@@ -1266,11 +1266,11 @@ bun test packages/worker/src/jobs/runJob.test.ts
 
 Expected: PASS, all nine cases. (The registry still exports `WebhookHandlerRegistry`; the test imports `JobHandlerRegistry`, which Step 7 renames.)
 
-- [ ] **Step 7: Rename the registry**
+- [x] **Step 7: Rename the registry**
 
 In `packages/worker/src/jobs/registry.ts`, rename the class `WebhookHandlerRegistry` → `JobHandlerRegistry`, change the imported type from `WebhookHandler` to `JobHandler`, and update the doc comment's first line to "Looks up the handler for a job type." The registered map stays exactly as it is; Task 14 adds the two render entries.
 
-- [ ] **Step 8: Make the webhook handlers load their own event**
+- [x] **Step 8: Make the webhook handlers load their own event**
 
 `packages/worker/src/jobs/handlers/syncUser.ts` — change the class to implement `JobHandler`, inject `WEBHOOK_EVENT_REPOSITORY_TOKEN`, and replace `handle`:
 
@@ -1307,7 +1307,7 @@ const webhookPayloadSchema = z.object({
 
 Apply the identical `webhookPayloadSchema` + event-load prologue to `handlers/seedOrg.ts`, keeping its `clerkOrgSchema.parse(event.payload)` body. Since `webhookPayloadSchema` is now used twice, put it in `packages/worker/src/jobs/handlers/webhookPayload.ts` and import it in both.
 
-- [ ] **Step 9: Update the two handler tests**
+- [x] **Step 9: Update the two handler tests**
 
 `syncUser.test.ts` and `seedOrg.test.ts` currently call `handler.handle(event)`. Change each to build a job with `makeJob({ jobType, dedupKey: "clerk:msg_1", payload: { source: "clerk", sourceEventId: "msg_1" } })`, pass a `WebhookEventRepository` stub whose `findBySourceEventId` returns the existing test event, and call `handler.handle(job)`. Add one case per handler:
 
@@ -1319,7 +1319,7 @@ Apply the identical `webhookPayloadSchema` + event-load prologue to `handlers/se
   });
 ```
 
-- [ ] **Step 10: Update the ingest path**
+- [x] **Step 10: Update the ingest path**
 
 In `packages/worker/src/ingest/handler.ts`: swap `WEBHOOK_JOB_REPOSITORY_TOKEN`/`WebhookJobRepository` for `JOB_REPOSITORY_TOKEN`/`JobRepository`, import `taskName` from `../jobs/taskKey.ts`, and replace the enqueue block:
 
@@ -1345,7 +1345,7 @@ In `packages/worker/src/ingest/handler.ts`: swap `WEBHOOK_JOB_REPOSITORY_TOKEN`/
     });
 ```
 
-- [ ] **Step 11: Delete the dead file and verify no stragglers**
+- [x] **Step 11: Delete the dead file and verify no stragglers**
 
 ```bash
 git rm packages/worker/src/jobs/WebhookHandler.ts
@@ -1354,7 +1354,7 @@ grep -rn "WebhookJob\|WebhookHandler\|WEBHOOK_JOB_REPOSITORY_TOKEN" packages --i
 
 Expected: no output.
 
-- [ ] **Step 12: Run everything**
+- [x] **Step 12: Run everything**
 
 ```bash
 bun run typecheck && bun test && bun run lint
@@ -1362,7 +1362,7 @@ bun run typecheck && bun test && bun run lint
 
 Expected: all clean. This is the first point since Task 4 that the whole repo builds.
 
-- [ ] **Step 13: Commit**
+- [x] **Step 13: Commit**
 
 ```bash
 git add -A packages/worker packages/platform
