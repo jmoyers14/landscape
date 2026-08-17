@@ -45,6 +45,7 @@ export const makeEstimate = (over: Partial<Estimate> = {}): Estimate => ({
   assemblies: [],
   lineItems: [],
   createdAt: CREATED_AT,
+  updatedAt: CREATED_AT,
   ...over,
 });
 

@@ -101,6 +101,7 @@ export function previewEstimate(
     assemblies,
     lineItems,
     createdAt: "",
+    updatedAt: "",
   };
   return computeEstimate(estimate);
 }

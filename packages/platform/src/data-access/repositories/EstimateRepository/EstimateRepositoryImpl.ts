@@ -123,5 +123,6 @@ function toEstimate(doc: EstimateDoc): Estimate {
     assemblies: (doc.assemblies ?? []).map(toEstimateAssembly),
     lineItems: (doc.lineItems ?? []).map(toLineItem),
     createdAt: doc.createdAt.toISOString(),
+    updatedAt: doc.updatedAt.toISOString(),
   };
 }

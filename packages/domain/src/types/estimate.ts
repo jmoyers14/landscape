@@ -55,4 +55,9 @@ export interface Estimate {
   assemblies: EstimateAssembly[];
   lineItems: LineItem[];
   createdAt: string;
+  /**
+   * Last write to the estimate. Part of the generated-document dedup key, so a
+   * saved edit invalidates a cached PDF; see the PDF generation design.
+   */
+  updatedAt: string;
 }
