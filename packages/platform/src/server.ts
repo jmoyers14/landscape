@@ -17,6 +17,11 @@ export { parseConfig } from "./config/parseConfig.ts";
 // rather than on the contract barrel.
 export { DATABASE_CONFIG_TOKEN } from "./data-access/databaseConfig.ts";
 export type { DatabaseConfig } from "./data-access/databaseConfig.ts";
+// The object-storage slice, for the same reason: its loader reads env. The API
+// resolves it to find `.local-storage/`'s root when serving the local stand-in
+// for signed GCS URLs.
+export { STORAGE_CONFIG_TOKEN } from "./integrations/storage/storageConfig.ts";
+export type { StorageConfig } from "./integrations/storage/storageConfig.ts";
 // registerWebhookCore is deliberately NOT re-exported here. It statically pulls
 // the Cloud Tasks + google-auth SDK adapters, and those must never enter a
 // consumer that only wants registerServerCore — the API bundles this barrel, and

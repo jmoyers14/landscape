@@ -11,6 +11,11 @@ import {
   loadAnalyticsConfig,
 } from "./integrations/analytics/analyticsConfig.ts";
 import {
+  STORAGE_CONFIG_TOKEN,
+  loadStorageConfig,
+} from "./integrations/storage/storageConfig.ts";
+import { LocalObjectStorage } from "./integrations/storage/LocalObjectStorage.ts";
+import {
   CLIENT_REPOSITORY_TOKEN,
   ESTIMATE_REPOSITORY_TOKEN,
   PROJECT_REPOSITORY_TOKEN,
@@ -34,6 +39,7 @@ import {
   AUTH_CLIENT_TOKEN,
   MAPS_CLIENT_TOKEN,
   ANALYTICS_CLIENT_TOKEN,
+  OBJECT_STORAGE_TOKEN,
 } from "./integrations/tokens.ts";
 import { ClerkClient } from "./integrations/auth/ClerkClient.ts";
 import { GoogleMapsClient } from "./integrations/maps/GoogleMapsClient.ts";
@@ -74,6 +80,23 @@ export function registerServerCore(container: DependencyContainer): void {
   });
   container.register(ANALYTICS_CONFIG_TOKEN, {
     useFactory: instanceCachingFactory(() => loadAnalyticsConfig()),
+  });
+  container.register(STORAGE_CONFIG_TOKEN, {
+    useFactory: instanceCachingFactory(() => loadStorageConfig()),
+  });
+
+  // Resolved lazily inside the factory so local dev is never made to supply GCP
+  // credentials.
+  // TODO(Task 7): branch on AppConfig.environment here and resolve
+  // GcsObjectStorage outside local. Importing that adapter statically is safe
+  // only because both server images now run from source — see
+  // packages/api/Dockerfile. Until it exists LocalObjectStorage is the only
+  // adapter, and it throws when resolved outside local, so a deployed process
+  // fails loudly rather than writing documents to ephemeral disk.
+  container.register(OBJECT_STORAGE_TOKEN, {
+    useFactory: instanceCachingFactory((dependencyContainer) =>
+      dependencyContainer.resolve(LocalObjectStorage),
+    ),
   });
 
   container.registerSingleton(CLIENT_REPOSITORY_TOKEN, ClientRepositoryImpl);

@@ -32,6 +32,7 @@ export * from "./integrations/maps/MapsClient.ts";
 export * from "./integrations/analytics/AnalyticsClient.ts";
 export * from "./integrations/webhooks/WebhookVerifier.ts";
 export * from "./integrations/tasks/TaskQueue.ts";
+export * from "./integrations/storage/ObjectStorage.ts";
 
 // Seed: the port + token only (the impl and starter content are server-only,
 // registered via registerServerCore).

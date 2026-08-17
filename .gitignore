@@ -6,3 +6,6 @@ dist/
 !.env.example
 *.log
 .DS_Store
+# Local-dev object storage. LocalObjectStorage writes rendered PDFs and uploaded
+# logos here, standing in for the GCS bucket a deployed environment uses.
+.local-storage/

@@ -4,14 +4,17 @@ import { appRouter } from "./router.ts";
 import { createContext } from "./createContext.ts";
 import { container } from "./services/index.ts";
 import { SERVER_CONFIG_TOKEN, type ServerConfig } from "./config/serverConfig.ts";
-import { ANALYTICS_CLIENT_TOKEN } from "@landscape/platform";
+import { ANALYTICS_CLIENT_TOKEN, APP_CONFIG_TOKEN } from "@landscape/platform";
 import {
   connectDatabase,
   DATABASE_CONFIG_TOKEN,
   rootLogger,
+  STORAGE_CONFIG_TOKEN,
   type DatabaseConfig,
+  type StorageConfig,
 } from "@landscape/platform/server";
-import type { AnalyticsClient } from "@landscape/platform";
+import type { AnalyticsClient, AppConfig } from "@landscape/platform";
+import { handleLocalStorage } from "./localStorageRoute.ts";
 
 // A crash anywhere leaves a structured line before the process dies, so Cloud
 // Run / Error Reporting has something to show. Registered before boot.
@@ -23,6 +26,13 @@ const main = async (): Promise<void> => {
 
   await connectDatabase(uri);
   rootLogger.info("connected to MongoDB");
+
+  const corsMiddleware = cors({ origin: webUrl, credentials: true });
+  const { environment } = container.resolve<AppConfig>(APP_CONFIG_TOKEN);
+  const localRoot =
+    environment === "local"
+      ? container.resolve<StorageConfig>(STORAGE_CONFIG_TOKEN).localRoot
+      : null;
 
   const server = createHTTPServer({
     router: appRouter,
@@ -40,10 +50,20 @@ const main = async (): Promise<void> => {
         log.warn({ path, code: error.code }, "request error");
       }
     },
-    middleware: cors({
-      origin: webUrl,
-      credentials: true,
-    }),
+    // Local only: stands in for the signed GCS URLs a deployed environment
+    // mints, so the browser's download and logo-upload paths are identical
+    // across environments.
+    middleware: (req, res, next) => {
+      if (localRoot === null) {
+        corsMiddleware(req, res, next);
+        return;
+      }
+      void handleLocalStorage(req, res, localRoot).then((handled) => {
+        if (!handled) {
+          corsMiddleware(req, res, next);
+        }
+      });
+    },
   });
 
   server.listen(port);
