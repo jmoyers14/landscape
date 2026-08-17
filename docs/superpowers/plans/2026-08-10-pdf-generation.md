@@ -2427,7 +2427,7 @@ Plain data with no dependencies, plus the two key functions that must stay in lo
   - `roundCents(value: number): number`
   - `MissingEstimateError`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // packages/platform/src/documents/keys.test.ts
@@ -2509,7 +2509,7 @@ describe("roundCents", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 ```bash
 bun test packages/platform/src/documents/keys.test.ts
@@ -2517,7 +2517,7 @@ bun test packages/platform/src/documents/keys.test.ts
 
 Expected: FAIL — cannot resolve `./keys.ts`.
 
-- [ ] **Step 3: Write the keys**
+- [x] **Step 3: Write the keys**
 
 ```ts
 // packages/platform/src/documents/keys.ts
@@ -2582,7 +2582,7 @@ export function roundCents(value: number): number {
 }
 ```
 
-- [ ] **Step 4: Write the view models**
+- [x] **Step 4: Write the view models**
 
 ```ts
 // packages/platform/src/documents/types.ts
@@ -2681,7 +2681,7 @@ export interface PartsOrderDocument {
 export const TAX_NOTE = "Prices include applicable sales tax.";
 ```
 
-- [ ] **Step 5: Write the error type**
+- [x] **Step 5: Write the error type**
 
 ```ts
 // packages/platform/src/documents/errors.ts
@@ -2702,7 +2702,7 @@ export class MissingEstimateError extends Error {
 }
 ```
 
-- [ ] **Step 6: Export from the barrel**
+- [x] **Step 6: Export from the barrel**
 
 In `packages/platform/src/index.ts`, after the integrations block:
 
@@ -2714,7 +2714,7 @@ export * from "./documents/keys.ts";
 export * from "./documents/errors.ts";
 ```
 
-- [ ] **Step 7: Run the test**
+- [x] **Step 7: Run the test**
 
 ```bash
 bun test packages/platform/src/documents/keys.test.ts
@@ -2722,7 +2722,7 @@ bun test packages/platform/src/documents/keys.test.ts
 
 Expected: PASS, all ten cases.
 
-- [ ] **Step 8: Typecheck and commit**
+- [x] **Step 8: Typecheck and commit**
 
 ```bash
 bun run typecheck && bun run lint
