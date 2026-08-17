@@ -1392,7 +1392,7 @@ A new integration slice following the `TaskQueue` pattern: a vendor-neutral port
   - `StorageConfig { bucket, downloadUrlTtlSeconds, uploadUrlTtlSeconds, localRoot, localBaseUrl }`, `STORAGE_CONFIG_TOKEN`, `loadStorageConfig()`
   - `makeObjectStorageFake(over?): ObjectStorage` in test-support
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // packages/platform/src/integrations/storage/LocalObjectStorage.test.ts
@@ -1469,7 +1469,7 @@ describe("LocalObjectStorage", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 ```bash
 bun test packages/platform/src/integrations/storage/LocalObjectStorage.test.ts
@@ -1477,7 +1477,7 @@ bun test packages/platform/src/integrations/storage/LocalObjectStorage.test.ts
 
 Expected: FAIL — cannot resolve `./LocalObjectStorage.ts`.
 
-- [ ] **Step 3: Write the port**
+- [x] **Step 3: Write the port**
 
 ```ts
 // packages/platform/src/integrations/storage/ObjectStorage.ts
@@ -1511,7 +1511,7 @@ export interface ObjectStorage {
 }
 ```
 
-- [ ] **Step 4: Write the config slice**
+- [x] **Step 4: Write the config slice**
 
 ```ts
 // packages/platform/src/integrations/storage/storageConfig.ts
@@ -1557,7 +1557,7 @@ export function loadStorageConfig(): StorageConfig {
 
 Add `DOCUMENTS_BUCKET=landscape-documents-local` to `packages/api/.env` and `packages/worker/.env` (and to `.env.example` if the repo keeps one) so local dev resolves the slice.
 
-- [ ] **Step 5: Write the local adapter**
+- [x] **Step 5: Write the local adapter**
 
 ```ts
 // packages/platform/src/integrations/storage/LocalObjectStorage.ts
@@ -1651,7 +1651,7 @@ export class LocalObjectStorage implements ObjectStorage {
 }
 ```
 
-- [ ] **Step 6: Run the test**
+- [x] **Step 6: Run the test**
 
 ```bash
 bun test packages/platform/src/integrations/storage/LocalObjectStorage.test.ts
@@ -1659,7 +1659,7 @@ bun test packages/platform/src/integrations/storage/LocalObjectStorage.test.ts
 
 Expected: PASS, all six cases.
 
-- [ ] **Step 7: Add the token, barrel export and DI registration**
+- [x] **Step 7: Add the token, barrel export and DI registration**
 
 In `packages/platform/src/integrations/tokens.ts`:
 
@@ -1696,7 +1696,7 @@ In `packages/platform/src/registerServerCore.ts` — both the API and the worker
 
 `GcsObjectStorage` lands in Task 7. Until then, register `LocalObjectStorage` for both branches with a `// TODO(Task 7)` and no import of the GCS module — the file must typecheck at the end of this task.
 
-- [ ] **Step 8: Add the storage fake to test-support**
+- [x] **Step 8: Add the storage fake to test-support**
 
 In `packages/platform/src/test-support/repoMocks.ts`:
 
@@ -1737,7 +1737,7 @@ export const makeObjectStorageFake = (
 };
 ```
 
-- [ ] **Step 9: Serve `.local-storage/` from the API**
+- [x] **Step 9: Serve `.local-storage/` from the API**
 
 ```ts
 // packages/api/src/localStorageRoute.ts
@@ -1847,7 +1847,7 @@ import { STORAGE_CONFIG_TOKEN, type StorageConfig } from "@landscape/platform/se
 
 Export `STORAGE_CONFIG_TOKEN` and the `StorageConfig` type from `packages/platform/src/server.ts` (server-only, since its loader reads env), matching how `DATABASE_CONFIG_TOKEN` is exposed.
 
-- [ ] **Step 10: Switch the API image to run from source**
+- [x] **Step 10: Switch the API image to run from source**
 
 The API is about to depend on `@google-cloud/storage` and, in Task 15, `@google-cloud/tasks`. `packages/worker/Dockerfile:1-6` records why a bundle can't carry them. Replace `packages/api/Dockerfile` with the worker's structure:
 
@@ -1891,7 +1891,7 @@ EXPOSE 8080
 CMD ["bun", "run", "packages/api/src/index.ts"]
 ```
 
-- [ ] **Step 11: Prove the image boots**
+- [x] **Step 11: Prove the image boots**
 
 ```bash
 docker build --platform linux/amd64 -t landscape-api-check -f packages/api/Dockerfile .
@@ -1899,7 +1899,7 @@ docker build --platform linux/amd64 -t landscape-api-check -f packages/api/Docke
 
 Expected: builds clean. A full boot needs Mongo and Clerk secrets, so build success plus the local `bun run dev:api` in the next step is the gate here.
 
-- [ ] **Step 12: Verify the local storage route end to end**
+- [x] **Step 12: Verify the local storage route end to end**
 
 With the API running (`bun run dev:api`):
 
@@ -1911,17 +1911,17 @@ curl -sS -D - 'http://localhost:3000/local-storage/orgs/org_test/probe.pdf?filen
 
 Expected: `200`, then response headers including `content-type: application/pdf` and `content-disposition: attachment; filename="Probe.pdf"`. Then `rm -rf .local-storage/orgs/org_test`.
 
-- [ ] **Step 13: Ignore the local storage directory**
+- [x] **Step 13: Ignore the local storage directory**
 
 Add `.local-storage/` to `.gitignore`.
 
-- [ ] **Step 14: Run everything**
+- [x] **Step 14: Run everything**
 
 ```bash
 bun run typecheck && bun test && bun run lint
 ```
 
-- [ ] **Step 15: Commit**
+- [x] **Step 15: Commit**
 
 ```bash
 git add -A packages/platform packages/api .gitignore
