@@ -348,7 +348,7 @@ A hand-bumped constant beside `priceLines`. Totals are never stored — `compute
 - Consumes: nothing.
 - Produces: `PRICING_FORMULA_VERSION: number`, exported from `@landscape/domain`. Tasks 10 and 15 build keys from it.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `packages/domain/src/engine/calc.test.ts`:
 
@@ -363,7 +363,7 @@ describe("PRICING_FORMULA_VERSION", () => {
 
 Add `PRICING_FORMULA_VERSION` to that file's existing import from `./calc.ts`.
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 ```bash
 bun test packages/domain/src/engine/calc.test.ts
@@ -371,7 +371,7 @@ bun test packages/domain/src/engine/calc.test.ts
 
 Expected: FAIL — `PRICING_FORMULA_VERSION` is not exported from `./calc.ts`.
 
-- [ ] **Step 3: Add the constant**
+- [x] **Step 3: Add the constant**
 
 In `packages/domain/src/engine/calc.ts`, immediately above `export function priceLines`:
 
@@ -390,11 +390,11 @@ In `packages/domain/src/engine/calc.ts`, immediately above `export function pric
 export const PRICING_FORMULA_VERSION = 1;
 ```
 
-- [ ] **Step 4: Export it from the package barrel**
+- [x] **Step 4: Export it from the package barrel**
 
 Confirm `packages/domain/src/engine/index.ts` re-exports `./calc.ts` with `export *`. If it names exports individually, add `PRICING_FORMULA_VERSION` to the list.
 
-- [ ] **Step 5: Run the test**
+- [x] **Step 5: Run the test**
 
 ```bash
 bun test packages/domain/src/engine/calc.test.ts
@@ -402,7 +402,7 @@ bun test packages/domain/src/engine/calc.test.ts
 
 Expected: PASS.
 
-- [ ] **Step 6: Verify it is reachable from the package root**
+- [x] **Step 6: Verify it is reachable from the package root**
 
 ```bash
 bun -e 'import { PRICING_FORMULA_VERSION } from "./packages/domain/src/index.ts"; console.log(PRICING_FORMULA_VERSION);'
@@ -410,7 +410,7 @@ bun -e 'import { PRICING_FORMULA_VERSION } from "./packages/domain/src/index.ts"
 
 Expected: prints `1`.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add packages/domain
