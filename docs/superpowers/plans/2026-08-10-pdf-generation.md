@@ -441,7 +441,7 @@ git commit -m "feat: version the pricing formula for document cache keys"
   - `JOB_REPOSITORY_TOKEN = "JobRepository"`
   - `makeJob(over?): Job`, `makeJobRepoMock(over?): JobRepository`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `JobRepositoryImpl` needs a live Mongo, which no repository test in this repo uses. Test the two properties that are pure and load-bearing instead — the mapper and the `$setOnInsert` contract — against a stubbed model. Create `packages/platform/src/data-access/repositories/JobRepository/JobRepositoryImpl.test.ts`:
 
@@ -491,7 +491,7 @@ describe("toJob", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 ```bash
 bun test packages/platform/src/data-access/repositories/JobRepository/JobRepositoryImpl.test.ts
@@ -499,7 +499,7 @@ bun test packages/platform/src/data-access/repositories/JobRepository/JobReposit
 
 Expected: FAIL — cannot resolve `./JobRepositoryImpl.ts`.
 
-- [ ] **Step 3: Write the model**
+- [x] **Step 3: Write the model**
 
 ```ts
 // packages/platform/src/data-access/models/Job.ts
@@ -553,7 +553,7 @@ jobSchema.index({ status: 1, updatedAt: -1 });
 export const JobModel = model("Job", jobSchema);
 ```
 
-- [ ] **Step 4: Write the entity types**
+- [x] **Step 4: Write the entity types**
 
 ```ts
 // packages/platform/src/data-access/repositories/JobRepository/types.ts
@@ -593,7 +593,7 @@ export interface Job {
 export type JobInput = Pick<Job, "jobType" | "dedupKey" | "orgId" | "payload">;
 ```
 
-- [ ] **Step 5: Write the port**
+- [x] **Step 5: Write the port**
 
 ```ts
 // packages/platform/src/data-access/repositories/JobRepository/JobRepository.ts
@@ -634,7 +634,7 @@ export interface JobRepository {
 }
 ```
 
-- [ ] **Step 6: Write the implementation**
+- [x] **Step 6: Write the implementation**
 
 ```ts
 // packages/platform/src/data-access/repositories/JobRepository/JobRepositoryImpl.ts
@@ -748,7 +748,7 @@ export function toJob(doc: JobDoc): Job {
 }
 ```
 
-- [ ] **Step 7: Run the test**
+- [x] **Step 7: Run the test**
 
 ```bash
 bun test packages/platform/src/data-access/repositories/JobRepository/JobRepositoryImpl.test.ts
@@ -756,7 +756,7 @@ bun test packages/platform/src/data-access/repositories/JobRepository/JobReposit
 
 Expected: PASS.
 
-- [ ] **Step 8: Swap the token, the barrel and the DI registration**
+- [x] **Step 8: Swap the token, the barrel and the DI registration**
 
 In `packages/platform/src/data-access/tokens.ts`, replace the `WEBHOOK_JOB_REPOSITORY_TOKEN` line with:
 
@@ -772,7 +772,7 @@ export * from "./data-access/repositories/JobRepository/JobRepository.ts";
 
 In `packages/platform/src/registerServerCore.ts`, replace the `WEBHOOK_JOB_REPOSITORY_TOKEN` import and its `registerSingleton` with `JOB_REPOSITORY_TOKEN` / `JobRepositoryImpl`, importing from `./data-access/repositories/JobRepository/JobRepositoryImpl.ts`.
 
-- [ ] **Step 9: Add the test doubles**
+- [x] **Step 9: Add the test doubles**
 
 In `packages/platform/src/test-support/factories.ts`, import `Job` from the new repository and add:
 
@@ -812,14 +812,14 @@ export const makeJobRepoMock = (
 });
 ```
 
-- [ ] **Step 10: Delete the old model and repository**
+- [x] **Step 10: Delete the old model and repository**
 
 ```bash
 git rm packages/platform/src/data-access/models/WebhookJob.ts
 git rm -r packages/platform/src/data-access/repositories/WebhookJobRepository
 ```
 
-- [ ] **Step 11: Verify nothing still references the old names**
+- [x] **Step 11: Verify nothing still references the old names**
 
 ```bash
 grep -rn "WebhookJob\|WEBHOOK_JOB_REPOSITORY_TOKEN" packages --include=*.ts --include=*.tsx
@@ -827,7 +827,7 @@ grep -rn "WebhookJob\|WEBHOOK_JOB_REPOSITORY_TOKEN" packages --include=*.ts --in
 
 Expected: only hits in `packages/worker/` — `runJob.ts`, `runJob.test.ts` and `ingest/handler.ts`, which Task 5 rewrites. Platform must be clean.
 
-- [ ] **Step 12: Typecheck platform**
+- [x] **Step 12: Typecheck platform**
 
 ```bash
 bun run --cwd packages/platform typecheck && bun run --cwd packages/platform test
@@ -835,7 +835,7 @@ bun run --cwd packages/platform typecheck && bun run --cwd packages/platform tes
 
 Expected: clean and green. (`bun run typecheck` at the root still fails on the worker — that is Task 5's job.)
 
-- [ ] **Step 13: Commit**
+- [x] **Step 13: Commit**
 
 ```bash
 git add packages/platform
