@@ -241,7 +241,7 @@ The dedup key is `estimate:{id}:{updatedAtMillis}:{formulaVersion}`. The Mongoos
 - Consumes: nothing.
 - Produces: `Estimate.updatedAt: string` (ISO 8601), populated by `EstimateRepositoryImpl.toEstimate` and defaulted by `makeEstimate`. Tasks 10 and 15 read it.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add to `packages/platform/src/test-support/factories.test.ts` (new file — the factories have no test today, and this one exists to pin the field's presence and shape):
 
@@ -265,7 +265,7 @@ describe("makeEstimate", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 ```bash
 bun test packages/platform/src/test-support/factories.test.ts
@@ -273,7 +273,7 @@ bun test packages/platform/src/test-support/factories.test.ts
 
 Expected: FAIL — `expect(received).toBe(expected)` with `received: undefined`, plus a typecheck error that `updatedAt` does not exist on `Estimate`.
 
-- [ ] **Step 3: Add the field to the domain type**
+- [x] **Step 3: Add the field to the domain type**
 
 In `packages/domain/src/types/estimate.ts`, inside `interface Estimate`, directly after `createdAt`:
 
@@ -286,7 +286,7 @@ In `packages/domain/src/types/estimate.ts`, inside `interface Estimate`, directl
   updatedAt: string;
 ```
 
-- [ ] **Step 4: Populate it in the mapper**
+- [x] **Step 4: Populate it in the mapper**
 
 In `packages/platform/src/data-access/repositories/EstimateRepository/EstimateRepositoryImpl.ts`, in `toEstimate`:
 
@@ -299,7 +299,7 @@ In `packages/platform/src/data-access/repositories/EstimateRepository/EstimateRe
 
 `EstimateDoc` already declares `updatedAt: Date` (`Estimate.ts:84`), so no schema change is needed.
 
-- [ ] **Step 5: Default it in the factory**
+- [x] **Step 5: Default it in the factory**
 
 In `packages/platform/src/test-support/factories.ts`, in `makeEstimate`, after `createdAt: CREATED_AT,`:
 
@@ -309,7 +309,7 @@ In `packages/platform/src/test-support/factories.ts`, in `makeEstimate`, after `
   ...over,
 ```
 
-- [ ] **Step 6: Run the tests and the typechecker**
+- [x] **Step 6: Run the tests and the typechecker**
 
 ```bash
 bun test packages/platform/src/test-support/factories.test.ts
@@ -318,7 +318,7 @@ bun run typecheck
 
 Expected: PASS, and typecheck clean. If `packages/domain/src/test-support/fixture.ts` or any `calc.test.ts` fixture builds an `Estimate` literal, add `updatedAt` there too — the typechecker will name every site.
 
-- [ ] **Step 7: Run the full suite**
+- [x] **Step 7: Run the full suite**
 
 ```bash
 bun test
@@ -326,7 +326,7 @@ bun test
 
 Expected: all packages pass.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add packages/domain packages/platform
