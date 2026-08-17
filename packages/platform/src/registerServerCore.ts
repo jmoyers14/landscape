@@ -1,6 +1,6 @@
 import "reflect-metadata"; // MUST be imported before any decorated class is used
 import { instanceCachingFactory, type DependencyContainer } from "tsyringe";
-import { APP_CONFIG_TOKEN } from "./config/appConfig.ts";
+import { APP_CONFIG_TOKEN, type AppConfig } from "./config/appConfig.ts";
 import { loadAppConfig } from "./config/loadAppConfig.ts";
 import { DATABASE_CONFIG_TOKEN } from "./data-access/databaseConfig.ts";
 import { loadDatabaseConfig } from "./data-access/databaseConfig.ts";
@@ -15,6 +15,7 @@ import {
   loadStorageConfig,
 } from "./integrations/storage/storageConfig.ts";
 import { LocalObjectStorage } from "./integrations/storage/LocalObjectStorage.ts";
+import { GcsObjectStorage } from "./integrations/storage/GcsObjectStorage.ts";
 import {
   CLIENT_REPOSITORY_TOKEN,
   ESTIMATE_REPOSITORY_TOKEN,
@@ -85,18 +86,18 @@ export function registerServerCore(container: DependencyContainer): void {
     useFactory: instanceCachingFactory(() => loadStorageConfig()),
   });
 
-  // Resolved lazily inside the factory so local dev is never made to supply GCP
-  // credentials.
-  // TODO(Task 7): branch on AppConfig.environment here and resolve
-  // GcsObjectStorage outside local. Importing that adapter statically is safe
-  // only because both server images now run from source — see
-  // packages/api/Dockerfile. Until it exists LocalObjectStorage is the only
-  // adapter, and it throws when resolved outside local, so a deployed process
-  // fails loudly rather than writing documents to ephemeral disk.
+  // Environment picks the adapter, resolved lazily inside the factory so local
+  // dev is never made to supply GCP credentials. GcsObjectStorage is imported
+  // statically, which is safe only because both server images now run from
+  // source — see packages/api/Dockerfile.
   container.register(OBJECT_STORAGE_TOKEN, {
-    useFactory: instanceCachingFactory((dependencyContainer) =>
-      dependencyContainer.resolve(LocalObjectStorage),
-    ),
+    useFactory: instanceCachingFactory((dependencyContainer) => {
+      const { environment } =
+        dependencyContainer.resolve<AppConfig>(APP_CONFIG_TOKEN);
+      return environment === "local"
+        ? dependencyContainer.resolve(LocalObjectStorage)
+        : dependencyContainer.resolve(GcsObjectStorage);
+    }),
   });
 
   container.registerSingleton(CLIENT_REPOSITORY_TOKEN, ClientRepositoryImpl);
