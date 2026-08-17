@@ -3,10 +3,12 @@ import {
   MATERIAL_REPOSITORY_TOKEN,
   ASSEMBLY_REPOSITORY_TOKEN,
   PRICING_SETTINGS_REPOSITORY_TOKEN,
+  COMPANY_PROFILE_REPOSITORY_TOKEN,
 } from "../data-access/tokens.ts";
 import type { MaterialRepository } from "../data-access/repositories/MaterialRepository/MaterialRepository.ts";
 import type { AssemblyRepository } from "../data-access/repositories/AssemblyRepository/AssemblyRepository.ts";
 import type { PricingSettingsRepository } from "../data-access/repositories/PricingSettingsRepository/PricingSettingsRepository.ts";
+import type { CompanyProfileRepository } from "../data-access/repositories/CompanyProfileRepository/CompanyProfileRepository.ts";
 import type { SeedService } from "./SeedService.ts";
 import { STARTER_PRICING } from "./pricing.ts";
 import { STARTER_ASSEMBLIES } from "./catalog.ts";
@@ -26,16 +28,22 @@ export class SeedServiceImpl implements SeedService {
     private readonly assemblies: AssemblyRepository,
     @inject(PRICING_SETTINGS_REPOSITORY_TOKEN)
     private readonly pricingSettings: PricingSettingsRepository,
+    @inject(COMPANY_PROFILE_REPOSITORY_TOKEN)
+    private readonly profiles: CompanyProfileRepository,
   ) {}
 
-  async seedNewOrg(orgId: string): Promise<void> {
+  async seedNewOrg(orgId: string, businessName: string): Promise<void> {
+    // ensure, not update: a redelivered organization.created must not overwrite
+    // a profile the customer has already edited.
+    await this.profiles.ensure(orgId, businessName);
     await this.converge(orgId);
   }
 
   async resetOrgCatalog(orgId: string): Promise<void> {
     // Destructive: dev-only. Clear first so a reset produces exactly the starter
     // catalog with no leftover custom rows — the opposite of seedNewOrg's
-    // preserve-custom contract.
+    // preserve-custom contract. The company profile is left alone: this clears
+    // the catalog, not the business identity.
     await this.clearCatalog(orgId);
     await this.converge(orgId);
   }

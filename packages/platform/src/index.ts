@@ -21,6 +21,7 @@ export * from "./data-access/repositories/EstimateRepository/EstimateRepository.
 export * from "./data-access/repositories/MaterialRepository/MaterialRepository.ts";
 export * from "./data-access/repositories/AssemblyRepository/AssemblyRepository.ts";
 export * from "./data-access/repositories/PricingSettingsRepository/PricingSettingsRepository.ts";
+export * from "./data-access/repositories/CompanyProfileRepository/CompanyProfileRepository.ts";
 export * from "./data-access/repositories/WebhookEventRepository/WebhookEventRepository.ts";
 export * from "./data-access/repositories/JobRepository/JobRepository.ts";
 export * from "./data-access/repositories/UserRepository/UserRepository.ts";

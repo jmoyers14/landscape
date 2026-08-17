@@ -13,6 +13,8 @@ import type { ProjectRepository } from "../data-access/repositories/ProjectRepos
 import type { EstimateRepository } from "../data-access/repositories/EstimateRepository/EstimateRepository.ts";
 import type { JobRepository } from "../data-access/repositories/JobRepository/JobRepository.ts";
 import type { ObjectStorage } from "../integrations/storage/ObjectStorage.ts";
+import type { CompanyProfileRepository } from "../data-access/repositories/CompanyProfileRepository/CompanyProfileRepository.ts";
+import { makeCompanyProfile } from "./factories.ts";
 
 export const makeMaterialRepoMock = (
   over: Partial<MaterialRepository> = {},
@@ -136,3 +138,12 @@ export const makeObjectStorageFake = (
     ...over,
   };
 };
+
+export const makeCompanyProfileRepoMock = (
+  over: Partial<CompanyProfileRepository> = {},
+): CompanyProfileRepository => ({
+  get: mock(async () => null),
+  ensure: mock(async () => makeCompanyProfile()),
+  update: mock(async () => makeCompanyProfile()),
+  ...over,
+});

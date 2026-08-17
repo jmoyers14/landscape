@@ -10,9 +10,9 @@ import { PoisonJobError } from "../PoisonJobError.ts";
 import { JOB_TYPES } from "../jobTypes.ts";
 
 class FakeSeedService implements SeedService {
-  public seeded: string[] = [];
-  async seedNewOrg(orgId: string) {
-    this.seeded.push(orgId);
+  public seeded: Array<{ orgId: string; businessName: string }> = [];
+  async seedNewOrg(orgId: string, businessName: string) {
+    this.seeded.push({ orgId, businessName });
   }
   async resetOrgCatalog() {
     throw new Error("resetOrgCatalog must not be called from the webhook path");
@@ -54,7 +54,20 @@ describe("SeedOrgHandler", () => {
 
     await handler.handle(job());
 
-    expect(seed.seeded).toEqual(["org_abc"]);
+    // The Clerk org name rides along so the company profile is pre-filled.
+    expect(seed.seeded).toEqual([{ orgId: "org_abc", businessName: "Acme" }]);
+  });
+
+  it("defaults the business name to empty when Clerk sends no org name", async () => {
+    const seed = new FakeSeedService();
+    const handler = new SeedOrgHandler(
+      eventsReturning(event({ id: "org_abc" })),
+      seed,
+    );
+
+    await handler.handle(job());
+
+    expect(seed.seeded).toEqual([{ orgId: "org_abc", businessName: "" }]);
   });
 
   it("throws on a payload with no org id, so the job is recorded as failed", async () => {

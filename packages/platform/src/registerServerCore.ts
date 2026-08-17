@@ -23,6 +23,7 @@ import {
   MATERIAL_REPOSITORY_TOKEN,
   ASSEMBLY_REPOSITORY_TOKEN,
   PRICING_SETTINGS_REPOSITORY_TOKEN,
+  COMPANY_PROFILE_REPOSITORY_TOKEN,
   WEBHOOK_EVENT_REPOSITORY_TOKEN,
   JOB_REPOSITORY_TOKEN,
   USER_REPOSITORY_TOKEN,
@@ -33,6 +34,7 @@ import { EstimateRepositoryImpl } from "./data-access/repositories/EstimateRepos
 import { MaterialRepositoryImpl } from "./data-access/repositories/MaterialRepository/MaterialRepositoryImpl.ts";
 import { AssemblyRepositoryImpl } from "./data-access/repositories/AssemblyRepository/AssemblyRepositoryImpl.ts";
 import { PricingSettingsRepositoryImpl } from "./data-access/repositories/PricingSettingsRepository/PricingSettingsRepositoryImpl.ts";
+import { CompanyProfileRepositoryImpl } from "./data-access/repositories/CompanyProfileRepository/CompanyProfileRepositoryImpl.ts";
 import { WebhookEventRepositoryImpl } from "./data-access/repositories/WebhookEventRepository/WebhookEventRepositoryImpl.ts";
 import { JobRepositoryImpl } from "./data-access/repositories/JobRepository/JobRepositoryImpl.ts";
 import { UserRepositoryImpl } from "./data-access/repositories/UserRepository/UserRepositoryImpl.ts";
@@ -108,6 +110,10 @@ export function registerServerCore(container: DependencyContainer): void {
   container.registerSingleton(
     PRICING_SETTINGS_REPOSITORY_TOKEN,
     PricingSettingsRepositoryImpl,
+  );
+  container.registerSingleton(
+    COMPANY_PROFILE_REPOSITORY_TOKEN,
+    CompanyProfileRepositoryImpl,
   );
   container.registerSingleton(
     WEBHOOK_EVENT_REPOSITORY_TOKEN,

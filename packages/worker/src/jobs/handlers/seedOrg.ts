@@ -11,9 +11,12 @@ import type { JobHandler } from "../JobHandler.ts";
 import { PoisonJobError } from "../PoisonJobError.ts";
 import { webhookPayloadSchema } from "./webhookPayload.ts";
 
-// Clerk's organization.* payload (event.data). We need only the org id, which
-// is the tenant boundary the whole app scopes to.
-const clerkOrgSchema = z.object({ id: z.string().min(1) });
+// Clerk's organization.* payload (event.data). The id IS the app's orgId (the
+// Clerk org is the tenant); the name pre-fills the company profile.
+const clerkOrgSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().default(""),
+});
 
 /**
  * Seeds a newly-created org's catalog with the starter data on
@@ -45,7 +48,7 @@ export class SeedOrgHandler implements JobHandler {
 
     // A bad shape throws, which the runner records as a failed job. Clerk's org
     // id IS the app's orgId (the Clerk org is the tenant).
-    const { id: orgId } = clerkOrgSchema.parse(event.payload);
-    await this.seedService.seedNewOrg(orgId);
+    const { id: orgId, name } = clerkOrgSchema.parse(event.payload);
+    await this.seedService.seedNewOrg(orgId, name);
   }
 }
