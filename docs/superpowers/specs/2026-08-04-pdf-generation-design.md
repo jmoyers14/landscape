@@ -226,6 +226,20 @@ If it fails, the fallback is `pdfmake` — pure JS, no wasm, real table support 
 which consumes the same view models. The document shapes and the whole pipeline
 are unaffected either way. That is why the templates hold no logic.
 
+**Spike outcome (2026-08-16):** verified under Bun 1.3.5 with
+`@react-pdf/renderer` 4.6.1 and React 19.2.8. A 90-row document renders to 8694
+bytes of valid PDF and paginates to 3 pages; every page repeats the `fixed`
+header ("Description | Amount"), and the `render`-prop footer resolves
+`totalPages`, emitting "Page 1 of 3" … "Page 3 of 3". Rows are continuous across
+the breaks (page 1 ends at item 34, page 2 spans 35–68, page 3 spans 69–90) —
+nothing is dropped or repeated. Neither yoga's wasm instantiation nor fontkit
+needed any special handling. `pdfmake` is no longer needed; the fallback stands
+only if a later Bun upgrade regresses it.
+
+React is pinned to the worker's own `node_modules` (19.2.8) and is not hoisted,
+so the web package keeps React 18.3.1 — the renderer's React dependency does not
+reach the frontend.
+
 ## Storage
 
 New integration slice `platform/src/integrations/storage/`, following the

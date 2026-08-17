@@ -22,7 +22,12 @@
 - **Group estimate lines by `sourceAssemblyId`, NEVER by `LineItem.phase`.** `phase` holds the assembly *name* (`generate.ts:65`) and merges duplicate assemblies.
 - **There is no "Tax" line on any client-facing document.** Sales tax is folded into direct cost per material line, pre-markup (`calc.ts:95-97`). Documents show assembly rows → **Total**, with the footnote *"Prices include applicable sales tax."*
 - **Templates hold no arithmetic.** Every number reaching a template is pre-computed and pre-rounded by `DocumentAssemblyService`.
-- Run tests with `bun test <path>` from the repo root, or `bun run --cwd packages/<pkg> test` for a package.
+- Run the whole suite with **`bun run test`** from the repo root, or
+  `bun run --cwd packages/<pkg> test` for a package. **Not bare `bun test`** — that
+  ignores the per-package `bunfig.toml` files, so `reflect-metadata` is never
+  preloaded and every tsyringe-decorated test fails. For a single file, run it
+  from inside its package (`cd packages/<pkg> && bun test <path>`) or pass
+  `--preload reflect-metadata` explicitly.
 - Typecheck everything with `bun run typecheck` from the repo root.
 
 ## Decisions this plan makes beyond the design doc
@@ -86,7 +91,7 @@ The design names this the first task for a reason: yoga (wasm) + fontkit are kno
 - Consumes: nothing.
 - Produces: a verified answer to "react-pdf or pdfmake?", recorded in the design doc. Every later task's template code depends on it.
 
-- [ ] **Step 1: Install the renderer into the worker only**
+- [x] **Step 1: Install the renderer into the worker only**
 
 The API image must never pull this dependency.
 
@@ -95,7 +100,7 @@ bun add --cwd packages/worker @react-pdf/renderer react
 bun add --cwd packages/worker --dev @types/react
 ```
 
-- [ ] **Step 2: Enable JSX in the worker's tsconfig**
+- [x] **Step 2: Enable JSX in the worker's tsconfig**
 
 `packages/worker/tsconfig.json` currently has no `jsx` setting, so `.tsx` files will not typecheck.
 
@@ -116,7 +121,7 @@ bun add --cwd packages/worker --dev @types/react
 }
 ```
 
-- [ ] **Step 3: Write the spike**
+- [x] **Step 3: Write the spike**
 
 Exercises exactly the three things the real templates need and nothing else: enough rows to force pagination, a header that repeats on every page, and a "Page N of M" footer.
 
@@ -172,7 +177,7 @@ await Bun.write("/tmp/spike.pdf", buffer);
 console.log(`wrote ${buffer.byteLength} bytes; magic=${buffer.subarray(0, 5).toString()}`);
 ```
 
-- [ ] **Step 4: Run it**
+- [x] **Step 4: Run it**
 
 ```bash
 bun run packages/worker/src/documents/spike.tsx
@@ -180,7 +185,7 @@ bun run packages/worker/src/documents/spike.tsx
 
 Expected: prints a byte count over 10000 and `magic=%PDF-`. If it throws on wasm instantiation or font loading, the spike has failed — go to Step 5b.
 
-- [ ] **Step 5a: If it succeeded, confirm pagination and the repeating header**
+- [x] **Step 5a: If it succeeded, confirm pagination and the repeating header**
 
 ```bash
 bun -e 'const b = await Bun.file("/tmp/spike.pdf").bytes(); const s = new TextDecoder("latin1").decode(b); console.log("pages:", (s.match(/\/Type\s*\/Page[^s]/g) ?? []).length);'
@@ -188,7 +193,7 @@ bun -e 'const b = await Bun.file("/tmp/spike.pdf").bytes(); const s = new TextDe
 
 Expected: `pages:` reports 3 or more. Open `/tmp/spike.pdf` and confirm by eye that "Description / Amount" appears at the top of every page and the footer reads "Page 1 of 3", "Page 2 of 3", …
 
-- [ ] **Step 5b: If it failed, switch to `pdfmake` before continuing**
+- [ ] **Step 5b: If it failed, switch to `pdfmake` before continuing** — NOT TAKEN; Step 5a passed.
 
 ```bash
 bun remove --cwd packages/worker @react-pdf/renderer react
@@ -198,7 +203,7 @@ bun add --cwd packages/worker --dev @types/pdfmake
 
 `pdfmake` is pure JS with real table support and no wasm. It consumes the same view models, so only Tasks 12 and 13 change — the document shapes, the job spine, and everything else in this plan are unaffected. Rewrite the spike as a `pdfmake` document definition with `table.headerRows: 1` and a `footer: (page, pages) => ...`, re-run Steps 4 and 5a, and note the substitution in Step 6. Do not proceed until one of the two engines is proven.
 
-- [ ] **Step 6: Record the outcome in the design doc**
+- [x] **Step 6: Record the outcome in the design doc**
 
 Replace the "Risk: `@react-pdf/renderer` under Bun" section's closing paragraph with what actually happened. For a success:
 
@@ -209,7 +214,7 @@ paginates to 3 pages with a `fixed` header and a `render`-prop page footer.
 regresses it.
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 The spike file is committed deliberately: it is the executable evidence for the decision, and Task 12 deletes it in the same commit that replaces it with real templates.
 
