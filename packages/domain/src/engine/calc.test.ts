@@ -1,5 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import { computeEstimate, priceLines } from "./calc.ts";
+import {
+  computeEstimate,
+  PRICING_FORMULA_VERSION,
+  priceLines,
+} from "./calc.ts";
 import { generateAssemblyLines } from "./generate.ts";
 import {
   drainageAssembly,
@@ -390,5 +394,12 @@ describe("priceLines — material / labor split", () => {
     expect(totals.materialTotal).toBe(0);
     expect(totals.laborTotal).toBeCloseTo(402.5, 8);
     expect(totals.total).toBeCloseTo(402.5, 8);
+  });
+});
+
+describe("PRICING_FORMULA_VERSION", () => {
+  it("is a positive integer that generated documents can key a cache on", () => {
+    expect(Number.isInteger(PRICING_FORMULA_VERSION)).toBe(true);
+    expect(PRICING_FORMULA_VERSION).toBeGreaterThan(0);
   });
 });
