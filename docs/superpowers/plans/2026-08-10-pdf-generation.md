@@ -2094,7 +2094,7 @@ The business identity every client-facing document is headed with. One row per o
   - `SeedService.seedNewOrg(orgId: string, businessName: string): Promise<void>` — **signature change**
   - `makeCompanyProfile(over?)`, `makeCompanyProfileRepoMock(over?)`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // packages/platform/src/seed/SeedServiceImpl.test.ts
@@ -2139,7 +2139,7 @@ describe("SeedServiceImpl company profile", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 ```bash
 bun test packages/platform/src/seed/SeedServiceImpl.test.ts
@@ -2147,7 +2147,7 @@ bun test packages/platform/src/seed/SeedServiceImpl.test.ts
 
 Expected: FAIL — `makeCompanyProfileRepoMock` is not exported.
 
-- [ ] **Step 3: Write the model**
+- [x] **Step 3: Write the model**
 
 ```ts
 // packages/platform/src/data-access/models/CompanyProfile.ts
@@ -2188,7 +2188,7 @@ export const CompanyProfileModel = model<CompanyProfileDoc>(
 );
 ```
 
-- [ ] **Step 4: Write the entity and port**
+- [x] **Step 4: Write the entity and port**
 
 ```ts
 // packages/platform/src/data-access/repositories/CompanyProfileRepository/types.ts
@@ -2235,7 +2235,7 @@ export interface CompanyProfileRepository {
 }
 ```
 
-- [ ] **Step 5: Write the implementation**
+- [x] **Step 5: Write the implementation**
 
 ```ts
 // packages/platform/src/data-access/repositories/CompanyProfileRepository/CompanyProfileRepositoryImpl.ts
@@ -2294,11 +2294,11 @@ function toProfile(doc: CompanyProfileDoc): CompanyProfile {
 }
 ```
 
-- [ ] **Step 6: Register it**
+- [x] **Step 6: Register it**
 
 Add `COMPANY_PROFILE_REPOSITORY_TOKEN = "CompanyProfileRepository"` to `data-access/tokens.ts`, the port to `src/index.ts`, and `registerSingleton(COMPANY_PROFILE_REPOSITORY_TOKEN, CompanyProfileRepositoryImpl)` to `registerServerCore.ts`.
 
-- [ ] **Step 7: Seed a profile with the org**
+- [x] **Step 7: Seed a profile with the org**
 
 In `packages/platform/src/seed/SeedService.ts`, change the port and its doc:
 
@@ -2324,7 +2324,7 @@ In `SeedServiceImpl.ts`, inject `COMPANY_PROFILE_REPOSITORY_TOKEN` as a fourth c
 
 `resetOrgCatalog` is the dev path and leaves the profile alone — it clears the catalog, not the business identity.
 
-- [ ] **Step 8: Pass the org name from the webhook**
+- [x] **Step 8: Pass the org name from the webhook**
 
 In `packages/worker/src/jobs/handlers/seedOrg.ts`, widen the schema and the call:
 
@@ -2344,7 +2344,7 @@ const clerkOrgSchema = z.object({
 
 Update `seedOrg.test.ts`'s event payload to include a `name`, and assert `seedNewOrg` was called with both arguments.
 
-- [ ] **Step 9: Add the test doubles**
+- [x] **Step 9: Add the test doubles**
 
 In `factories.ts`:
 
@@ -2376,7 +2376,7 @@ export const makeCompanyProfileRepoMock = (
 });
 ```
 
-- [ ] **Step 10: Run the test**
+- [x] **Step 10: Run the test**
 
 ```bash
 bun test packages/platform/src/seed/SeedServiceImpl.test.ts
@@ -2384,17 +2384,17 @@ bun test packages/platform/src/seed/SeedServiceImpl.test.ts
 
 Expected: PASS, both cases.
 
-- [ ] **Step 11: Fix the dev seed CLI**
+- [x] **Step 11: Fix the dev seed CLI**
 
 `packages/api/src/seed/seed.ts` calls `resetOrgCatalog`, whose signature is unchanged — no edit needed. Confirm with the typechecker rather than by inspection.
 
-- [ ] **Step 12: Run everything**
+- [x] **Step 12: Run everything**
 
 ```bash
 bun run typecheck && bun test && bun run lint
 ```
 
-- [ ] **Step 13: Commit**
+- [x] **Step 13: Commit**
 
 ```bash
 git add -A packages/platform packages/worker packages/api
