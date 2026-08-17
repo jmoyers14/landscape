@@ -11,6 +11,7 @@ import type { AssemblyRepository } from "../data-access/repositories/AssemblyRep
 import type { PricingSettingsRepository } from "../data-access/repositories/PricingSettingsRepository/PricingSettingsRepository.ts";
 import type { ProjectRepository } from "../data-access/repositories/ProjectRepository/ProjectRepository.ts";
 import type { EstimateRepository } from "../data-access/repositories/EstimateRepository/EstimateRepository.ts";
+import type { JobRepository } from "../data-access/repositories/JobRepository/JobRepository.ts";
 
 export const makeMaterialRepoMock = (
   over: Partial<MaterialRepository> = {},
@@ -80,5 +81,20 @@ export const makeEstimateRepoMock = (
   updateMeta: mock(async () => null),
   replaceSnapshot: mock(async () => null),
   deleteById: mock(async () => {}),
+  ...over,
+});
+
+export const makeJobRepoMock = (
+  over: Partial<JobRepository> = {},
+): JobRepository => ({
+  enqueuePending: mock(async () => {
+    throw new Error("not stubbed: JobRepository.enqueuePending");
+  }),
+  markRunning: mock(async () => null),
+  markSucceeded: mock(async () => null),
+  markFailed: mock(async () => null),
+  findByKey: mock(async () => null),
+  findForOrg: mock(async () => null),
+  findByStatus: mock(async () => []),
   ...over,
 });

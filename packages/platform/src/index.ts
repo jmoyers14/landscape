@@ -22,7 +22,7 @@ export * from "./data-access/repositories/MaterialRepository/MaterialRepository.
 export * from "./data-access/repositories/AssemblyRepository/AssemblyRepository.ts";
 export * from "./data-access/repositories/PricingSettingsRepository/PricingSettingsRepository.ts";
 export * from "./data-access/repositories/WebhookEventRepository/WebhookEventRepository.ts";
-export * from "./data-access/repositories/WebhookJobRepository/WebhookJobRepository.ts";
+export * from "./data-access/repositories/JobRepository/JobRepository.ts";
 export * from "./data-access/repositories/UserRepository/UserRepository.ts";
 
 // Integrations: tokens and vendor-neutral ports.
