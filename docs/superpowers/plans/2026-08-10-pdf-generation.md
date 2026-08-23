@@ -3427,7 +3427,7 @@ Layout only. Every number arrives pre-computed and pre-rounded, so a template ca
 
 If Task 1 selected `pdfmake`, keep the exported function signatures and the test exactly as written here and swap only the two template modules' internals for `pdfmake` document definitions.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Not byte snapshots — embedded fonts and creation timestamps make those brittle. Assert the magic bytes, then extract the text layer and assert the figures, labels and page count.
 
@@ -3546,7 +3546,17 @@ export function pageCount(bytes: Uint8Array): number {
 }
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+**As built, `extractText` differs from the sketch above.** react-pdf writes
+hex-string `TJ` arrays inside *flate-compressed* streams, so the literal-`(...)`
+scan returns `""` — which passes every `toContain` vacuously. The shipped helper
+inflates each stream (`node:zlib`) and decodes the hex runs, as verified in Task
+1. Two traps it already hit, worth knowing before touching it in Task 13:
+`/stream\r?\n/` also matches the tail of `endstream\n` (silently dropping every
+page after the first), and Bun's `TextDecoder` types reject `"latin1"`, so it
+decodes via `Buffer.toString("latin1")`. Text comes back in the font's byte
+encoding — assert on ASCII.
+
+- [x] **Step 2: Run it to verify it fails**
 
 ```bash
 bun test packages/worker/src/documents/render.test.tsx
@@ -3554,7 +3564,7 @@ bun test packages/worker/src/documents/render.test.tsx
 
 Expected: FAIL — cannot resolve `./render.tsx`.
 
-- [ ] **Step 3: Write the shared layout pieces**
+- [x] **Step 3: Write the shared layout pieces**
 
 ```tsx
 // packages/worker/src/documents/templates/shared.tsx
@@ -3680,7 +3690,7 @@ function imageFormat(contentType: string): "png" | "jpg" {
 }
 ```
 
-- [ ] **Step 4: Write the estimate template**
+- [x] **Step 4: Write the estimate template**
 
 ```tsx
 // packages/worker/src/documents/templates/EstimatePdf.tsx
@@ -3742,7 +3752,7 @@ export const EstimatePdf = ({ doc }: { doc: EstimateDocument }) => (
 );
 ```
 
-- [ ] **Step 5: Write the render entry point**
+- [x] **Step 5: Write the render entry point**
 
 ```tsx
 // packages/worker/src/documents/render.tsx
@@ -3768,7 +3778,7 @@ export async function renderPartsOrderPdf(
 }
 ```
 
-- [ ] **Step 6: Run the test**
+- [x] **Step 6: Run the test**
 
 ```bash
 bun test packages/worker/src/documents/render.test.tsx
@@ -3776,13 +3786,13 @@ bun test packages/worker/src/documents/render.test.tsx
 
 Expected: PASS, all six cases. If `extractText` returns nothing, the font is subsetting text into a CID stream — switch the assertion helper to check `pageCount` plus `bytes.byteLength`, and verify the figures once by eye against a written-out `/tmp/estimate.pdf`, noting that in the test file.
 
-- [ ] **Step 7: Delete the spike**
+- [x] **Step 7: Delete the spike**
 
 ```bash
 git rm packages/worker/src/documents/spike.tsx
 ```
 
-- [ ] **Step 8: Run everything and commit**
+- [x] **Step 8: Run everything and commit**
 
 ```bash
 bun run typecheck && bun test && bun run lint
