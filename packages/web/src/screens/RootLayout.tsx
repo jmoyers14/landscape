@@ -34,6 +34,13 @@ const Header = () => (
         >
           Clients
         </Link>
+        <Link
+          to="/settings/company"
+          className="text-primary-200 transition-colors hover:text-grey-50"
+          activeProps={{ className: "text-white font-medium" }}
+        >
+          Company
+        </Link>
       </nav>
     </div>
     <div className="flex items-center gap-3">
