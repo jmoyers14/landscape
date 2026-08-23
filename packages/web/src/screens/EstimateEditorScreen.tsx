@@ -15,6 +15,7 @@ import {
 import { queryClient, trpc } from "../trpc.ts";
 import { ErrorNote, Page } from "../components/ui.tsx";
 import { formatCurrency, formatQuantity } from "../lib/format.ts";
+import { DocumentDownloadButton } from "../components/DocumentDownloadButton.tsx";
 
 type RouterOutput = inferRouterOutputs<AppRouter>;
 type SavedEstimate = NonNullable<RouterOutput["estimates"]["get"]>;
@@ -118,6 +119,19 @@ export function EstimateEditorScreen() {
         onStatus={(status) => updateMeta.mutate({ id: estimateId, status })}
         onDelete={() => removeEstimate.mutate({ id: estimateId })}
       />
+
+      <div className="flex flex-wrap items-start gap-3">
+        <DocumentDownloadButton
+          estimateId={estimateId}
+          kind="estimate"
+          label="Download estimate PDF"
+        />
+        <DocumentDownloadButton
+          estimateId={estimateId}
+          kind="partsOrder"
+          label="Download parts order"
+        />
+      </div>
 
       {isDraft ? (
         context.data ? (
