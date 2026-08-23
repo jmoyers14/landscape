@@ -10,6 +10,7 @@ import {
   MATERIAL_SERVICE_TOKEN,
   ASSEMBLY_SERVICE_TOKEN,
   DOCUMENT_JOB_SERVICE_TOKEN,
+  COMPANY_PROFILE_SERVICE_TOKEN,
 } from "./services/index.ts";
 import {
   ANALYTICS_CLIENT_TOKEN,
@@ -25,6 +26,7 @@ import type { PricingSettingsService } from "./services/PricingSettingsService/P
 import type { MaterialService } from "./services/MaterialService/MaterialService.ts";
 import type { AssemblyService } from "./services/AssemblyService/AssemblyService.ts";
 import type { DocumentJobService } from "./services/DocumentJobService/DocumentJobService.ts";
+import type { CompanyProfileService } from "./services/CompanyProfileService/CompanyProfileService.ts";
 import type { AuthService } from "./services/AuthService/AuthService.ts";
 import type { AppConfig, AnalyticsClient } from "@landscape/platform";
 import type { Context } from "./context.ts";
@@ -73,6 +75,9 @@ export async function createContext(
       ),
       documentJobService: container.resolve<DocumentJobService>(
         DOCUMENT_JOB_SERVICE_TOKEN,
+      ),
+      companyProfileService: container.resolve<CompanyProfileService>(
+        COMPANY_PROFILE_SERVICE_TOKEN,
       ),
     },
   };

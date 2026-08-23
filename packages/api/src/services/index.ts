@@ -18,6 +18,7 @@ import {
   MATERIAL_SERVICE_TOKEN,
   ASSEMBLY_SERVICE_TOKEN,
   DOCUMENT_JOB_SERVICE_TOKEN,
+  COMPANY_PROFILE_SERVICE_TOKEN,
 } from "./tokens.ts";
 import { AuthServiceImpl } from "./AuthService/AuthServiceImpl.ts";
 import { ClientServiceImpl } from "./ClientService/ClientServiceImpl.ts";
@@ -28,6 +29,7 @@ import { PricingSettingsServiceImpl } from "./PricingSettingsService/PricingSett
 import { MaterialServiceImpl } from "./MaterialService/MaterialServiceImpl.ts";
 import { AssemblyServiceImpl } from "./AssemblyService/AssemblyServiceImpl.ts";
 import { DocumentJobServiceImpl } from "./DocumentJobService/DocumentJobServiceImpl.ts";
+import { CompanyProfileServiceImpl } from "./CompanyProfileService/CompanyProfileServiceImpl.ts";
 
 // This entrypoint's composition root. Registrations go on a *child* container
 // rather than tsyringe's global one so two entrypoints in the same process (or
@@ -62,6 +64,10 @@ container.registerSingleton(
 container.registerSingleton(MATERIAL_SERVICE_TOKEN, MaterialServiceImpl);
 container.registerSingleton(ASSEMBLY_SERVICE_TOKEN, AssemblyServiceImpl);
 container.registerSingleton(DOCUMENT_JOB_SERVICE_TOKEN, DocumentJobServiceImpl);
+container.registerSingleton(
+  COMPANY_PROFILE_SERVICE_TOKEN,
+  CompanyProfileServiceImpl,
+);
 
 export { container };
 export * from "./tokens.ts";
