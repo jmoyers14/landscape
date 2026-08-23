@@ -4915,7 +4915,7 @@ export const documentsRouter = router({
 - `packages/api/src/createContext.ts`: resolve it into `services`
 - `packages/api/src/router.ts`: add `documents: documentsRouter`
 
-- [ ] **Step 11: Exercise the whole pipeline locally**
+- [x] **Step 11: Exercise the whole pipeline locally**
 
 Start Mongo, the API and the worker (`bun run dev`), sign in, open an estimate, and note its id. Then:
 
@@ -5509,7 +5509,7 @@ bun run --cwd packages/web typecheck
 
 Expected: clean.
 
-- [ ] **Step 4: Verify in the running app**
+- [x] **Step 4: Verify in the running app**
 
 With `bun run dev` and a seeded org:
 
@@ -5789,10 +5789,16 @@ bun run --cwd packages/web typecheck
 4. Try a `.svg` → rejected with a clear message, nothing written.
 5. Download an estimate PDF → the logo and the company details head the document.
 
-**NOT DONE — needs a human**, the third and last of these: Task 15 Step 11, Task
-17 Step 4 and this one all close in a single run of the app. Verified instead:
-`packages/web` typechecks and builds with the screen, its `/settings/company`
-route and the nav link in place.
+**PARTLY DONE (2026-08-23).** The local end-to-end run closed Task 15 Step 11
+and Task 17 Step 4 — both document flows work — but the **logo upload has not
+been exercised**, so this step stays open until sub-steps 2–4 are run.
+
+Worth knowing when you do run it: a passing local test does **not** cover the
+deployed upload. Locally the browser PUTs to the API's own `/local-storage/`
+route (same origin); in production it PUTs cross-origin to a signed GCS URL,
+where `image/png` is not a CORS-safelisted content type and the request is
+preflighted. That path is only exercised after deploy — see the bucket CORS
+block added to `deploy.sh`.
 
 - [x] **Step 6: Commit**
 
