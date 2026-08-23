@@ -4039,7 +4039,7 @@ Assemble → render → put → return `{ storageKey, byteSize }`. One handler c
   - `RenderResult { storageKey: string; byteSize: number }`
   - `RenderEstimatePdfHandler`, `RenderPartsOrderPdfHandler`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // packages/worker/src/jobs/handlers/renderDocument.test.ts
@@ -4142,7 +4142,7 @@ describe("RenderEstimatePdfHandler", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 ```bash
 bun test packages/worker/src/jobs/handlers/renderDocument.test.ts
@@ -4150,7 +4150,7 @@ bun test packages/worker/src/jobs/handlers/renderDocument.test.ts
 
 Expected: FAIL — cannot resolve `./renderDocument.ts`.
 
-- [ ] **Step 3: Write the handler**
+- [x] **Step 3: Write the handler**
 
 ```ts
 // packages/worker/src/jobs/handlers/renderDocument.ts
@@ -4294,9 +4294,27 @@ export class RenderPartsOrderPdfHandler extends RenderDocumentHandler {
 }
 ```
 
-Note the test constructs the handler positionally with a fake renderer as the fourth argument; keep that parameter order.
+**As built, the renderer is a property, not a constructor parameter.** The
+defaulted fourth argument above does not survive container resolution: tsyringe
+resolves *every* declared constructor parameter — a default value does not
+exempt it — and `design:paramtypes` records a function as `Object`, so Step 7
+fails with `TypeInfo not known for "Object"`. Each concrete handler therefore
+declares `protected render = renderEstimatePdf` (resp. `renderPartsOrderPdf`),
+and the test substitutes it by subclassing:
 
-- [ ] **Step 4: Run the test**
+```ts
+class StubbedHandler extends RenderEstimatePdfHandler {
+  protected override render = renderer;
+}
+```
+
+Two other corrections to the test as sketched: every `rejects` assertion needs
+`await` (without it the assertion settles after the test ends and passes
+vacuously), and there is a seventh case covering `RenderPartsOrderPdfHandler` —
+every other case exercises the estimate handler, so a copy-paste slip in the
+parts-order subclass would otherwise be invisible.
+
+- [x] **Step 4: Run the test**
 
 ```bash
 bun test packages/worker/src/jobs/handlers/renderDocument.test.ts
@@ -4304,7 +4322,7 @@ bun test packages/worker/src/jobs/handlers/renderDocument.test.ts
 
 Expected: PASS, all six cases.
 
-- [ ] **Step 5: Add the job types and queue**
+- [x] **Step 5: Add the job types and queue**
 
 In `packages/worker/src/jobs/jobTypes.ts`:
 
@@ -4327,7 +4345,7 @@ export const QUEUES = {
 } as const;
 ```
 
-- [ ] **Step 6: Register the handlers**
+- [x] **Step 6: Register the handlers**
 
 In `packages/worker/src/jobs/registry.ts`, extend the constructor and the map:
 
@@ -4347,7 +4365,7 @@ In `packages/worker/src/jobs/registry.ts`, extend the constructor and the map:
   }
 ```
 
-- [ ] **Step 7: Confirm the container can build a render handler**
+- [x] **Step 7: Confirm the container can build a render handler**
 
 The handlers have a defaulted constructor parameter, which tsyringe must not try to resolve.
 
@@ -4365,7 +4383,7 @@ console.log("parts handler:", registry.get("renderPartsOrderPdf")?.constructor.n
 
 Expected: prints `RenderEstimatePdfHandler` and `RenderPartsOrderPdfHandler`. If tsyringe fails on the defaulted parameter, drop the parameter and have each subclass call the module function directly, injecting the renderer via a protected method the test overrides with a subclass instead.
 
-- [ ] **Step 8: Run everything and commit**
+- [x] **Step 8: Run everything and commit**
 
 ```bash
 bun run typecheck && bun test && bun run lint
