@@ -413,17 +413,43 @@ WEB_URL=$(gcloud run services describe "$WEB_SERVICE" \
 echo "Web deployed at: $WEB_URL"
 
 # ── Wire CORS only if the web origin changed (i.e. the first-ever deploy) ────
+# --update-env-vars, NOT --set-env-vars: the latter replaces the service's whole
+# environment, which would drop DOCUMENTS_BUCKET, WORKER_URL and the Cloud Tasks
+# coordinates the API gained when it started enqueueing document renders. Only
+# WEB_URL is in question here, so only WEB_URL is touched — and the secrets stay
+# as they are without having to be restated.
 if [ "$WEB_URL" != "$API_WEB_URL" ]; then
   echo "Web origin changed; updating API CORS (WEB_URL=$WEB_URL)..."
   gcloud run services update "$API_SERVICE" \
     --project "$PROJECT" --region "$REGION" \
-    --set-env-vars ENVIRONMENT=production \
-    --set-env-vars WEB_URL="$WEB_URL" \
-    "${API_ENV_EXTRA[@]+"${API_ENV_EXTRA[@]}"}" \
-    --set-secrets "$API_SECRETS"
+    --update-env-vars WEB_URL="$WEB_URL" >/dev/null
 else
   echo "API already trusts $WEB_URL — skipping CORS update."
 fi
+
+# ── Bucket CORS ──────────────────────────────────────────────────────────────
+# The browser PUTs a logo straight at a signed GCS URL, cross-origin from the web
+# app. "image/png" is not a CORS-safelisted content-type, so that request is
+# preflighted and the bucket has to name the origin allowed to make it —
+# otherwise the upload fails in the browser with no server-side trace.
+#
+# Downloads need no entry: they are anchor navigations to a signed URL, not
+# fetches, so CORS never applies to them.
+CORS_FILE=$(mktemp)
+cat > "$CORS_FILE" <<JSON
+[
+  {
+    "origin": ["$WEB_URL"],
+    "method": ["PUT"],
+    "responseHeader": ["content-type"],
+    "maxAgeSeconds": 3600
+  }
+]
+JSON
+echo "Setting CORS on gs://$DOCUMENTS_BUCKET for $WEB_URL..."
+gcloud storage buckets update "gs://$DOCUMENTS_BUCKET" \
+  --project "$PROJECT" --cors-file="$CORS_FILE" >/dev/null
+rm -f "$CORS_FILE"
 
 echo ""
 echo "Deploy complete!"
