@@ -77,15 +77,18 @@ function decodeHex(hex: string): string {
 }
 
 /**
- * The document's visible text, recovered from its content streams — one line per
- * text-showing operator, so a per-line assertion means something.
+ * The document's visible text, recovered from its content streams in reading
+ * order and concatenated.
  *
- * react-pdf writes hex-string `TJ` arrays with kerning offsets between the
- * chunks, so the pieces of one operator are concatenated to rebuild the run.
- * Good enough to assert that a label and a formatted figure reached the page;
- * not a general PDF parser. Text comes back byte-for-byte in the font's
- * encoding, so assert on ASCII — an em dash arrives as its WinAnsi byte, not as
- * "—".
+ * Deliberately flat: there are no line breaks to assert on. react-pdf's layout
+ * engine segments a run at digit boundaries ("1in PVC pipe" is emitted as "1"
+ * then "in PVC pipe"), and it positions runs with nested `cm` transforms rather
+ * than one `Tm` per line, so recovering visual lines would mean tracking the
+ * CTM through the q/Q stack — a PDF interpreter, not a test helper. Assert with
+ * `toContain`, not with anchored line regexes.
+ *
+ * Text comes back byte-for-byte in the font's encoding, so assert on ASCII — an
+ * em dash arrives as its WinAnsi byte, not as "—".
  */
 export function extractText(bytes: Uint8Array): string {
   const runs: string[] = [];
@@ -104,7 +107,12 @@ export function extractText(bytes: Uint8Array): string {
     }
   }
 
-  return runs.join("\n");
+  return runs.join("");
+}
+
+/** How many times `needle` appears — e.g. once per page for a `fixed` header. */
+export function countOccurrences(bytes: Uint8Array, needle: string): number {
+  return extractText(bytes).split(needle).length - 1;
 }
 
 export function pageCount(bytes: Uint8Array): number {

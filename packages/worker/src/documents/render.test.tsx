@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import type { EstimateDocument } from "@landscape/platform";
+import type { EstimateDocument, PartsOrderDocument } from "@landscape/platform";
 import { TAX_NOTE } from "@landscape/platform";
-import { renderEstimatePdf } from "./render.tsx";
-import { extractText, pageCount } from "./testSupport.ts";
+import { renderEstimatePdf, renderPartsOrderPdf } from "./render.tsx";
+import { countOccurrences, extractText, pageCount } from "./testSupport.ts";
 
 const doc = (over: Partial<EstimateDocument> = {}): EstimateDocument => ({
   company: {
@@ -61,7 +61,8 @@ describe("renderEstimatePdf", () => {
     const text = extractText(await renderEstimatePdf(doc()));
 
     expect(text).toContain(TAX_NOTE);
-    expect(text).not.toMatch(/^\s*Tax\b/m);
+    // A tax row would be labelled like every other row on the document.
+    expect(text).not.toMatch(/\bTax\b/);
   });
 
   it("renders with no client and no logo rather than failing", async () => {
@@ -84,5 +85,88 @@ describe("renderEstimatePdf", () => {
     // a page break, and extractText reads past page one.
     expect(extractText(bytes)).toContain("Assembly 80");
     expect(extractText(bytes)).toContain("$11,160.00");
+  });
+});
+
+const partsDoc = (
+  over: Partial<PartsOrderDocument> = {},
+): PartsOrderDocument => ({
+  company: doc().company,
+  project: { name: "Oak St Rebuild", location: "12 Oak St" },
+  title: "Parts order",
+  createdAt: "2026-08-01T12:00:00.000Z",
+  lines: [
+    {
+      description: "1in PVC pipe",
+      unit: "ft",
+      quantity: 25,
+      unitPrice: 2,
+      lineTotal: 50,
+    },
+    {
+      description: "Shrub, 5 gal",
+      unit: "ea",
+      quantity: 6,
+      unitPrice: 18,
+      lineTotal: 108,
+    },
+  ],
+  subtotal: 158,
+  deliveryTotal: 12,
+  total: 170,
+  ...over,
+});
+
+describe("renderPartsOrderPdf", () => {
+  it("produces a PDF", async () => {
+    const bytes = await renderPartsOrderPdf(partsDoc());
+
+    expect(new TextDecoder().decode(bytes.subarray(0, 5))).toBe("%PDF-");
+  });
+
+  it("prints each material with its quantity, unit price and line total", async () => {
+    const text = extractText(await renderPartsOrderPdf(partsDoc()));
+
+    expect(text).toContain("1in PVC pipe");
+    expect(text).toContain("25");
+    expect(text).toContain("$2.00");
+    expect(text).toContain("$50.00");
+  });
+
+  it("shows delivery as its own line, not folded into unit prices", async () => {
+    const text = extractText(await renderPartsOrderPdf(partsDoc()));
+
+    expect(text).toContain("Delivery");
+    expect(text).toContain("$12.00");
+    expect(text).toContain("$170.00");
+  });
+
+  it("carries no tax note — the supplier charges their own", async () => {
+    const text = extractText(await renderPartsOrderPdf(partsDoc()));
+
+    expect(text).not.toContain(TAX_NOTE);
+  });
+
+  it("paginates a long order with a repeating header", async () => {
+    const lines = Array.from({ length: 70 }, (_, i) => ({
+      description: `Material ${i + 1}`,
+      unit: "ea",
+      quantity: i + 1,
+      unitPrice: 3,
+      lineTotal: (i + 1) * 3,
+    }));
+    const bytes = await renderPartsOrderPdf(
+      partsDoc({ lines, subtotal: 7455, deliveryTotal: 0, total: 7455 }),
+    );
+    const pages = pageCount(bytes);
+
+    expect(pages).toBeGreaterThan(1);
+
+    // The column header is `fixed`, so it appears once per page — a supplier
+    // reading page 2 still knows which column is the unit price.
+    expect(countOccurrences(bytes, "Unit price")).toBe(pages);
+    // The last row and the total reach the final page.
+    expect(extractText(bytes)).toContain("Material 70");
+    expect(extractText(bytes)).toContain("$7,455.00");
   });
 });

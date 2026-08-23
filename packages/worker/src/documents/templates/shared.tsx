@@ -66,7 +66,9 @@ export const styles = StyleSheet.create({
   grow: { flex: 1 },
   amount: { width: 90, textAlign: "right" },
   qtyCell: { width: 70, textAlign: "right" },
-  unitCell: { width: 60 },
+  // Qty is right-aligned and Unit is left-aligned, so without a gutter they
+  // collide: "240" + "ft" reads as "240ft".
+  unitCell: { width: 60, paddingLeft: 8 },
   priceCell: { width: 80, textAlign: "right" },
   note: { marginTop: 18, fontSize: 9, color: "#616e7c" },
   footer: {

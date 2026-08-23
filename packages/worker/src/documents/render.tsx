@@ -1,6 +1,7 @@
 import { renderToBuffer } from "@react-pdf/renderer";
 import type { EstimateDocument, PartsOrderDocument } from "@landscape/platform";
 import { EstimatePdf } from "./templates/EstimatePdf.tsx";
+import { PartsOrderPdf } from "./templates/PartsOrderPdf.tsx";
 
 /**
  * The only place the PDF engine is named. Takes a plain view model, returns
@@ -14,7 +15,7 @@ export async function renderEstimatePdf(
 }
 
 export async function renderPartsOrderPdf(
-  _doc: PartsOrderDocument,
+  doc: PartsOrderDocument,
 ): Promise<Uint8Array> {
-  throw new Error("not implemented");
+  return new Uint8Array(await renderToBuffer(<PartsOrderPdf doc={doc} />));
 }
