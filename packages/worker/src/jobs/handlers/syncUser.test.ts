@@ -8,7 +8,7 @@ import type {
 import { makeJob } from "@landscape/platform/test-support";
 import { SyncUserHandler } from "./syncUser.ts";
 import { PoisonJobError } from "../PoisonJobError.ts";
-import { JOB_TYPES } from "../jobTypes.ts";
+import { JOB_TYPES } from "@landscape/platform";
 
 /**
  * Captures the upsert so the test can assert what got mirrored, without a

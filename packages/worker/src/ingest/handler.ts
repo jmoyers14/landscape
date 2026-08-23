@@ -11,7 +11,7 @@ import {
   type WebhookVerifier,
 } from "@landscape/platform";
 import { routeEvent } from "./eventRouting.ts";
-import { taskName } from "../jobs/taskKey.ts";
+import { taskName } from "@landscape/platform";
 
 /** The only source this endpoint serves. */
 const SOURCE: WebhookSource = "clerk";

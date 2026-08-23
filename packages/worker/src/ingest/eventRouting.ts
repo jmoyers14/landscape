@@ -1,4 +1,4 @@
-import { JOB_TYPES, QUEUES } from "../jobs/jobTypes.ts";
+import { JOB_TYPES, QUEUES } from "@landscape/platform";
 
 /**
  * Where a verified event goes: which job to run, on which queue.

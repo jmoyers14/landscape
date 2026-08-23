@@ -1,5 +1,5 @@
 import { injectable } from "tsyringe";
-import { JOB_TYPES } from "./jobTypes.ts";
+import { JOB_TYPES } from "@landscape/platform";
 import type { JobHandler } from "./JobHandler.ts";
 import { SyncUserHandler } from "./handlers/syncUser.ts";
 import { SeedOrgHandler } from "./handlers/seedOrg.ts";

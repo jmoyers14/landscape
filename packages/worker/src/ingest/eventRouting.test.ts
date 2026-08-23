@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { routeEvent } from "./eventRouting.ts";
-import { JOB_TYPES, QUEUES } from "../jobs/jobTypes.ts";
+import { JOB_TYPES, QUEUES } from "@landscape/platform";
 
 describe("routeEvent", () => {
   it("routes organization.created to the seed-org job", () => {

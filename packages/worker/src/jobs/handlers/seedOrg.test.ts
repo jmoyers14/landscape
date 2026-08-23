@@ -7,7 +7,7 @@ import type {
 import { makeJob } from "@landscape/platform/test-support";
 import { SeedOrgHandler } from "./seedOrg.ts";
 import { PoisonJobError } from "../PoisonJobError.ts";
-import { JOB_TYPES } from "../jobTypes.ts";
+import { JOB_TYPES } from "@landscape/platform";
 
 class FakeSeedService implements SeedService {
   public seeded: Array<{ orgId: string; businessName: string }> = [];

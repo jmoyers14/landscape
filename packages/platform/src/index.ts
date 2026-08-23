@@ -45,6 +45,11 @@ export {
   DOCUMENT_ASSEMBLY_SERVICE_TOKEN,
 } from "./documents/DocumentAssemblyService.ts";
 
+// Jobs: the shared vocabulary both entrypoints enqueue against. Keeping it here
+// is what stops the API's job type and the worker's registry key from drifting.
+export * from "./jobs/jobTypes.ts";
+export * from "./jobs/taskKey.ts";
+
 // Seed: the port + token only (the impl and starter content are server-only,
 // registered via registerServerCore).
 export { type SeedService, SEED_SERVICE_TOKEN } from "./seed/SeedService.ts";

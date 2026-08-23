@@ -9,6 +9,7 @@ import {
   PRICING_SETTINGS_SERVICE_TOKEN,
   MATERIAL_SERVICE_TOKEN,
   ASSEMBLY_SERVICE_TOKEN,
+  DOCUMENT_JOB_SERVICE_TOKEN,
 } from "./services/index.ts";
 import {
   ANALYTICS_CLIENT_TOKEN,
@@ -23,6 +24,7 @@ import type { AddressService } from "./services/AddressService/AddressService.ts
 import type { PricingSettingsService } from "./services/PricingSettingsService/PricingSettingsService.ts";
 import type { MaterialService } from "./services/MaterialService/MaterialService.ts";
 import type { AssemblyService } from "./services/AssemblyService/AssemblyService.ts";
+import type { DocumentJobService } from "./services/DocumentJobService/DocumentJobService.ts";
 import type { AuthService } from "./services/AuthService/AuthService.ts";
 import type { AppConfig, AnalyticsClient } from "@landscape/platform";
 import type { Context } from "./context.ts";
@@ -68,6 +70,9 @@ export async function createContext(
       ),
       assemblyService: container.resolve<AssemblyService>(
         ASSEMBLY_SERVICE_TOKEN,
+      ),
+      documentJobService: container.resolve<DocumentJobService>(
+        DOCUMENT_JOB_SERVICE_TOKEN,
       ),
     },
   };

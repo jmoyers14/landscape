@@ -7,7 +7,7 @@ import {
 } from "@landscape/platform";
 import { JobHandlerRegistry } from "./registry.ts";
 import { PoisonJobError } from "./PoisonJobError.ts";
-import { taskBodySchema } from "./taskKey.ts";
+import { taskBodySchema } from "@landscape/platform";
 
 /** An HTTP outcome for the route to return to Cloud Tasks. */
 export interface JobResult {
