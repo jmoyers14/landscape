@@ -5338,7 +5338,7 @@ One component owns request → poll → download for both document kinds, placed
 - Consumes: `documents.requestEstimatePdf`, `documents.requestPartsOrderPdf`, `documents.status` (Task 15).
 - Produces: `<DocumentDownloadButton estimateId kind label />` where `kind` is `"estimate" | "partsOrder"`.
 
-- [ ] **Step 1: Write the component**
+- [x] **Step 1: Write the component**
 
 The web package has no test setup (`packages/web` has no `test` script and is absent from the root `test` task), so this task is verified by running the app — Step 4. Do not add a test framework for it here.
 
@@ -5484,7 +5484,7 @@ export function DocumentDownloadButton({
 }
 ```
 
-- [ ] **Step 2: Place both buttons in the estimate editor**
+- [x] **Step 2: Place both buttons in the estimate editor**
 
 In `packages/web/src/screens/EstimateEditorScreen.tsx`, import the component and render the pair in the screen's header actions area (beside the status control near line 287):
 
@@ -5501,7 +5501,7 @@ In `packages/web/src/screens/EstimateEditorScreen.tsx`, import the component and
         />
 ```
 
-- [ ] **Step 3: Typecheck**
+- [x] **Step 3: Typecheck**
 
 ```bash
 bun run --cwd packages/web typecheck
@@ -5519,7 +5519,18 @@ With `bun run dev` and a seeded org:
 4. Change a driver value, save, and click again → a new render happens (a new `document rendered` line, a new folder under `.local-storage/`).
 5. Click **Download parts order** → a materials list at cost, with delivery on its own line.
 
-- [ ] **Step 5: Commit**
+**NOT DONE — needs a human**, same reasons as Task 15 Step 11 (a signed-in
+browser, and a dev stack running from this worktree). Pairs with that step: one
+run of the app closes both. What was verified instead: `packages/web` typechecks
+and **builds** clean with the component wired into the editor.
+
+Two notes for whoever runs it. The buttons sit directly under `MetaHeader` in
+`EstimateEditorScreen` rather than beside the status control, since that control
+lives inside `MetaHeader` and `estimateId` is only in scope one level up. And
+they render for **draft** estimates too — worth deciding whether a client-facing
+bid should be downloadable before the estimate is saved.
+
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/web
