@@ -4972,7 +4972,7 @@ Avoids piping binaries through tRPC: the browser gets a short-lived signed PUT U
   - `COMPANY_PROFILE_SERVICE_TOKEN = "CompanyProfileService"`
   - tRPC: `company.get`, `company.update`, `company.requestLogoUpload`, `company.confirmLogo`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // packages/api/src/services/CompanyProfileService/CompanyProfileServiceImpl.test.ts
@@ -5102,7 +5102,7 @@ describe("CompanyProfileServiceImpl.confirmLogo", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 ```bash
 bun test packages/api/src/services/CompanyProfileService/CompanyProfileServiceImpl.test.ts
@@ -5110,7 +5110,7 @@ bun test packages/api/src/services/CompanyProfileService/CompanyProfileServiceIm
 
 Expected: FAIL — cannot resolve `./CompanyProfileServiceImpl.ts`.
 
-- [ ] **Step 3: Write the port**
+- [x] **Step 3: Write the port**
 
 ```ts
 // packages/api/src/services/CompanyProfileService/CompanyProfileService.ts
@@ -5139,7 +5139,7 @@ export interface CompanyProfileService {
 }
 ```
 
-- [ ] **Step 4: Write the implementation**
+- [x] **Step 4: Write the implementation**
 
 ```ts
 // packages/api/src/services/CompanyProfileService/CompanyProfileServiceImpl.ts
@@ -5257,7 +5257,7 @@ export class CompanyProfileServiceImpl implements CompanyProfileService {
 }
 ```
 
-- [ ] **Step 5: Run the test**
+- [x] **Step 5: Run the test**
 
 ```bash
 bun test packages/api/src/services/CompanyProfileService/CompanyProfileServiceImpl.test.ts
@@ -5265,7 +5265,7 @@ bun test packages/api/src/services/CompanyProfileService/CompanyProfileServiceIm
 
 Expected: PASS, all nine cases.
 
-- [ ] **Step 6: Write the router**
+- [x] **Step 6: Write the router**
 
 ```ts
 // packages/api/src/routers/company.ts
@@ -5312,11 +5312,11 @@ export const companyRouter = router({
 });
 ```
 
-- [ ] **Step 7: Wire it up**
+- [x] **Step 7: Wire it up**
 
 Same five sites as Task 15 Step 10: `tokens.ts` (`COMPANY_PROFILE_SERVICE_TOKEN`), `services/index.ts`, `context.ts`, `createContext.ts`, `router.ts` (`company: companyRouter`).
 
-- [ ] **Step 8: Run everything and commit**
+- [x] **Step 8: Run everything and commit**
 
 ```bash
 bun run typecheck && bun test && bun run lint
