@@ -5815,7 +5815,7 @@ Bucket, queue, IAM, and the env both services need. All idempotent, in `deploy.s
 - Consumes: `QUEUES.DOCUMENT_RENDER` (`packages/platform/src/jobs/jobTypes.ts`) — the queue name must match exactly.
 - Produces: `landscape-documents-{env}` bucket, `document-render-queue`, the IAM grants signing needs, and `DOCUMENTS_BUCKET` on both Cloud Run services.
 
-- [ ] **Step 1: Declare the new names**
+- [x] **Step 1: Declare the new names**
 
 In `deploy.sh`, beside the existing queue constants (around line 26):
 
@@ -5831,7 +5831,7 @@ TASKS_INVOKER_SA="cloud-tasks-invoker@${PROJECT}.iam.gserviceaccount.com"
 DOCUMENTS_BUCKET="landscape-documents-production"
 ```
 
-- [ ] **Step 2: Create the bucket**
+- [x] **Step 2: Create the bucket**
 
 Add before the API deploy block:
 
@@ -5872,7 +5872,7 @@ gcloud iam service-accounts add-iam-policy-binding "$RUNTIME_SA" \
   --role roles/iam.serviceAccountTokenCreator --quiet >/dev/null
 ```
 
-- [ ] **Step 3: Create the queue**
+- [x] **Step 3: Create the queue**
 
 Extend the existing queue loop (around line 74 of the Cloud Tasks block):
 
@@ -5880,7 +5880,7 @@ Extend the existing queue loop (around line 74 of the Cloud Tasks block):
 for QUEUE in "$ORG_SEED_QUEUE" "$USER_SYNC_QUEUE" "$DOCUMENT_RENDER_QUEUE"; do
 ```
 
-- [ ] **Step 4: Give both services the bucket name and the queue's coordinates**
+- [x] **Step 4: Give both services the bucket name and the queue's coordinates**
 
 The API now enqueues tasks, so it needs the same Cloud Tasks env the worker has. Add to the API's `gcloud run deploy`:
 
@@ -5896,6 +5896,18 @@ and to the worker's:
 ```bash
   --set-env-vars DOCUMENTS_BUCKET="$DOCUMENTS_BUCKET" \
 ```
+
+**As built, the API is also handed `WORKER_URL` at deploy time.** Setting it only
+in the corrective update below leaves the API running without one from its deploy
+until the worker's finishes — and `loadTasksConfig` requires it, so a document
+request in that window 500s. `deploy.sh` already solves this exact problem for
+`API_WEB_URL`: the URL is stable, so read it before the API deploys
+(`API_WORKER_URL`) and pass it in from the first revision. The corrective update
+is kept, now guarded by `[ "$WORKER_URL" != "$API_WORKER_URL" ]`, so it fires
+only on a true first deploy or if the worker's URL actually changed.
+
+The stale path in the queue-name comment (`packages/worker/src/jobs/jobTypes.ts`)
+was corrected to `packages/platform/...` at the same time — Task 15 moved it.
 
 The API also needs `WORKER_URL` — it is the base Cloud Tasks posts callbacks to. The worker's URL isn't known until after the worker deploys, and the API deploys first, so add a corrective update after the worker's URL is resolved (mirroring the existing first-deploy correction at line 178):
 
@@ -5928,6 +5940,10 @@ gcloud iam service-accounts get-iam-policy "$RUNTIME_SA" \
 
 Expected: uniform access `True`, public access `enforced`; the queue `RUNNING`; the runtime SA listed as a token-creator member on itself.
 
+**NOT DONE — this deploys to production**, which is the user's call, not an
+agent's. `deploy.sh` is written and passes `bash -n`; running it is the remaining
+step. Note it deploys the whole app, not just this feature.
+
 - [ ] **Step 6: Verify the deployed pipeline**
 
 In the deployed app: open an estimate, download the estimate PDF, and confirm the object appears under `gs://landscape-documents-production/orgs/<orgId>/estimates/`. Then click again and confirm no new worker revision log line — the short-circuit works in production too.
@@ -5942,7 +5958,17 @@ If the download 403s, the signing grant hasn't propagated — re-run `deploy.sh`
 
 The Estimate PDF is the "Estimate Export" line in [`docs/go-live-todo.md`](../../go-live-todo.md). Mark it done there, noting that the parts order shipped alongside it.
 
-- [ ] **Step 8: Commit**
+**NOT DONE, and it shouldn't be yet.** Three reasons: `docs/go-live-todo.md` is
+untracked in the main checkout, so it isn't in this worktree at all; it has no
+checkboxes — "Estimate Export" is a prose section, so "mark it done" needs a
+judgement call about wording; and the feature is not live until Steps 5–6 deploy
+it. Tick it after the deploy, not before.
+
+`docs/observability.md` was checked for the queue/bucket mention this task's
+file list flags as conditional — it lists neither, so there is nothing to update
+there.
+
+- [x] **Step 8: Commit**
 
 ```bash
 git add deploy.sh docs
