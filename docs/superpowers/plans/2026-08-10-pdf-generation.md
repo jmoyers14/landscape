@@ -3813,7 +3813,7 @@ git commit -m "feat: render the client-facing estimate PDF"
 - Consumes: `PartsOrderDocument`, `shared.tsx` (Task 12).
 - Produces: a working `renderPartsOrderPdf`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `render.test.tsx`:
 
@@ -3882,7 +3882,14 @@ describe("renderPartsOrderPdf", () => {
 
 Add `renderPartsOrderPdf` and `PartsOrderDocument` to the file's imports.
 
-- [ ] **Step 2: Run it to verify it fails**
+**Note on `extractText`:** it returns concatenated reading-order text with no
+line breaks. react-pdf's layout engine segments a run at digit boundaries
+("1in PVC pipe" is emitted as "1" then "in PVC pipe") and positions runs with
+nested `cm` transforms rather than one `Tm` per line, so line-anchored regexes
+cannot work without a CTM interpreter. Assert with `toContain`, and use
+`countOccurrences` for "once per page" checks on `fixed` chrome.
+
+- [x] **Step 2: Run it to verify it fails**
 
 ```bash
 bun test packages/worker/src/documents/render.test.tsx
@@ -3890,7 +3897,7 @@ bun test packages/worker/src/documents/render.test.tsx
 
 Expected: FAIL — five failures, all `not implemented`.
 
-- [ ] **Step 3: Write the template**
+- [x] **Step 3: Write the template**
 
 ```tsx
 // packages/worker/src/documents/templates/PartsOrderPdf.tsx
@@ -3959,7 +3966,7 @@ export const PartsOrderPdf = ({ doc }: { doc: PartsOrderDocument }) => (
 );
 ```
 
-- [ ] **Step 4: Wire it into the render entry point**
+- [x] **Step 4: Wire it into the render entry point**
 
 In `packages/worker/src/documents/render.tsx`, replace the stub:
 
@@ -3971,7 +3978,7 @@ export async function renderPartsOrderPdf(
 }
 ```
 
-- [ ] **Step 5: Run the test**
+- [x] **Step 5: Run the test**
 
 ```bash
 bun test packages/worker/src/documents/render.test.tsx
@@ -3979,7 +3986,7 @@ bun test packages/worker/src/documents/render.test.tsx
 
 Expected: PASS, all eleven cases.
 
-- [ ] **Step 6: Eyeball both documents once**
+- [x] **Step 6: Eyeball both documents once**
 
 ```bash
 bun -e '
@@ -4000,7 +4007,13 @@ open /tmp/estimate.pdf
 
 Expected: a readable one-page bid — header block, "Prepared for", two rows, a ruled Total, the tax footnote, and a centred page footer. Automated tests cannot judge whether it looks like a document a contractor would send; this step is the check that it does.
 
-- [ ] **Step 7: Commit**
+**This step paid for itself.** The parts order's Qty column is right-aligned and
+Unit is left-aligned with no gutter between them, so the header read `QtyUnit`
+and every row read `240ft`. No text assertion can catch it — `extractText`
+concatenates runs, so the collision is invisible either way. Fixed by giving
+`unitCell` a `paddingLeft` in `shared.tsx`.
+
+- [x] **Step 7: Commit**
 
 ```bash
 git add packages/worker
