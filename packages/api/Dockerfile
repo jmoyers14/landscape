@@ -1,4 +1,10 @@
-FROM oven/bun:1 AS builder
+# The API runs from TypeScript SOURCE, not a bundle — like the worker, and for
+# the same reason. @google-cloud/tasks is a gapic client that loads JSON config
+# (*_client_config.json) via runtime require; `bun build` doesn't emit those
+# assets, so a bundled image crashes at boot with "Cannot find module
+# cloud_tasks_client_config.json". The API gained that dependency when it started
+# enqueueing document renders and minting signed GCS URLs.
+FROM oven/bun:1
 WORKDIR /app
 
 # Copy workspace manifests first for cached installs
@@ -11,17 +17,10 @@ COPY packages/platform/package.json packages/platform/
 
 RUN bun install --frozen-lockfile
 
-# Build the API (bundles @landscape/domain and @landscape/platform from source,
-# so copy them too)
 COPY tsconfig.json ./
 COPY packages/domain/ packages/domain/
 COPY packages/platform/ packages/platform/
 COPY packages/api/ packages/api/
-RUN bun run build:api
-
-FROM oven/bun:1-slim
-WORKDIR /app
-COPY --from=builder /app/packages/api/dist ./dist
 
 # Build stamp (from deploy.sh) baked in as runtime env so the API can report
 # exactly which build is running via the system.version query.
@@ -35,4 +34,4 @@ ENV BUILT_AT=$BUILT_AT
 # Cloud Run injects PORT; default to 8080 for local docker runs
 ENV PORT=8080
 EXPOSE 8080
-CMD ["bun", "run", "dist/index.js"]
+CMD ["bun", "run", "packages/api/src/index.ts"]

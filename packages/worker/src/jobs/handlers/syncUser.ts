@@ -2,10 +2,14 @@ import { inject, injectable } from "tsyringe";
 import { z } from "zod";
 import {
   USER_REPOSITORY_TOKEN,
+  WEBHOOK_EVENT_REPOSITORY_TOKEN,
+  type Job,
   type UserRepository,
-  type WebhookEvent,
+  type WebhookEventRepository,
 } from "@landscape/platform";
-import type { WebhookHandler } from "../WebhookHandler.ts";
+import type { JobHandler } from "../JobHandler.ts";
+import { PoisonJobError } from "../PoisonJobError.ts";
+import { webhookPayloadSchema } from "./webhookPayload.ts";
 
 /**
  * The slice of Clerk's `user.*` payload we mirror. Clerk sends far more; we
@@ -34,13 +38,23 @@ const clerkUserSchema = z.object({
  * delivery demands.
  */
 @injectable()
-export class SyncUserHandler implements WebhookHandler {
+export class SyncUserHandler implements JobHandler {
   constructor(
+    @inject(WEBHOOK_EVENT_REPOSITORY_TOKEN)
+    private readonly events: WebhookEventRepository,
     @inject(USER_REPOSITORY_TOKEN)
     private readonly users: UserRepository,
   ) {}
 
-  async handle(event: WebhookEvent): Promise<void> {
+  async handle(job: Job): Promise<void> {
+    const { source, sourceEventId } = webhookPayloadSchema.parse(job.payload);
+    const event = await this.events.findBySourceEventId(source, sourceEventId);
+    if (!event) {
+      // The event is recorded before the job is enqueued, so its absence is
+      // permanent, not a race worth retrying.
+      throw new PoisonJobError("raw event missing");
+    }
+
     // The verifier stored `event.data` (the user object) as the payload. A bad
     // shape throws here, which the runner turns into a failed job.
     const data = clerkUserSchema.parse(event.payload);

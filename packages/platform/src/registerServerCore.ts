@@ -1,6 +1,6 @@
 import "reflect-metadata"; // MUST be imported before any decorated class is used
 import { instanceCachingFactory, type DependencyContainer } from "tsyringe";
-import { APP_CONFIG_TOKEN } from "./config/appConfig.ts";
+import { APP_CONFIG_TOKEN, type AppConfig } from "./config/appConfig.ts";
 import { loadAppConfig } from "./config/loadAppConfig.ts";
 import { DATABASE_CONFIG_TOKEN } from "./data-access/databaseConfig.ts";
 import { loadDatabaseConfig } from "./data-access/databaseConfig.ts";
@@ -11,14 +11,21 @@ import {
   loadAnalyticsConfig,
 } from "./integrations/analytics/analyticsConfig.ts";
 import {
+  STORAGE_CONFIG_TOKEN,
+  loadStorageConfig,
+} from "./integrations/storage/storageConfig.ts";
+import { LocalObjectStorage } from "./integrations/storage/LocalObjectStorage.ts";
+import { GcsObjectStorage } from "./integrations/storage/GcsObjectStorage.ts";
+import {
   CLIENT_REPOSITORY_TOKEN,
   ESTIMATE_REPOSITORY_TOKEN,
   PROJECT_REPOSITORY_TOKEN,
   MATERIAL_REPOSITORY_TOKEN,
   ASSEMBLY_REPOSITORY_TOKEN,
   PRICING_SETTINGS_REPOSITORY_TOKEN,
+  COMPANY_PROFILE_REPOSITORY_TOKEN,
   WEBHOOK_EVENT_REPOSITORY_TOKEN,
-  WEBHOOK_JOB_REPOSITORY_TOKEN,
+  JOB_REPOSITORY_TOKEN,
   USER_REPOSITORY_TOKEN,
 } from "./data-access/tokens.ts";
 import { ClientRepositoryImpl } from "./data-access/repositories/ClientRepository/ClientRepositoryImpl.ts";
@@ -27,19 +34,23 @@ import { EstimateRepositoryImpl } from "./data-access/repositories/EstimateRepos
 import { MaterialRepositoryImpl } from "./data-access/repositories/MaterialRepository/MaterialRepositoryImpl.ts";
 import { AssemblyRepositoryImpl } from "./data-access/repositories/AssemblyRepository/AssemblyRepositoryImpl.ts";
 import { PricingSettingsRepositoryImpl } from "./data-access/repositories/PricingSettingsRepository/PricingSettingsRepositoryImpl.ts";
+import { CompanyProfileRepositoryImpl } from "./data-access/repositories/CompanyProfileRepository/CompanyProfileRepositoryImpl.ts";
 import { WebhookEventRepositoryImpl } from "./data-access/repositories/WebhookEventRepository/WebhookEventRepositoryImpl.ts";
-import { WebhookJobRepositoryImpl } from "./data-access/repositories/WebhookJobRepository/WebhookJobRepositoryImpl.ts";
+import { JobRepositoryImpl } from "./data-access/repositories/JobRepository/JobRepositoryImpl.ts";
 import { UserRepositoryImpl } from "./data-access/repositories/UserRepository/UserRepositoryImpl.ts";
 import {
   AUTH_CLIENT_TOKEN,
   MAPS_CLIENT_TOKEN,
   ANALYTICS_CLIENT_TOKEN,
+  OBJECT_STORAGE_TOKEN,
 } from "./integrations/tokens.ts";
 import { ClerkClient } from "./integrations/auth/ClerkClient.ts";
 import { GoogleMapsClient } from "./integrations/maps/GoogleMapsClient.ts";
 import { PostHogClient } from "./integrations/analytics/PostHogClient.ts";
 import { SEED_SERVICE_TOKEN } from "./seed/SeedService.ts";
 import { SeedServiceImpl } from "./seed/SeedServiceImpl.ts";
+import { DOCUMENT_ASSEMBLY_SERVICE_TOKEN } from "./documents/DocumentAssemblyService.ts";
+import { DocumentAssemblyServiceImpl } from "./documents/DocumentAssemblyServiceImpl.ts";
 import { LOGGER_TOKEN } from "./logging/Logger.ts";
 import { rootLogger } from "./logging/pinoLogger.ts";
 
@@ -75,6 +86,23 @@ export function registerServerCore(container: DependencyContainer): void {
   container.register(ANALYTICS_CONFIG_TOKEN, {
     useFactory: instanceCachingFactory(() => loadAnalyticsConfig()),
   });
+  container.register(STORAGE_CONFIG_TOKEN, {
+    useFactory: instanceCachingFactory(() => loadStorageConfig()),
+  });
+
+  // Environment picks the adapter, resolved lazily inside the factory so local
+  // dev is never made to supply GCP credentials. GcsObjectStorage is imported
+  // statically, which is safe only because both server images now run from
+  // source — see packages/api/Dockerfile.
+  container.register(OBJECT_STORAGE_TOKEN, {
+    useFactory: instanceCachingFactory((dependencyContainer) => {
+      const { environment } =
+        dependencyContainer.resolve<AppConfig>(APP_CONFIG_TOKEN);
+      return environment === "local"
+        ? dependencyContainer.resolve(LocalObjectStorage)
+        : dependencyContainer.resolve(GcsObjectStorage);
+    }),
+  });
 
   container.registerSingleton(CLIENT_REPOSITORY_TOKEN, ClientRepositoryImpl);
   container.registerSingleton(PROJECT_REPOSITORY_TOKEN, ProjectRepositoryImpl);
@@ -86,13 +114,14 @@ export function registerServerCore(container: DependencyContainer): void {
     PricingSettingsRepositoryImpl,
   );
   container.registerSingleton(
+    COMPANY_PROFILE_REPOSITORY_TOKEN,
+    CompanyProfileRepositoryImpl,
+  );
+  container.registerSingleton(
     WEBHOOK_EVENT_REPOSITORY_TOKEN,
     WebhookEventRepositoryImpl,
   );
-  container.registerSingleton(
-    WEBHOOK_JOB_REPOSITORY_TOKEN,
-    WebhookJobRepositoryImpl,
-  );
+  container.registerSingleton(JOB_REPOSITORY_TOKEN, JobRepositoryImpl);
   container.registerSingleton(USER_REPOSITORY_TOKEN, UserRepositoryImpl);
 
   container.registerSingleton(AUTH_CLIENT_TOKEN, ClerkClient);
@@ -103,4 +132,11 @@ export function registerServerCore(container: DependencyContainer): void {
   // repos), resolved by both the worker's org.created handler and the dev seed
   // CLI — hence in the shared core rather than an entrypoint.
   container.registerSingleton(SEED_SERVICE_TOKEN, SeedServiceImpl);
+
+  // Same rationale as SeedService: a shared platform capability both the API
+  // (status/first-request path) and the worker (rendering) resolve.
+  container.registerSingleton(
+    DOCUMENT_ASSEMBLY_SERVICE_TOKEN,
+    DocumentAssemblyServiceImpl,
+  );
 }

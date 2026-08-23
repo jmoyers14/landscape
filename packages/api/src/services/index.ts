@@ -1,7 +1,13 @@
 import "reflect-metadata"; // MUST be imported before any decorated class is used
 import { container as rootContainer, instanceCachingFactory } from "tsyringe";
 import { registerServerCore } from "@landscape/platform/server";
-import { SERVER_CONFIG_TOKEN, loadServerConfig } from "../config/serverConfig.ts";
+// Imported from its own entry — NOT the /server barrel — because it statically
+// pulls the Cloud Tasks + google-auth SDKs. The API enqueues document renders.
+import { registerTaskQueue } from "@landscape/platform/tasks";
+import {
+  SERVER_CONFIG_TOKEN,
+  loadServerConfig,
+} from "../config/serverConfig.ts";
 import {
   AUTH_SERVICE_TOKEN,
   CLIENT_SERVICE_TOKEN,
@@ -11,6 +17,8 @@ import {
   PRICING_SETTINGS_SERVICE_TOKEN,
   MATERIAL_SERVICE_TOKEN,
   ASSEMBLY_SERVICE_TOKEN,
+  DOCUMENT_JOB_SERVICE_TOKEN,
+  COMPANY_PROFILE_SERVICE_TOKEN,
 } from "./tokens.ts";
 import { AuthServiceImpl } from "./AuthService/AuthServiceImpl.ts";
 import { ClientServiceImpl } from "./ClientService/ClientServiceImpl.ts";
@@ -20,6 +28,8 @@ import { AddressServiceImpl } from "./AddressService/AddressServiceImpl.ts";
 import { PricingSettingsServiceImpl } from "./PricingSettingsService/PricingSettingsServiceImpl.ts";
 import { MaterialServiceImpl } from "./MaterialService/MaterialServiceImpl.ts";
 import { AssemblyServiceImpl } from "./AssemblyService/AssemblyServiceImpl.ts";
+import { DocumentJobServiceImpl } from "./DocumentJobService/DocumentJobServiceImpl.ts";
+import { CompanyProfileServiceImpl } from "./CompanyProfileService/CompanyProfileServiceImpl.ts";
 
 // This entrypoint's composition root. Registrations go on a *child* container
 // rather than tsyringe's global one so two entrypoints in the same process (or
@@ -31,6 +41,9 @@ const container = rootContainer.createChildContainer();
 // container, then register this entrypoint's request-scoped services on top.
 // registerSingleton: one shared instance for the process.
 registerServerCore(container);
+
+// The document pipeline runs in the worker, so the API's part is to enqueue.
+registerTaskQueue(container);
 
 // Server config is this entrypoint's own concern (port + web origin); the worker
 // has no HTTP-server config of this shape, so it's registered here, not in the
@@ -50,6 +63,11 @@ container.registerSingleton(
 );
 container.registerSingleton(MATERIAL_SERVICE_TOKEN, MaterialServiceImpl);
 container.registerSingleton(ASSEMBLY_SERVICE_TOKEN, AssemblyServiceImpl);
+container.registerSingleton(DOCUMENT_JOB_SERVICE_TOKEN, DocumentJobServiceImpl);
+container.registerSingleton(
+  COMPANY_PROFILE_SERVICE_TOKEN,
+  CompanyProfileServiceImpl,
+);
 
 export { container };
 export * from "./tokens.ts";

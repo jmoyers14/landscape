@@ -8,10 +8,10 @@ import type { TaskQueue, TaskRequest } from "./TaskQueue.ts";
  * Local-development TaskQueue. Cloud Tasks has no emulator, so without this the
  * entire webhook path would be untestable off GCP.
  *
- * Delivers by POSTing straight back to the worker's own `/tasks/{jobType}`
- * endpoint — the same HTTP hop Cloud Tasks would make. That's the point: the
- * ingest handler, the route, runJob, and the handler registry all run exactly as
- * they will in production. Only the transport in between is different.
+ * Delivers by POSTing straight to the worker's `/tasks/{jobType}` endpoint — the
+ * same HTTP hop Cloud Tasks would make. That's the point: the ingest handler,
+ * the route, runJob, and the handler registry all run exactly as they will in
+ * production. Only the transport in between is different.
  *
  * What it deliberately does NOT reproduce:
  *  - **Retries.** A failed job stays failed. Its row records the error, and
@@ -41,7 +41,17 @@ export class InlineTaskQueue implements TaskQueue {
       );
     }
 
-    const url = `http://localhost:${process.env.PORT ?? 3001}/tasks/${request.jobType}`;
+    // The worker's base URL, explicitly — NOT `PORT`, which is whichever
+    // process happens to be enqueuing. That was correct while only the worker
+    // enqueued (to itself); the API enqueues document renders now, and its own
+    // PORT would post the task straight back to the API.
+    //
+    // Same variable the deployed worker receives as its OIDC audience
+    // (deploy.sh), read from the environment rather than TasksConfig because
+    // that config also demands GCP settings local dev has no business supplying.
+    const base =
+      process.env.WORKER_URL ?? `http://localhost:${process.env.PORT ?? 3001}`;
+    const url = `${base}/tasks/${request.jobType}`;
 
     // Not awaited: the ingest request must return promptly so the provider sees
     // a 2xx, exactly as it would if a real queue had accepted the task. Errors

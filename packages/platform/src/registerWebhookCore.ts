@@ -6,14 +6,11 @@ import {
   loadClerkWebhookConfig,
 } from "./integrations/webhooks/clerkWebhookConfig.ts";
 import { ClerkWebhookVerifier } from "./integrations/webhooks/ClerkWebhookVerifier.ts";
-import { TASKS_CONFIG_TOKEN, loadTasksConfig } from "./integrations/tasks/tasksConfig.ts";
-import { CloudTasksQueue } from "./integrations/tasks/CloudTasksQueue.ts";
-import { InlineTaskQueue } from "./integrations/tasks/InlineTaskQueue.ts";
 import { AllowAllTaskAuthenticator } from "./integrations/tasks/AllowAllTaskAuthenticator.ts";
 import { GoogleOidcTaskAuthenticator } from "./integrations/tasks/GoogleOidcTaskAuthenticator.ts";
+import { registerTaskQueue } from "./registerTaskQueue.ts";
 import {
   CLERK_WEBHOOK_VERIFIER_TOKEN,
-  TASK_QUEUE_TOKEN,
   TASK_AUTHENTICATOR_TOKEN,
 } from "./integrations/tokens.ts";
 
@@ -34,23 +31,15 @@ export function registerWebhookCore(container: DependencyContainer): void {
   container.register(CLERK_WEBHOOK_CONFIG_TOKEN, {
     useFactory: instanceCachingFactory(() => loadClerkWebhookConfig()),
   });
-  container.registerSingleton(CLERK_WEBHOOK_VERIFIER_TOKEN, ClerkWebhookVerifier);
+  container.registerSingleton(
+    CLERK_WEBHOOK_VERIFIER_TOKEN,
+    ClerkWebhookVerifier,
+  );
 
-  container.register(TASKS_CONFIG_TOKEN, {
-    useFactory: instanceCachingFactory(() => loadTasksConfig()),
-  });
-
-  // Environment picks the queue. Resolved lazily inside the factory so the
-  // Cloud Tasks config is only validated when that adapter is actually chosen —
-  // local dev must not be made to supply a GCP project id.
-  container.register(TASK_QUEUE_TOKEN, {
-    useFactory: instanceCachingFactory((dependencyContainer) => {
-      const { environment } = dependencyContainer.resolve<AppConfig>(APP_CONFIG_TOKEN);
-      return environment === "local"
-        ? dependencyContainer.resolve(InlineTaskQueue)
-        : dependencyContainer.resolve(CloudTasksQueue);
-    }),
-  });
+  // The queue itself is no longer webhook-specific — the API enqueues document
+  // renders through the same port — so it registers from its own module. The
+  // worker still gets it by calling this, since ingestion needs both halves.
+  registerTaskQueue(container);
 
   // The /tasks/* guard, chosen the same way and in lockstep with the queue:
   // local's loopback InlineTaskQueue pairs with allow-all (no token exists to
@@ -59,7 +48,8 @@ export function registerWebhookCore(container: DependencyContainer): void {
   // OIDC verifier reads.
   container.register(TASK_AUTHENTICATOR_TOKEN, {
     useFactory: instanceCachingFactory((dependencyContainer) => {
-      const { environment } = dependencyContainer.resolve<AppConfig>(APP_CONFIG_TOKEN);
+      const { environment } =
+        dependencyContainer.resolve<AppConfig>(APP_CONFIG_TOKEN);
       return environment === "local"
         ? dependencyContainer.resolve(AllowAllTaskAuthenticator)
         : dependencyContainer.resolve(GoogleOidcTaskAuthenticator);

@@ -11,11 +11,15 @@
  */
 export interface SeedService {
   /**
-   * Converge the org onto the starter catalog. Upserts each starter material and
-   * assembly by its seed key, so re-running updates the starter rows in place
-   * and leaves custom rows alone. This is what the webhook handler calls.
+   * Converge the org onto the starter catalog and ensure it has a company
+   * profile. `businessName` comes from the Clerk organization, so a brand-new
+   * org's documents are headed correctly before anyone visits settings.
+   *
+   * Upserts each starter material and assembly by its seed key, so re-running
+   * updates the starter rows in place and leaves custom rows alone. This is what
+   * the webhook handler calls.
    */
-  seedNewOrg(orgId: string): Promise<void>;
+  seedNewOrg(orgId: string, businessName: string): Promise<void>;
 
   /**
    * Wipe the org's entire catalog (materials + assemblies) and re-seed from

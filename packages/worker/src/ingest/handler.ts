@@ -1,17 +1,17 @@
 import { inject, injectable } from "tsyringe";
 import {
   CLERK_WEBHOOK_VERIFIER_TOKEN,
+  JOB_REPOSITORY_TOKEN,
   TASK_QUEUE_TOKEN,
   WEBHOOK_EVENT_REPOSITORY_TOKEN,
-  WEBHOOK_JOB_REPOSITORY_TOKEN,
+  type JobRepository,
   type TaskQueue,
   type WebhookEventRepository,
-  type WebhookJobRepository,
   type WebhookSource,
   type WebhookVerifier,
 } from "@landscape/platform";
 import { routeEvent } from "./eventRouting.ts";
-import { taskName } from "./taskKey.ts";
+import { taskName } from "@landscape/platform";
 
 /** The only source this endpoint serves. */
 const SOURCE: WebhookSource = "clerk";
@@ -48,8 +48,8 @@ export class IngestService {
     private readonly verifier: WebhookVerifier,
     @inject(WEBHOOK_EVENT_REPOSITORY_TOKEN)
     private readonly events: WebhookEventRepository,
-    @inject(WEBHOOK_JOB_REPOSITORY_TOKEN)
-    private readonly jobs: WebhookJobRepository,
+    @inject(JOB_REPOSITORY_TOKEN)
+    private readonly jobs: JobRepository,
     @inject(TASK_QUEUE_TOKEN)
     private readonly queue: TaskQueue,
   ) {}
@@ -75,18 +75,24 @@ export class IngestService {
       return { status: 200, body: { status: "ignored", type } };
     }
 
+    // The content key for a webhook-derived job. One event can fan out to
+    // several job types, and (jobType, dedupKey) is unique, so they don't
+    // collide.
+    const dedupKey = `${SOURCE}:${sourceEventId}`;
+
     await this.jobs.enqueuePending({
-      source: SOURCE,
-      sourceEventId,
       jobType: route.jobType,
+      dedupKey,
       orgId: orgIdFrom(type, payload),
+      // The handler resolves the raw event from this pointer.
+      payload: { source: SOURCE, sourceEventId },
     });
 
     await this.queue.enqueue({
       queue: route.queue,
       jobType: route.jobType,
-      name: taskName(SOURCE, sourceEventId, route.jobType),
-      payload: { source: SOURCE, sourceEventId },
+      name: taskName(route.jobType, dedupKey, 0),
+      payload: { dedupKey },
     });
 
     return { status: 202, body: { status: "queued", jobType: route.jobType } };

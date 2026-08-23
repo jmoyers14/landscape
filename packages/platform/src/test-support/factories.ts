@@ -10,6 +10,8 @@ import type { Estimate } from "../data-access/repositories/EstimateRepository/Es
 import type { Material } from "../data-access/repositories/MaterialRepository/MaterialRepository.ts";
 import type { Assembly } from "../data-access/repositories/AssemblyRepository/AssemblyRepository.ts";
 import type { PricingSettings } from "../data-access/repositories/PricingSettingsRepository/PricingSettingsRepository.ts";
+import type { Job } from "../data-access/repositories/JobRepository/JobRepository.ts";
+import type { CompanyProfile } from "../data-access/repositories/CompanyProfileRepository/CompanyProfileRepository.ts";
 
 const CREATED_AT = "2026-01-01T00:00:00.000Z";
 
@@ -45,6 +47,7 @@ export const makeEstimate = (over: Partial<Estimate> = {}): Estimate => ({
   assemblies: [],
   lineItems: [],
   createdAt: CREATED_AT,
+  updatedAt: CREATED_AT,
   ...over,
 });
 
@@ -86,5 +89,33 @@ export const makePricingSettings = (
     { key: "general", label: "General labor", rate: 35 },
     { key: "skilled", label: "Skilled labor", rate: 55 },
   ],
+  ...over,
+});
+
+export const makeJob = (over: Partial<Job> = {}): Job => ({
+  id: "job_1",
+  jobType: "renderEstimatePdf",
+  dedupKey: "estimate:estimate_1:1767225600000:1",
+  orgId: "org_1",
+  payload: null,
+  result: null,
+  status: "pending",
+  attempts: 0,
+  lastError: null,
+  createdAt: CREATED_AT,
+  updatedAt: CREATED_AT,
+  ...over,
+});
+
+export const makeCompanyProfile = (
+  over: Partial<CompanyProfile> = {},
+): CompanyProfile => ({
+  businessName: "Test Landscaping",
+  address: "100 Garden Way, Springfield, OR 97477",
+  phone: "555-0100",
+  email: "bids@test-landscaping.example",
+  licenseNumber: "CCB #123456",
+  logoStorageKey: null,
+  logoContentType: null,
   ...over,
 });

@@ -1,4 +1,8 @@
-import type { AnalyticsClient, AuthIdentity, Logger } from "@landscape/platform";
+import type {
+  AnalyticsClient,
+  AuthIdentity,
+  Logger,
+} from "@landscape/platform";
 import type { ClientService } from "./services/ClientService/ClientService.ts";
 import type { ProjectService } from "./services/ProjectService/ProjectService.ts";
 import type { EstimateService } from "./services/EstimateService/EstimateService.ts";
@@ -6,6 +10,8 @@ import type { AddressService } from "./services/AddressService/AddressService.ts
 import type { PricingSettingsService } from "./services/PricingSettingsService/PricingSettingsService.ts";
 import type { MaterialService } from "./services/MaterialService/MaterialService.ts";
 import type { AssemblyService } from "./services/AssemblyService/AssemblyService.ts";
+import type { DocumentJobService } from "./services/DocumentJobService/DocumentJobService.ts";
+import type { CompanyProfileService } from "./services/CompanyProfileService/CompanyProfileService.ts";
 import type { AppConfig } from "@landscape/platform";
 
 /**
@@ -46,5 +52,7 @@ export interface Context {
     pricingSettingsService: PricingSettingsService;
     materialService: MaterialService;
     assemblyService: AssemblyService;
+    documentJobService: DocumentJobService;
+    companyProfileService: CompanyProfileService;
   };
 }

@@ -23,11 +23,16 @@ MONGO_SECRET_NAME="mongodb-uri"       # Secret Manager secret holding the Atlas 
 MAPS_SECRET_NAME="google-maps-api-key" # Secret Manager secret holding the Google Maps key (optional)
 CLERK_WEBHOOK_SECRET_NAME="clerk-webhook-signing-secret" # Secret Manager secret holding the whsec_ signing key
 
-# Cloud Tasks: one queue per job kind (names MUST match packages/worker/src/jobs/jobTypes.ts)
+# Cloud Tasks: one queue per job kind (names MUST match packages/platform/src/jobs/jobTypes.ts)
 # and the identity Cloud Tasks stamps its OIDC callbacks with.
 ORG_SEED_QUEUE="org-seed-queue"
 USER_SYNC_QUEUE="user-sync-queue"
+DOCUMENT_RENDER_QUEUE="document-render-queue"
 TASKS_INVOKER_SA="cloud-tasks-invoker@${PROJECT}.iam.gserviceaccount.com"
+
+# Generated PDFs. Uniform bucket-level access, no public access: every read goes
+# through a short-lived signed URL.
+DOCUMENTS_BUCKET="landscape-documents-production"
 
 # ── Safety guard ─────────────────────────────────────────────────────────────
 # Activate the personal configuration and refuse to proceed unless the active
@@ -161,6 +166,41 @@ else
   echo "No Google Maps key found — deploying without the property-image feature."
 fi
 
+# ── Document storage ─────────────────────────────────────────────────────────
+# Uniform bucket-level access (no per-object ACLs) and public access prevented:
+# the only way to read an object is a signed URL the API mints on demand.
+#
+# No lifecycle/retention rule in v1 — artifacts are ~100KB and "what we sent the
+# client" is worth keeping. Revisit when volume justifies it.
+echo "Ensuring documents bucket: $DOCUMENTS_BUCKET"
+gcloud services enable storage.googleapis.com --project "$PROJECT" --quiet >/dev/null
+if ! gcloud storage buckets describe "gs://$DOCUMENTS_BUCKET" --project "$PROJECT" >/dev/null 2>&1; then
+  gcloud storage buckets create "gs://$DOCUMENTS_BUCKET" \
+    --project "$PROJECT" \
+    --location "$REGION" \
+    --uniform-bucket-level-access \
+    --public-access-prevention >/dev/null
+fi
+
+# Both Cloud Run services run as the same runtime SA, so one grant covers the
+# API (reads + signs) and the worker (writes).
+gcloud storage buckets add-iam-policy-binding "gs://$DOCUMENTS_BUCKET" \
+  --project "$PROJECT" \
+  --member "serviceAccount:$RUNTIME_SA" \
+  --role roles/storage.objectAdmin --quiet >/dev/null
+
+# ── The signing footgun ──────────────────────────────────────────────────────
+# A Cloud Run service account has NO private key, so getSignedUrl can't sign
+# locally — it delegates to the IAM SignBlob API. That needs
+# iamcredentials.googleapis.com enabled (also done for Cloud Tasks below) AND
+# the service account granted token-creator ON ITSELF. Without this, signed URLs
+# fail at request time with a permission error, not at boot.
+gcloud services enable iamcredentials.googleapis.com --project "$PROJECT" --quiet >/dev/null
+gcloud iam service-accounts add-iam-policy-binding "$RUNTIME_SA" \
+  --project "$PROJECT" \
+  --member "serviceAccount:$RUNTIME_SA" \
+  --role roles/iam.serviceAccountTokenCreator --quiet >/dev/null
+
 # ── API ──────────────────────────────────────────────────────────────────────
 # The web URL is stable across deploys, so look it up now and hand it to the API
 # from its first revision — no placeholder, no transient wrong-origin window.
@@ -169,6 +209,14 @@ EXISTING_WEB_URL=$(gcloud run services describe "$WEB_SERVICE" \
   --project "$PROJECT" --region "$REGION" --format "value(status.url)" 2>/dev/null || true)
 API_WEB_URL="${EXISTING_WEB_URL:-https://placeholder.example.com}"
 echo "API will trust web origin: $API_WEB_URL"
+
+# The API enqueues document renders, so it needs the worker's URL too — and the
+# worker deploys AFTER the API. Same trick as above: the URL is stable, so read
+# it now rather than leaving the API without one until the correction near the
+# end of this script. Only a true first deploy falls back to the placeholder.
+EXISTING_WORKER_URL_FOR_API=$(gcloud run services describe "$WORKER_SERVICE" \
+  --project "$PROJECT" --region "$REGION" --format "value(status.url)" 2>/dev/null || true)
+API_WORKER_URL="${EXISTING_WORKER_URL_FOR_API:-https://placeholder.example.com}"
 
 echo "Building API image..."
 docker build --platform linux/amd64 \
@@ -190,6 +238,11 @@ gcloud run deploy "$API_SERVICE" \
   --allow-unauthenticated \
   --set-env-vars ENVIRONMENT=production \
   --set-env-vars WEB_URL="$API_WEB_URL" \
+  --set-env-vars DOCUMENTS_BUCKET="$DOCUMENTS_BUCKET" \
+  --set-env-vars GCP_PROJECT_ID="$PROJECT" \
+  --set-env-vars GCP_LOCATION="$REGION" \
+  --set-env-vars TASKS_INVOKER_SERVICE_ACCOUNT="$TASKS_INVOKER_SA" \
+  --set-env-vars WORKER_URL="$API_WORKER_URL" \
   "${API_ENV_EXTRA[@]+"${API_ENV_EXTRA[@]}"}" \
   --set-secrets "$API_SECRETS"
 
@@ -210,7 +263,7 @@ echo "Ensuring Cloud Tasks API + queues..."
 gcloud services enable cloudtasks.googleapis.com iamcredentials.googleapis.com \
   --project "$PROJECT" --quiet >/dev/null
 
-for QUEUE in "$ORG_SEED_QUEUE" "$USER_SYNC_QUEUE"; do
+for QUEUE in "$ORG_SEED_QUEUE" "$USER_SYNC_QUEUE" "$DOCUMENT_RENDER_QUEUE"; do
   if ! gcloud tasks queues describe "$QUEUE" \
       --location "$REGION" --project "$PROJECT" >/dev/null 2>&1; then
     echo "Creating Cloud Tasks queue: $QUEUE"
@@ -303,6 +356,7 @@ gcloud run deploy "$WORKER_SERVICE" \
   --set-env-vars GCP_PROJECT_ID="$PROJECT" \
   --set-env-vars GCP_LOCATION="$REGION" \
   --set-env-vars WORKER_URL="$WORKER_SELF_URL" \
+  --set-env-vars DOCUMENTS_BUCKET="$DOCUMENTS_BUCKET" \
   --set-env-vars TASKS_INVOKER_SERVICE_ACCOUNT="$TASKS_INVOKER_SA" \
   --set-secrets "MONGODB_URI=$MONGO_SECRET_NAME:latest,CLERK_WEBHOOK_SIGNING_SECRET=$CLERK_WEBHOOK_SECRET_NAME:latest"
 
@@ -319,6 +373,16 @@ if [ "$WORKER_URL" != "$WORKER_SELF_URL" ]; then
   gcloud run services update "$WORKER_SERVICE" \
     --project "$PROJECT" --region "$REGION" \
     --update-env-vars WORKER_URL="$WORKER_URL"
+fi
+
+# Same correction for the API, which also enqueues document renders. It was
+# handed the worker's URL read before its own deploy, so this only fires on a
+# true first deploy (placeholder) or if the worker's URL changed.
+if [ "$WORKER_URL" != "$API_WORKER_URL" ]; then
+  echo "Pointing the API's queue callbacks at $WORKER_URL..."
+  gcloud run services update "$API_SERVICE" \
+    --project "$PROJECT" --region "$REGION" \
+    --update-env-vars WORKER_URL="$WORKER_URL" >/dev/null
 fi
 
 # ── Web ──────────────────────────────────────────────────────────────────────
@@ -349,17 +413,43 @@ WEB_URL=$(gcloud run services describe "$WEB_SERVICE" \
 echo "Web deployed at: $WEB_URL"
 
 # ── Wire CORS only if the web origin changed (i.e. the first-ever deploy) ────
+# --update-env-vars, NOT --set-env-vars: the latter replaces the service's whole
+# environment, which would drop DOCUMENTS_BUCKET, WORKER_URL and the Cloud Tasks
+# coordinates the API gained when it started enqueueing document renders. Only
+# WEB_URL is in question here, so only WEB_URL is touched — and the secrets stay
+# as they are without having to be restated.
 if [ "$WEB_URL" != "$API_WEB_URL" ]; then
   echo "Web origin changed; updating API CORS (WEB_URL=$WEB_URL)..."
   gcloud run services update "$API_SERVICE" \
     --project "$PROJECT" --region "$REGION" \
-    --set-env-vars ENVIRONMENT=production \
-    --set-env-vars WEB_URL="$WEB_URL" \
-    "${API_ENV_EXTRA[@]+"${API_ENV_EXTRA[@]}"}" \
-    --set-secrets "$API_SECRETS"
+    --update-env-vars WEB_URL="$WEB_URL" >/dev/null
 else
   echo "API already trusts $WEB_URL — skipping CORS update."
 fi
+
+# ── Bucket CORS ──────────────────────────────────────────────────────────────
+# The browser PUTs a logo straight at a signed GCS URL, cross-origin from the web
+# app. "image/png" is not a CORS-safelisted content-type, so that request is
+# preflighted and the bucket has to name the origin allowed to make it —
+# otherwise the upload fails in the browser with no server-side trace.
+#
+# Downloads need no entry: they are anchor navigations to a signed URL, not
+# fetches, so CORS never applies to them.
+CORS_FILE=$(mktemp)
+cat > "$CORS_FILE" <<JSON
+[
+  {
+    "origin": ["$WEB_URL"],
+    "method": ["PUT"],
+    "responseHeader": ["content-type"],
+    "maxAgeSeconds": 3600
+  }
+]
+JSON
+echo "Setting CORS on gs://$DOCUMENTS_BUCKET for $WEB_URL..."
+gcloud storage buckets update "gs://$DOCUMENTS_BUCKET" \
+  --project "$PROJECT" --cors-file="$CORS_FILE" >/dev/null
+rm -f "$CORS_FILE"
 
 echo ""
 echo "Deploy complete!"

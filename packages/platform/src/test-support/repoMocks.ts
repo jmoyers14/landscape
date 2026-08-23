@@ -9,8 +9,13 @@ import { mock } from "bun:test";
 import type { MaterialRepository } from "../data-access/repositories/MaterialRepository/MaterialRepository.ts";
 import type { AssemblyRepository } from "../data-access/repositories/AssemblyRepository/AssemblyRepository.ts";
 import type { PricingSettingsRepository } from "../data-access/repositories/PricingSettingsRepository/PricingSettingsRepository.ts";
+import type { ClientRepository } from "../data-access/repositories/ClientRepository/ClientRepository.ts";
 import type { ProjectRepository } from "../data-access/repositories/ProjectRepository/ProjectRepository.ts";
 import type { EstimateRepository } from "../data-access/repositories/EstimateRepository/EstimateRepository.ts";
+import type { JobRepository } from "../data-access/repositories/JobRepository/JobRepository.ts";
+import type { ObjectStorage } from "../integrations/storage/ObjectStorage.ts";
+import type { CompanyProfileRepository } from "../data-access/repositories/CompanyProfileRepository/CompanyProfileRepository.ts";
+import { makeCompanyProfile } from "./factories.ts";
 
 export const makeMaterialRepoMock = (
   over: Partial<MaterialRepository> = {},
@@ -55,6 +60,20 @@ export const makePricingSettingsRepoMock = (
   ...over,
 });
 
+export const makeClientRepoMock = (
+  over: Partial<ClientRepository> = {},
+): ClientRepository => ({
+  findByOrg: mock(async () => []),
+  findById: mock(async () => null),
+  findByEmail: mock(async () => null),
+  create: mock(async () => {
+    throw new Error("not stubbed: ClientRepository.create");
+  }),
+  update: mock(async () => null),
+  deleteById: mock(async () => {}),
+  ...over,
+});
+
 export const makeProjectRepoMock = (
   over: Partial<ProjectRepository> = {},
 ): ProjectRepository => ({
@@ -80,5 +99,66 @@ export const makeEstimateRepoMock = (
   updateMeta: mock(async () => null),
   replaceSnapshot: mock(async () => null),
   deleteById: mock(async () => {}),
+  ...over,
+});
+
+export const makeJobRepoMock = (
+  over: Partial<JobRepository> = {},
+): JobRepository => ({
+  enqueuePending: mock(async () => {
+    throw new Error("not stubbed: JobRepository.enqueuePending");
+  }),
+  markRunning: mock(async () => null),
+  markSucceeded: mock(async () => null),
+  markFailed: mock(async () => null),
+  findByKey: mock(async () => null),
+  findForOrg: mock(async () => null),
+  findByStatus: mock(async () => []),
+  ...over,
+});
+
+/**
+ * In-memory ObjectStorage for handler and service tests. Records what was put so
+ * a test can assert the key and bytes without touching a filesystem or GCS.
+ */
+export const makeObjectStorageFake = (
+  over: Partial<ObjectStorage> = {},
+): ObjectStorage & {
+  objects: Map<string, { bytes: Uint8Array; contentType: string }>;
+} => {
+  const objects = new Map<string, { bytes: Uint8Array; contentType: string }>();
+  return {
+    objects,
+    put: mock(async (key: string, bytes: Uint8Array, contentType: string) => {
+      objects.set(key, { bytes, contentType });
+    }),
+    get: mock(async (key: string) => {
+      const found = objects.get(key);
+      if (!found) {
+        throw new Error(`no object at ${key}`);
+      }
+      return found.bytes;
+    }),
+    head: mock(async (key: string) => {
+      const found = objects.get(key);
+      return found
+        ? { contentType: found.contentType, byteSize: found.bytes.byteLength }
+        : null;
+    }),
+    remove: mock(async (key: string) => {
+      objects.delete(key);
+    }),
+    signedDownloadUrl: mock(async (key: string) => `https://signed.test/${key}`),
+    signedUploadUrl: mock(async (key: string) => `https://upload.test/${key}`),
+    ...over,
+  };
+};
+
+export const makeCompanyProfileRepoMock = (
+  over: Partial<CompanyProfileRepository> = {},
+): CompanyProfileRepository => ({
+  get: mock(async () => null),
+  ensure: mock(async () => makeCompanyProfile()),
+  update: mock(async () => makeCompanyProfile()),
   ...over,
 });

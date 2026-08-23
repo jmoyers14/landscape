@@ -21,8 +21,9 @@ export * from "./data-access/repositories/EstimateRepository/EstimateRepository.
 export * from "./data-access/repositories/MaterialRepository/MaterialRepository.ts";
 export * from "./data-access/repositories/AssemblyRepository/AssemblyRepository.ts";
 export * from "./data-access/repositories/PricingSettingsRepository/PricingSettingsRepository.ts";
+export * from "./data-access/repositories/CompanyProfileRepository/CompanyProfileRepository.ts";
 export * from "./data-access/repositories/WebhookEventRepository/WebhookEventRepository.ts";
-export * from "./data-access/repositories/WebhookJobRepository/WebhookJobRepository.ts";
+export * from "./data-access/repositories/JobRepository/JobRepository.ts";
 export * from "./data-access/repositories/UserRepository/UserRepository.ts";
 
 // Integrations: tokens and vendor-neutral ports.
@@ -32,6 +33,22 @@ export * from "./integrations/maps/MapsClient.ts";
 export * from "./integrations/analytics/AnalyticsClient.ts";
 export * from "./integrations/webhooks/WebhookVerifier.ts";
 export * from "./integrations/tasks/TaskQueue.ts";
+export * from "./integrations/storage/ObjectStorage.ts";
+
+// Documents: view models, key layout and errors. Pure data — the assembly
+// service itself is server-only and registered via registerServerCore.
+export * from "./documents/types.ts";
+export * from "./documents/keys.ts";
+export * from "./documents/errors.ts";
+export {
+  type DocumentAssemblyService,
+  DOCUMENT_ASSEMBLY_SERVICE_TOKEN,
+} from "./documents/DocumentAssemblyService.ts";
+
+// Jobs: the shared vocabulary both entrypoints enqueue against. Keeping it here
+// is what stops the API's job type and the worker's registry key from drifting.
+export * from "./jobs/jobTypes.ts";
+export * from "./jobs/taskKey.ts";
 
 // Seed: the port + token only (the impl and starter content are server-only,
 // registered via registerServerCore).

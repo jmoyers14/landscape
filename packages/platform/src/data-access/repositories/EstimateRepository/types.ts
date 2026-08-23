@@ -15,11 +15,11 @@ export type {
 export type LineItemInput = Omit<LineItem, "id">;
 
 // The caller-supplied fields for a new estimate — Estimate without the
-// server-managed ones (id, createdAt) and the generated parts the repository
-// initializes empty (assemblies, lineItems).
+// server-managed ones (id, createdAt, updatedAt) and the generated parts the
+// repository initializes empty (assemblies, lineItems).
 export type NewEstimate = Omit<
   Estimate,
-  "id" | "createdAt" | "assemblies" | "lineItems"
+  "id" | "createdAt" | "updatedAt" | "assemblies" | "lineItems"
 >;
 
 // Editable meta: title/status only. Rates are snapshotted at generation, not

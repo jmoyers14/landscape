@@ -70,6 +70,19 @@ export interface PricedLine {
 }
 
 /**
+ * Version of the cost buildup below. **Bump this whenever `priceLines` or
+ * `directCostOfLine` changes the money.**
+ *
+ * Totals are never persisted — every read recomputes them — so a deploy that
+ * changes the buildup reprices every existing estimate without touching its
+ * `updatedAt`. Generated documents are cached on
+ * `(estimateId, updatedAt, PRICING_FORMULA_VERSION)`; without this component a
+ * cached PDF would keep serving figures the app no longer shows. Bumping it
+ * invalidates every cached document at once.
+ */
+export const PRICING_FORMULA_VERSION = 1;
+
+/**
  * The cost buildup — the single source of truth for how an estimate's money is
  * computed, faithful to the spreadsheet. Material lines carry their sales tax
  * (per line, pre-markup) and delivery inside direct cost; labor is untaxed.

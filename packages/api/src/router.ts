@@ -8,6 +8,8 @@ import { pricingSettingsRouter } from "./routers/pricingSettings.ts";
 import { materialsRouter } from "./routers/materials.ts";
 import { assembliesRouter } from "./routers/assemblies.ts";
 import { systemRouter } from "./routers/system.ts";
+import { documentsRouter } from "./routers/documents.ts";
+import { companyRouter } from "./routers/company.ts";
 
 export const appRouter = router({
   clients: clientsRouter,
@@ -19,6 +21,8 @@ export const appRouter = router({
   materials: materialsRouter,
   assemblies: assembliesRouter,
   system: systemRouter,
+  documents: documentsRouter,
+  company: companyRouter,
 });
 
 export type AppRouter = typeof appRouter;
