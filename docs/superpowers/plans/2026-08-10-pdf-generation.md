@@ -4417,7 +4417,7 @@ This task also moves the job vocabulary into `platform`, because the API is now 
   - tRPC: `documents.requestEstimatePdf`, `documents.requestPartsOrderPdf`, `documents.status`
   - `registerTaskQueue(container)`, exported from `@landscape/platform/tasks`
 
-- [ ] **Step 1: Move the job vocabulary into platform**
+- [x] **Step 1: Move the job vocabulary into platform**
 
 `JOB_TYPES`, `QUEUES` and `taskName` are no longer worker-private — the API enqueues too, and a job type or queue name that drifts between the two would silently route work nowhere.
 
@@ -4438,7 +4438,7 @@ export * from "./jobs/taskKey.ts";
 
 Update the worker's imports (`registry.ts`, `ingest/eventRouting.ts`, `ingest/handler.ts`, `jobs/runJob.ts`) to pull `JOB_TYPES`, `QUEUES`, `taskName` and `taskBodySchema` from `@landscape/platform`. Update `jobTypes.ts`'s doc comment, whose second paragraph still says "the queue names deploy.sh must create" — that stays true; add that the API reads the same table.
 
-- [ ] **Step 2: Extract the task-queue registration**
+- [x] **Step 2: Extract the task-queue registration**
 
 ```ts
 // packages/platform/src/registerTaskQueue.ts
@@ -4486,7 +4486,7 @@ In `packages/platform/src/registerWebhookCore.ts`, delete the tasks-config and `
     "./tasks": "./src/registerTaskQueue.ts",
 ```
 
-- [ ] **Step 3: Point the API's container at the queue**
+- [x] **Step 3: Point the API's container at the queue**
 
 `InlineTaskQueue` posts to `http://localhost:${PORT}/tasks/...`, which is the **worker's** port, not the API's. In `packages/api/src/services/index.ts` (the API's composition root), after `registerServerCore(container)`:
 
@@ -4507,7 +4507,7 @@ Add `WORKER_URL` handling for local dev: `InlineTaskQueue` currently derives its
 
 and set `WORKER_URL=http://localhost:3001` in `packages/api/.env`.
 
-- [ ] **Step 4: Write the failing test**
+- [x] **Step 4: Write the failing test**
 
 ```ts
 // packages/api/src/services/DocumentJobService/DocumentJobServiceImpl.test.ts
@@ -4668,7 +4668,7 @@ describe("DocumentJobServiceImpl.status", () => {
 });
 ```
 
-- [ ] **Step 5: Run it to verify it fails**
+- [x] **Step 5: Run it to verify it fails**
 
 ```bash
 bun test packages/api/src/services/DocumentJobService/DocumentJobServiceImpl.test.ts
@@ -4676,7 +4676,7 @@ bun test packages/api/src/services/DocumentJobService/DocumentJobServiceImpl.tes
 
 Expected: FAIL — cannot resolve `./DocumentJobServiceImpl.ts`.
 
-- [ ] **Step 6: Write the port**
+- [x] **Step 6: Write the port**
 
 ```ts
 // packages/api/src/services/DocumentJobService/DocumentJobService.ts
@@ -4706,7 +4706,7 @@ export interface DocumentJobService {
 }
 ```
 
-- [ ] **Step 7: Write the implementation**
+- [x] **Step 7: Write the implementation**
 
 ```ts
 // packages/api/src/services/DocumentJobService/DocumentJobServiceImpl.ts
@@ -4857,7 +4857,7 @@ export class DocumentJobServiceImpl implements DocumentJobService {
 }
 ```
 
-- [ ] **Step 8: Run the test**
+- [x] **Step 8: Run the test**
 
 ```bash
 bun test packages/api/src/services/DocumentJobService/DocumentJobServiceImpl.test.ts
@@ -4865,7 +4865,7 @@ bun test packages/api/src/services/DocumentJobService/DocumentJobServiceImpl.tes
 
 Expected: PASS, all ten cases.
 
-- [ ] **Step 9: Write the router**
+- [x] **Step 9: Write the router**
 
 ```ts
 // packages/api/src/routers/documents.ts
@@ -4907,7 +4907,7 @@ export const documentsRouter = router({
 });
 ```
 
-- [ ] **Step 10: Wire it up**
+- [x] **Step 10: Wire it up**
 
 - `packages/api/src/services/tokens.ts`: add `export const DOCUMENT_JOB_SERVICE_TOKEN = "DocumentJobService";`
 - `packages/api/src/services/index.ts`: `container.registerSingleton(DOCUMENT_JOB_SERVICE_TOKEN, DocumentJobServiceImpl);`
@@ -4932,7 +4932,19 @@ console.log(await res.text());
 
 with `TOKEN` a Clerk session token from the browser's devtools and `ESTIMATE_ID` the estimate. Expected: a `pending` response, a worker log line reading `document rendered`, and a file under `.local-storage/orgs/<orgId>/estimates/<id>/`. Calling it a second time must return `succeeded` with a URL and produce **no** new worker log line — that is the short-circuit working.
 
-- [ ] **Step 12: Run everything and commit**
+**NOT DONE — needs a human.** Three reasons, none of them code: it wants a Clerk
+session token from a signed-in browser; the dev servers on :3000/:3001 run from
+the main checkout, not this worktree, so they'd exercise the old code; and
+`MONGODB_URI` points at a shared Atlas cluster, which is not somewhere to create
+rows unasked. Run it from the worktree with `bun run dev` before merging.
+
+What *was* verified without it: `DocumentJobServiceImpl` resolves from the real
+API container with all four dependencies (and the container selects
+`InlineTaskQueue` for local), and `InlineTaskQueue` now has tests pinning that it
+delivers to `WORKER_URL` rather than the enqueuing process's own `PORT` — the one
+behaviour change here that a unit test can reach.
+
+- [x] **Step 12: Run everything and commit**
 
 ```bash
 bun run typecheck && bun test && bun run lint
