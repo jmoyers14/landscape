@@ -5549,7 +5549,7 @@ git commit -m "feat: download estimate and parts order PDFs from the editor"
 - Consumes: `company.get`, `company.update`, `company.requestLogoUpload`, `company.confirmLogo` (Task 16).
 - Produces: the `/settings/company` route and its nav link.
 
-- [ ] **Step 1: Write the screen**
+- [x] **Step 1: Write the screen**
 
 ```tsx
 // packages/web/src/screens/CompanySettingsScreen.tsx
@@ -5747,7 +5747,7 @@ export function CompanySettingsScreen() {
 }
 ```
 
-- [ ] **Step 2: Add the route**
+- [x] **Step 2: Add the route**
 
 In `packages/web/src/router.tsx`, import the screen and add:
 
@@ -5761,7 +5761,7 @@ const companySettingsRoute = createRoute({
 
 and include `companySettingsRoute` in `rootRoute.addChildren([...])`.
 
-- [ ] **Step 3: Add the nav link**
+- [x] **Step 3: Add the nav link**
 
 In `packages/web/src/screens/RootLayout.tsx`, inside the `<nav>`, after the Clients link:
 
@@ -5775,7 +5775,7 @@ In `packages/web/src/screens/RootLayout.tsx`, inside the `<nav>`, after the Clie
         </Link>
 ```
 
-- [ ] **Step 4: Typecheck**
+- [x] **Step 4: Typecheck**
 
 ```bash
 bun run --cwd packages/web typecheck
@@ -5789,7 +5789,12 @@ bun run --cwd packages/web typecheck
 4. Try a `.svg` → rejected with a clear message, nothing written.
 5. Download an estimate PDF → the logo and the company details head the document.
 
-- [ ] **Step 6: Commit**
+**NOT DONE — needs a human**, the third and last of these: Task 15 Step 11, Task
+17 Step 4 and this one all close in a single run of the app. Verified instead:
+`packages/web` typechecks and builds with the screen, its `/settings/company`
+route and the nav link in place.
+
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/web
