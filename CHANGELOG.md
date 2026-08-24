@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.2.0](https://github.com/jmoyers14/landscape/compare/v1.1.0...v1.2.0) (2026-08-24)
+
+
+### Features
+
+* add an object storage port with a local adapter ([4af6a8a](https://github.com/jmoyers14/landscape/commit/4af6a8a13cfb5d2a28529e3e4f8ccbe6c59189dc))
+* assemble the client-facing estimate document ([90ef9dd](https://github.com/jmoyers14/landscape/commit/90ef9ddd8a58e1593c9d7878cf4d30c43d695579))
+* define document view models and storage key layout ([2fea786](https://github.com/jmoyers14/landscape/commit/2fea786950d0602802261291aa305f7851a69f0e))
+* derive a supplier parts order from an estimate ([367f6bf](https://github.com/jmoyers14/landscape/commit/367f6bf62b079986efe2146809f4d8559899ecb4))
+* download estimate and parts order PDFs from the editor ([403db6f](https://github.com/jmoyers14/landscape/commit/403db6fda37d872a95ac884fab5ae7e9caa9e73f))
+* edit the company profile and upload a logo ([1c58a1d](https://github.com/jmoyers14/landscape/commit/1c58a1d30c85485138923f4cf126156d48c1767f))
+* expose an estimate's updatedAt on the entity ([10176ab](https://github.com/jmoyers14/landscape/commit/10176ab869f3df4c11b9756de1e1579ba02a507e))
+* generate estimate and parts order PDFs ([795de8a](https://github.com/jmoyers14/landscape/commit/795de8a843923d0e555f10dd0b0722a4384559f1))
+* give every organization a company profile ([7d4c663](https://github.com/jmoyers14/landscape/commit/7d4c663993548b64e141156fac297019db8ea998))
+* manage the company profile and its logo ([a9fb698](https://github.com/jmoyers14/landscape/commit/a9fb698047b56462e4b541f6cd88c2d8dcf6b8ed))
+* render the client-facing estimate PDF ([5d22cb2](https://github.com/jmoyers14/landscape/commit/5d22cb26a139f2b3c2966b30fcecfa5d2bf84834))
+* render the supplier parts order PDF ([8cf4f69](https://github.com/jmoyers14/landscape/commit/8cf4f693f5a3b1038c3d6723871d14eaf65b8a90))
+* request and poll generated documents over the API ([bc9bbd6](https://github.com/jmoyers14/landscape/commit/bc9bbd6d5dff26f2be6855e1b6fab585f8aa8209))
+* run document renders as background jobs ([0e926b2](https://github.com/jmoyers14/landscape/commit/0e926b290ea03ca9585c5d0f3635a0cf94856236))
+* store documents in Google Cloud Storage ([1abce3f](https://github.com/jmoyers14/landscape/commit/1abce3f93bf0b0409cdf57a38f71bb87c1f35cab))
+* version the pricing formula for document cache keys ([026fd02](https://github.com/jmoyers14/landscape/commit/026fd028a2059f6672016de93339479486c0d77f))
+
+
+### Bug Fixes
+
+* correct two deploy-blocking bugs in the documents rollout ([b447575](https://github.com/jmoyers14/landscape/commit/b4475752bb711658f82161ef0f5b986703989afc))
+* resolve the local storage root the same way in both processes ([3188b50](https://github.com/jmoyers14/landscape/commit/3188b50dccee3468d18c4056b281c45b19e8cd06))
+
 ## [1.1.0](https://github.com/jmoyers14/landscape/compare/v1.0.0...v1.1.0) (2026-08-07)
 
 
