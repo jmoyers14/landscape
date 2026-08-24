@@ -16,11 +16,10 @@
     "build:web": "bun run --cwd packages/web build",
     "test": "bun run --cwd packages/domain test && bun run --cwd packages/platform test && bun run --cwd packages/api test && bun run --cwd packages/worker test",
     "typecheck": "bun run --cwd packages/domain typecheck && bun run --cwd packages/platform typecheck && bun run --cwd packages/api typecheck && bun run --cwd packages/worker typecheck && bun run --cwd packages/web typecheck",
-    "lint": "biome lint .",
-    "lint:fix": "biome lint --write --unsafe ."
+    "lint": "bunx @biomejs/biome@2.5.1 lint .",
+    "lint:fix": "bunx @biomejs/biome@2.5.1 lint --write --unsafe ."
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.1",
     "typescript": "^5.3.3"
   },
   "dependencies": {
