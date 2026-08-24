@@ -1,5 +1,5 @@
-# The worker runs from TypeScript SOURCE, not a bundle — unlike the api/web
-# images. @google-cloud/tasks is a gapic client that loads JSON config
+# The worker runs from TypeScript SOURCE, not a bundle — as does the api image,
+# and for the same reason. @google-cloud/tasks is a gapic client that loads JSON config
 # (*_client_config.json) via runtime require; `bun build` doesn't emit those
 # assets, so a bundled worker crashes at boot with "Cannot find module
 # cloud_tasks_client_config.json". Running from source with node_modules present
@@ -15,7 +15,13 @@ COPY packages/worker/package.json packages/worker/
 COPY packages/domain/package.json packages/domain/
 COPY packages/platform/package.json packages/platform/
 
-RUN bun install --frozen-lockfile
+# --production: this image installs and then RUNS FROM SOURCE, so devDependencies
+# are pure cost — biome and typescript are lint/typecheck tooling that never
+# executes here, and Bun transpiles TS itself. Dropping them takes ~90s off the
+# build and removes the biome platform binaries, whose slow, fat tarballs have
+# lost the race under bun's 48-way concurrent install and failed the build.
+# The web image must NOT do this: `vite build` needs those devDependencies.
+RUN bun install --frozen-lockfile --production
 
 # Source for the worker and the two packages it imports. node_modules (from the
 # install above) stays in place, so @google-cloud/tasks resolves its JSON config

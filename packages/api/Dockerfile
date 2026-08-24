@@ -15,7 +15,13 @@ COPY packages/worker/package.json packages/worker/
 COPY packages/domain/package.json packages/domain/
 COPY packages/platform/package.json packages/platform/
 
-RUN bun install --frozen-lockfile
+# --production: this image installs and then RUNS FROM SOURCE, so devDependencies
+# are pure cost — biome and typescript are lint/typecheck tooling that never
+# executes here, and Bun transpiles TS itself. Dropping them takes ~90s off the
+# build and removes the biome platform binaries, whose slow, fat tarballs have
+# lost the race under bun's 48-way concurrent install and failed the build.
+# The web image must NOT do this: `vite build` needs those devDependencies.
+RUN bun install --frozen-lockfile --production
 
 COPY tsconfig.json ./
 COPY packages/domain/ packages/domain/
