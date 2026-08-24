@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Landscape — Webhook Ingestion</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --panel: #f8fafc;
+      --border: #e2e8f0;
+      --ink: #0f172a;
+      --muted: #475569;
+      --accent: #6366f1;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      padding: 32px;
+    }
+    h1 { font-size: 22px; margin: 0 0 4px; }
+    h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 12px; }
+    .sub { color: var(--muted); margin: 0 0 28px; }
+    .legend {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 22px 24px;
+      margin-bottom: 28px;
+      max-width: 920px;
+    }
+    .divider { height: 1px; background: var(--border); margin: 20px 0; border: 0; }
+    table { border-collapse: collapse; width: 100%; max-width: 720px; font-size: 14px; }
+    td { padding: 5px 14px 5px 0; vertical-align: top; }
+    td:first-child { font-weight: 600; color: var(--accent); white-space: nowrap; }
+    code { background: #eef2ff; padding: 1px 6px; border-radius: 5px; font-size: 13px; }
+    .diagram { border: 1px solid var(--border); border-radius: 12px; padding: 16px; overflow-x: auto; }
+    .diagram img { display: block; width: 100%; height: auto; min-width: 720px; }
+    .note { color: var(--muted); font-size: 13px; margin: 10px 0 0; }
+    .swatch { display: inline-block; width: 13px; height: 13px; border-radius: 3px; vertical-align: middle; margin-right: 7px; border: 1px solid rgba(0,0,0,.15); }
+  </style>
+</head>
+<body>
+  <h1>Landscape — Webhook Ingestion</h1>
+  <p class="sub">
+    How an inbound Clerk webhook becomes durable, idempotent, retryable work. The
+    <b>worker</b> Cloud Run service owns this whole path; the API is not involved.
+  </p>
+
+  <div class="legend">
+    <h2>How to read it</h2>
+    <p style="margin:0 0 18px; color:var(--muted);">
+      Top to bottom is one webhook's journey. The <b>shared ingestion path</b> is
+      source-agnostic once the signature is verified; the fan-out below it is where
+      an event type is dispatched to its own queue and handler.
+    </p>
+
+    <table>
+      <tr>
+        <td><span class="swatch" style="background:#fdf3e3; border-color:#b8860b;"></span>store</td>
+        <td>A MongoDB write. <code>webhook_events</code> is the immutable audit log (raw payload, keyed by
+          <code>source</code> + <code>sourceEventId</code>); <code>webhook_jobs</code> is the per-job status record.</td>
+      </tr>
+      <tr>
+        <td><span class="swatch" style="background:#e8eef7; border-color:#4a6fa5;"></span>queue</td>
+        <td>A Cloud Tasks queue — one per job kind, so retry/backoff policy is tuned independently. Locally an
+          in-process queue stands in (no Cloud Tasks emulator exists).</td>
+      </tr>
+      <tr>
+        <td><span class="swatch" style="background:#eaf5ea; border-color:#4a8a4a;"></span>worker</td>
+        <td>A registered job handler, invoked when Cloud Tasks calls <code>/tasks/{jobType}</code> back. Every
+          handler is idempotent — at-least-once delivery means the same event can arrive twice.</td>
+      </tr>
+    </table>
+
+    <hr class="divider" />
+    <h2>The invariants worth knowing</h2>
+    <table>
+      <tr><td>verify first</td><td>a bad signature persists <em>nothing</em> and returns 400 — the source is named in the path (<code>/ingest/clerk</code>) so the right verifier is chosen before anything is trusted.</td></tr>
+      <tr><td>record before act</td><td>the raw event is written before any work is scheduled, so a later failure can be replayed without asking Clerk to redeliver.</td></tr>
+      <tr><td>idempotent by key</td><td>events dedup on <code>(source, sourceEventId)</code>, jobs on <code>(source, sourceEventId, jobType)</code>. A provider redelivery is absorbed — never double-applied, never reset once succeeded.</td></tr>
+      <tr><td>status = retry contract</td><td>the worker answers Cloud Tasks with an HTTP status: <b>200</b> = done (incl. permanent/poison outcomes), <b>500</b> = a handler threw, so retry per the queue's policy.</td></tr>
+    </table>
+  </div>
+
+  <div class="diagram">
+    <img src="webhook.svg" alt="Landscape webhook ingestion flow diagram" />
+  </div>
+  <p class="note">Diagram source: <code>docs/webhook.mmd</code> · vector: <code>docs/webhook.svg</code></p>
+  <p class="note">
+    Conceptual flow, not a class map. Boxes name what happens (&ldquo;Verify svix signature&rdquo;), not the
+    files that do it (<code>ClerkWebhookVerifier</code>, <code>IngestService</code>, <code>JobRunner</code>).
+    <code>seed org DB</code> is currently a stub — real seeding lands with the SeedService extraction.
+  </p>
+</body>
+</html>

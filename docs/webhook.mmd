@@ -1,0 +1,39 @@
+flowchart TD
+%% The webhook source is named in the path (/ingest/<source>), not sniffed from
+%% headers — signature verification is per-source, so the source must be known
+%% before anything is authenticated. Clerk is the only source today; a second one
+%% adds a sibling entry point + its own verifier and rejoins the shared path at
+%% "INSERT raw event".
+%%
+%% Transactional email is DEFERRED (2026-07-22) — no provider chosen, and no
+%% known date when one is needed. The fan-out below is the pattern an email
+%% queue would slot into unchanged: another queue + another idempotent handler.
+%% Nothing in the design depends on it, so it costs nothing to add later.
+    Clerk[Clerk] -->|webhook POST, any event type| Ingest["POST /ingest/clerk\n(worker, Cloud Run)"]
+
+    subgraph Shared["Shared ingestion path"]
+        Ingest --> Verify["Verify svix signature"]
+        Verify --> RawLog[("INSERT raw event\n(event_id, payload)")]
+        RawLog --> CreateTask["Create Cloud Task\n(deterministic name)"]
+        CreateTask --> JobsInsert[("UPSERT webhook_jobs\nstatus = pending")]
+        JobsInsert --> Dispatch{"dispatched by\nevent type"}
+    end
+
+    Dispatch -->|organization.created| Q1["Cloud Tasks queue:\norg-seed-queue"]
+    Dispatch -->|user.created, user.updated| Q2["Cloud Tasks queue:\nuser-sync-queue"]
+
+    Q1 --> W1["Worker: seed org DB\n(idempotent)"]
+    Q2 --> W2["Worker: sync user record\n(idempotent)"]
+
+    W1 --> JobsUpdate[("UPDATE webhook_jobs\nstatus, attempts, last_error")]
+    W2 --> JobsUpdate
+
+    JobsUpdate --> Alert["Alerting\n(per criticality tier)"]
+    JobsUpdate --> Retry["Manual retry\n(admin action)"]
+
+    classDef queue fill:#e8eef7,stroke:#4a6fa5,color:#1a1a1a
+    classDef worker fill:#eaf5ea,stroke:#4a8a4a,color:#1a1a1a
+    classDef store fill:#fdf3e3,stroke:#b8860b,color:#1a1a1a
+    class Q1,Q2 queue
+    class W1,W2 worker
+    class RawLog,JobsInsert,JobsUpdate store

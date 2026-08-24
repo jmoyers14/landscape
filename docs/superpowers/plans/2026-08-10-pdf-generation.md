@@ -5927,7 +5927,7 @@ gcloud run services update "$API_SERVICE" \
   --update-env-vars WORKER_URL="$WORKER_URL" >/dev/null
 ```
 
-- [ ] **Step 5: Deploy and verify**
+- [x] **Step 5: Deploy and verify**
 
 ```bash
 ./deploy.sh
@@ -5946,9 +5946,19 @@ gcloud iam service-accounts get-iam-policy "$RUNTIME_SA" \
 
 Expected: uniform access `True`, public access `enforced`; the queue `RUNNING`; the runtime SA listed as a token-creator member on itself.
 
-**NOT DONE — this deploys to production**, which is the user's call, not an
-agent's. `deploy.sh` is written and passes `bash -n`; running it is the remaining
-step. Note it deploys the whole app, not just this feature.
+**DONE (2026-08-24), at v1.2.0.** Verified after the run:
+
+- bucket `landscape-documents-production`: `uniform_bucket_level_access: True`,
+  `public_access_prevention: enforced`, location `US-CENTRAL1`
+- `document-render-queue`: `RUNNING`
+- bucket CORS: `PUT` from the web origin only, `content-type` allowed
+
+Three attempts were needed, and neither blocker was in this feature. The API
+and worker images installed the whole workspace including devDependencies, and
+`@biomejs/biome`'s two Linux binaries (~39s each to fetch on their own) failed
+extraction inside a full install, killing the build. Fixed by `--production` on
+those two images and by running biome through `bunx` so it leaves the
+dependency graph entirely.
 
 - [ ] **Step 6: Verify the deployed pipeline**
 
